@@ -12,15 +12,15 @@ export function PageCard({
   children?: ReactNode;
 }) {
   return (
-    <main className="mx-auto flex min-h-[calc(100vh-73px)] w-full max-w-5xl items-start">
-      <section className="w-full rounded-[2rem] border border-[color:var(--border)] bg-[color:var(--panel)] p-8 shadow-sm">
+    <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-8 sm:py-12">
+      <section className="rounded-[1.75rem] border border-[color:var(--border)] bg-[color:var(--panel)] p-6 shadow-sm sm:p-10">
         <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[color:var(--muted)]">
           {eyebrow}
         </p>
-        <h1 className="mt-4 text-3xl font-semibold tracking-tight text-[color:var(--foreground)] sm:text-4xl">
+        <h1 className="mt-3 text-2xl font-semibold tracking-tight text-[color:var(--foreground)] sm:text-3xl">
           {title}
         </h1>
-        <p className="mt-4 max-w-3xl text-base leading-7 text-[color:var(--soft-foreground)]">
+        <p className="mt-3 text-sm leading-7 text-[color:var(--soft-foreground)] sm:text-base">
           {description}
         </p>
         {children}

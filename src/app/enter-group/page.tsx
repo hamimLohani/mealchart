@@ -5,8 +5,8 @@ export default function EnterGroupPage() {
   return (
     <PageCard
       eyebrow="Enter Group"
-      title="Token-based group entry"
-      description="Members will enter the shared group token here and move into the public group dashboard for meals, charts, money management, history, and notices."
+      title="Enter your group token"
+      description="Type the token your admin shared with you. You'll then pick your name from the member list to start entering meals."
     >
       <EnterGroupForm />
     </PageCard>

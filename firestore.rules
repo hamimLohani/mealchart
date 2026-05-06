@@ -42,5 +42,15 @@ service cloud.firestore {
       allow read: if true;
       allow create, update, delete: if isGroupAdmin(groupId);
     }
+    match /groups/{groupId}/meals/{mealId} {
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if isGroupAdmin(groupId);
+    }
+
+    match /groups/{groupId}/costs/{costId} {
+      allow read: if true;
+      allow create, update, delete: if isGroupAdmin(groupId);
+    }
   }
 }

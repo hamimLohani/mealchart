@@ -183,7 +183,7 @@ export function RegisterGroupForm() {
       ) : null}
 
       <button
-        className="button-primary w-full sm:w-fit disabled:cursor-not-allowed disabled:opacity-60"
+        className="button-primary w-full disabled:cursor-not-allowed disabled:opacity-60"
         disabled={isSubmitting || !isFirebaseConfigured}
         type="submit"
       >

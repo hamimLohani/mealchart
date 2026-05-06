@@ -1,62 +1,91 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase/client";
+import { useAuthStore } from "@/store/auth-store";
 
-const adminRoutes = [
-  { href: "/admin/login", label: "Login", hint: "Admin access" },
-  { href: "/admin/members", label: "Members", hint: "People and join dates" },
-  { href: "/admin/costs", label: "Costs", hint: "Bazar and expenses" },
-  { href: "/admin/add-money", label: "Add Money", hint: "Member deposits" },
-  { href: "/admin/edit-meals", label: "Edit Meals", hint: "Daily meal table" },
-  { href: "/admin/create-chart", label: "Create Chart", hint: "New 31-day sheet" },
-  { href: "/admin/notices", label: "Notices", hint: "Updates and alerts" },
+const navGroups = [
+  {
+    label: "People",
+    items: [
+      { href: "/admin/members",  label: "Members",  hint: "Add, edit, remove" },
+      { href: "/admin/add-money",label: "Add Money", hint: "Member deposits" },
+    ],
+  },
+  {
+    label: "Meals & Costs",
+    items: [
+      { href: "/admin/edit-meals", label: "Edit Meals", hint: "Daily meal table" },
+      { href: "/admin/costs",      label: "Costs",      hint: "Bazar and expenses" },
+    ],
+  },
+  {
+    label: "Reports",
+    items: [
+      { href: "/admin/create-chart", label: "Create Chart", hint: "New monthly sheet" },
+      { href: "/admin/notices",      label: "Notices",      hint: "Updates and alerts" },
+    ],
+  },
 ];
 
 export function AdminNav() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { admin, isLoaded } = useAuthStore();
+  const isLoggedIn = isLoaded && !!admin;
+
+  async function handleLogout() {
+    if (auth) await signOut(auth);
+    router.push("/admin/login");
+  }
 
   return (
-    <nav className="admin-nav-shell">
-      <div className="admin-nav-header">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[color:var(--muted)]">
-            Admin Panel
-          </p>
-          <p className="mt-2 text-xl font-semibold text-[color:var(--foreground)]">
-            Manage the group from one place
-          </p>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-[color:var(--soft-foreground)]">
-            Switch between members, deposits, charts, meal editing, and notices without leaving the admin workspace.
-          </p>
+    <nav className="admin-sidebar">
+      {/* Identity */}
+      <div className="admin-sidebar-identity">
+        <div className="admin-sidebar-avatar">
+          {isLoggedIn ? (admin.email?.[0]?.toUpperCase() ?? "A") : "A"}
         </div>
-        <div className="admin-nav-badge">
-          <span>{adminRoutes.length}</span>
-          <p>tools</p>
+        <div className="min-w-0">
+          <p className="admin-sidebar-role">Admin Panel</p>
+          <p className="admin-sidebar-email">
+            {isLoggedIn ? admin.email : "Not signed in"}
+          </p>
         </div>
       </div>
 
-      <div className="admin-nav-links">
-        {adminRoutes.map((route, index) => {
-          const isActive = pathname === route.href;
-
-          return (
-            <Link
-              key={route.href}
-              className={isActive ? "admin-nav-link active" : "admin-nav-link"}
-              href={route.href}
-            >
-              <span className="admin-nav-link-index">
-                {String(index + 1).padStart(2, "0")}
-              </span>
-              <span className="admin-nav-link-copy">
-                <span className="admin-nav-link-title">{route.label}</span>
-                <span className="admin-nav-link-hint">{route.hint}</span>
-              </span>
-            </Link>
-          );
-        })}
-      </div>
+      {isLoggedIn ? (
+        <>
+          <div className="admin-sidebar-groups">
+            {navGroups.map((group) => (
+              <div key={group.label} className="admin-sidebar-group">
+                <p className="admin-sidebar-group-label">{group.label}</p>
+                {group.items.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={pathname === item.href ? "admin-sidebar-link active" : "admin-sidebar-link"}
+                  >
+                    <span className="admin-sidebar-link-label">{item.label}</span>
+                    <span className="admin-sidebar-link-hint">{item.hint}</span>
+                  </Link>
+                ))}
+              </div>
+            ))}
+          </div>
+          <button className="admin-sidebar-logout" onClick={handleLogout} type="button">
+            <span>↩</span>
+            <span>Logout</span>
+          </button>
+        </>
+      ) : (
+        <Link href="/admin/login" className="admin-sidebar-link" style={{ margin: "0.5rem 0" }}>
+          <span className="admin-sidebar-link-label">Login</span>
+          <span className="admin-sidebar-link-hint">Admin access</span>
+        </Link>
+      )}
     </nav>
   );
 }

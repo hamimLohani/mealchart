@@ -8,6 +8,7 @@ import {
   limit,
   orderBy,
   query,
+  setDoc,
   Timestamp,
   updateDoc,
   where,
@@ -22,7 +23,9 @@ import {
 import {
   adminsCollection,
   chartsCollection,
+  costsCollection,
   depositsCollection,
+  mealsCollection,
   membersCollection,
   noticesCollection,
   groupsCollection,
@@ -33,7 +36,7 @@ import {
   toDateInputValue,
   toMonthKey,
 } from "@/lib/utils/date";
-import type { AdminProfile, Chart, DepositEntry, Group, Member } from "@/types/domain";
+import type { AdminProfile, Chart, CostEntry, DepositEntry, Group, MealEntry, Member, Notice } from "@/types/domain";
 
 function ensureDb() {
   if (!db) {
@@ -294,6 +297,130 @@ export async function updateMember(input: {
     id: input.memberId,
     ...payload,
   } as Member;
+}
+
+export async function getMealsForDate(groupId: string, date: string) {
+  const database = ensureDb();
+  const snapshot = await getDocs(
+    query(
+      collection(database, mealsCollection(groupId)),
+      where("date", "==", date),
+    ),
+  );
+
+  return snapshot.docs.map((entry) => normalizeDoc<MealEntry>(entry.id, entry.data()));
+}
+
+// Deterministic doc ID: memberId_date — allows setDoc upsert without a prior read
+export async function saveMealEntry(input: {
+  groupId: string;
+  memberId: string;
+  date: string;
+  quantity: number;
+}) {
+  const database = ensureDb();
+  const docId = `${input.memberId}_${input.date}`;
+  const ref = doc(database, mealsCollection(input.groupId), docId);
+  await setDoc(ref, {
+    memberId: input.memberId,
+    date: input.date,
+    quantity: input.quantity,
+  });
+}
+
+// ── Costs ────────────────────────────────────────────────────────────
+
+export async function listCostsForMonth(groupId: string, monthKey: string) {
+  const database = ensureDb();
+  const snapshot = await getDocs(
+    query(
+      collection(database, costsCollection(groupId)),
+      where("date", ">=", `${monthKey}-01`),
+      where("date", "<=", `${monthKey}-31`),
+      orderBy("date", "desc"),
+    ),
+  );
+  return snapshot.docs.map((entry) => normalizeDoc<CostEntry>(entry.id, entry.data()));
+}
+
+export async function listCosts(groupId: string) {
+  const database = ensureDb();
+  const snapshot = await getDocs(
+    query(collection(database, costsCollection(groupId)), orderBy("date", "desc")),
+  );
+  return snapshot.docs.map((entry) => normalizeDoc<CostEntry>(entry.id, entry.data()));
+}
+
+export async function createCost(input: {
+  groupId: string;
+  itemName: string;
+  amount: number;
+  date: string;
+}) {
+  const database = ensureDb();
+  const payload = { itemName: input.itemName, amount: input.amount, date: input.date };
+  const ref = await addDoc(collection(database, costsCollection(input.groupId)), payload);
+  await addDoc(collection(database, noticesCollection(input.groupId)), {
+    ...buildNoticeRecord({
+      title: "Cost added",
+      body: `${input.itemName} — ${input.amount.toFixed(2)} tk on ${input.date}.`,
+      systemGenerated: true,
+    }),
+    createdAt: new Date().toISOString(),
+  });
+  return { id: ref.id, ...payload } as CostEntry;
+}
+
+export async function deleteCost(groupId: string, costId: string) {
+  const database = ensureDb();
+  await deleteDoc(doc(database, costsCollection(groupId), costId));
+}
+
+// ── Notices ───────────────────────────────────────────────────────────
+
+export async function listNotices(groupId: string) {
+  const database = ensureDb();
+  const snapshot = await getDocs(
+    query(collection(database, noticesCollection(groupId)), orderBy("createdAt", "desc")),
+  );
+  return snapshot.docs.map((entry) => normalizeDoc<Notice>(entry.id, entry.data()));
+}
+
+export async function createNotice(input: { groupId: string; title: string; body: string }) {
+  const database = ensureDb();
+  const record = buildNoticeRecord({ title: input.title, body: input.body, systemGenerated: false });
+  const ref = await addDoc(collection(database, noticesCollection(input.groupId)), {
+    ...record,
+    createdAt: new Date().toISOString(),
+  });
+  return { ...record, id: ref.id };
+}
+
+export async function updateNotice(input: { groupId: string; noticeId: string; title: string; body: string }) {
+  const database = ensureDb();
+  await updateDoc(doc(database, noticesCollection(input.groupId), input.noticeId), {
+    title: input.title,
+    body: input.body,
+  });
+}
+
+export async function deleteNotice(groupId: string, noticeId: string) {
+  const database = ensureDb();
+  await deleteDoc(doc(database, noticesCollection(groupId), noticeId));
+}
+
+// ── Meals for month (edit-meals table) ───────────────────────────────
+
+export async function getMealsForMonth(groupId: string, monthKey: string) {
+  const database = ensureDb();
+  const snapshot = await getDocs(
+    query(
+      collection(database, mealsCollection(groupId)),
+      where("date", ">=", `${monthKey}-01`),
+      where("date", "<=", `${monthKey}-31`),
+    ),
+  );
+  return snapshot.docs.map((entry) => normalizeDoc<MealEntry>(entry.id, entry.data()));
 }
 
 export async function deleteMember(groupId: string, memberId: string) {

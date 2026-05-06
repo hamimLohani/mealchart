@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import {
@@ -187,17 +187,6 @@ export function MemberManager() {
     });
   }
 
-  async function handleSignOut() {
-    if (!auth) {
-      return;
-    }
-
-    await signOut(auth);
-    setAdminProfile(null);
-    setMembers([]);
-    setError("Log in as an admin to manage members.");
-  }
-
   if (isLoading) {
     return <p className="mt-8 text-sm text-[color:var(--soft-foreground)]">Loading members...</p>;
   }
@@ -209,21 +198,6 @@ export function MemberManager() {
           {error}
         </p>
       ) : null}
-
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.5rem] border border-[color:var(--border)] bg-[color:var(--background)] p-5">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
-            Current admin
-          </p>
-          <p className="mt-2 text-lg font-semibold">
-            {adminProfile?.email ?? "Not logged in"}
-          </p>
-        </div>
-
-        <button className="button-secondary" onClick={handleSignOut} type="button">
-          Sign out
-        </button>
-      </div>
 
       <form
         className="grid gap-4 rounded-[1.5rem] border border-[color:var(--border)] bg-[color:var(--background)] p-5"

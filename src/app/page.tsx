@@ -5,45 +5,31 @@ import { useUiStore } from "@/store/ui-store";
 
 const copy = {
   en: {
-    badge: "Realtime hostel and mess meal management",
-    title: "One shared app for every group, with clean monthly accounting.",
+    badge: "Hostel & mess meal management",
+    title: "One app for every group, with clean monthly accounting.",
     description:
-      "Admins register their group, get a token instantly, and manage members, meals, costs, deposits, notices, and monthly charts from one place.",
+      "Admins register their group, get a token instantly, and manage members, meals, costs, deposits, notices, and monthly charts — all from one place.",
     primary: "Register Group",
     secondary: "Enter With Token",
     admin: "Admin Login",
-    sectionsTitle: "Planned MVP",
-    sections: [
-      "Admin self-registration with auto-generated group token",
-      "Member entry by group token only",
-      "Realtime meals, costs, deposits, and notices",
-      "Monthly chart view and money management summary",
-    ],
     stats: [
-      { label: "Backend", value: "Firebase Only" },
-      { label: "Mode", value: "Multi Group" },
-      { label: "Target", value: "Hostel + Mess" },
+      { label: "Backend", value: "Firebase" },
+      { label: "Mode", value: "Multi-Group" },
+      { label: "Target", value: "Hostel & Mess" },
     ],
   },
   bn: {
-    badge: "হোস্টেল এবং মেসের জন্য রিয়েলটাইম মিল ম্যানেজমেন্ট",
+    badge: "হোস্টেল ও মেসের মিল ম্যানেজমেন্ট",
     title: "একটি অ্যাপেই একাধিক গ্রুপ, পরিষ্কার মাসিক হিসাবসহ।",
     description:
-      "অ্যাডমিন গ্রুপ রেজিস্টার করবে, সাথে সাথে টোকেন পাবে, তারপর সদস্য, মিল, খরচ, জমা টাকা, নোটিশ এবং মাসিক চার্ট এক জায়গা থেকে পরিচালনা করবে।",
+      "অ্যাডমিন গ্রুপ রেজিস্টার করবে, সাথে সাথে টোকেন পাবে, তারপর সদস্য, মিল, খরচ, জমা, নোটিশ ও মাসিক চার্ট এক জায়গা থেকে পরিচালনা করবে।",
     primary: "গ্রুপ রেজিস্টার",
-    secondary: "টোকেন দিয়ে প্রবেশ",
+    secondary: "টোকেন দিয়ে প্রবেশ",
     admin: "অ্যাডমিন লগইন",
-    sectionsTitle: "প্রথম সংস্করণের পরিকল্পনা",
-    sections: [
-      "অ্যাডমিন রেজিস্ট্রেশনের পর অটো গ্রুপ টোকেন",
-      "শুধু গ্রুপ টোকেন দিয়ে সদস্য প্রবেশ",
-      "রিয়েলটাইম মিল, খরচ, জমা টাকা এবং নোটিশ",
-      "মাসভিত্তিক চার্ট ও টাকা ব্যবস্থাপনা",
-    ],
     stats: [
-      { label: "ব্যাকএন্ড", value: "শুধু Firebase" },
-      { label: "মোড", value: "মাল্টি গ্রুপ" },
-      { label: "টার্গেট", value: "হোস্টেল + মেস" },
+      { label: "ব্যাকএন্ড", value: "Firebase" },
+      { label: "মোড", value: "মাল্টি-গ্রুপ" },
+      { label: "টার্গেট", value: "হোস্টেল ও মেস" },
     ],
   },
 } as const;
@@ -53,21 +39,27 @@ export default function Home() {
   const t = copy[language];
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-5 pb-16 pt-8 sm:px-8">
-      <section className="grid gap-8 rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.22),_transparent_34%),linear-gradient(135deg,_rgba(11,94,77,0.96),_rgba(8,28,55,0.98))] p-8 text-white shadow-[0_30px_120px_rgba(8,28,55,0.45)] lg:grid-cols-[1.3fr_0.7fr] lg:p-12">
-        <div className="space-y-8">
-          <span className="inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/80">
+    <main className="mx-auto w-full max-w-7xl px-4 pb-16 pt-6 sm:px-8 sm:pt-10">
+      <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(135deg,_rgba(11,94,77,0.97),_rgba(8,28,55,0.99))] p-6 text-white shadow-[0_24px_80px_rgba(8,28,55,0.4)] sm:p-10 lg:grid lg:grid-cols-[1fr_auto] lg:gap-10 lg:p-14">
+        {/* Decorative glow */}
+        <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-[rgba(44,179,145,0.18)] blur-3xl" />
+
+        {/* Left: copy + CTA */}
+        <div className="relative flex flex-col gap-6 sm:gap-8">
+          <span className="inline-flex w-fit rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.28em] text-white/75 sm:px-4 sm:py-2 sm:text-xs">
             {t.badge}
           </span>
-          <div className="space-y-4">
-            <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
+
+          <div className="flex flex-col gap-3">
+            <h1 className="max-w-2xl text-3xl font-semibold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
               {t.title}
             </h1>
-            <p className="max-w-2xl text-base leading-7 text-white/78 sm:text-lg">
+            <p className="max-w-xl text-sm leading-7 text-white/70 sm:text-base sm:leading-8">
               {t.description}
             </p>
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row">
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             <Link className="button-primary" href="/register">
               {t.primary}
             </Link>
@@ -80,50 +72,19 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="grid gap-4 rounded-[1.75rem] border border-white/12 bg-black/18 p-5 backdrop-blur">
+        {/* Right: stats */}
+        <div className="relative mt-8 flex flex-row gap-3 lg:mt-0 lg:flex-col lg:justify-center">
           {t.stats.map((stat) => (
             <div
               key={stat.label}
-              className="rounded-[1.25rem] border border-white/10 bg-white/8 p-4"
+              className="flex-1 rounded-[1.25rem] border border-white/12 bg-white/8 p-3 text-center backdrop-blur sm:p-4 lg:min-w-[9rem] lg:text-left"
             >
-              <p className="text-xs uppercase tracking-[0.28em] text-white/55">
+              <p className="text-[0.65rem] uppercase tracking-[0.24em] text-white/50 sm:text-xs">
                 {stat.label}
               </p>
-              <p className="mt-2 text-2xl font-semibold">{stat.value}</p>
+              <p className="mt-1 text-base font-semibold sm:mt-2 sm:text-xl">{stat.value}</p>
             </div>
           ))}
-        </div>
-      </section>
-
-      <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {t.sections.map((item, index) => (
-          <article
-            key={item}
-            className="rounded-[1.5rem] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-sm"
-          >
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[color:var(--muted)]">
-              0{index + 1}
-            </p>
-            <h2 className="mt-4 text-lg font-semibold text-[color:var(--foreground)]">
-              {item}
-            </h2>
-          </article>
-        ))}
-      </section>
-
-      <section className="mt-10 rounded-[2rem] border border-[color:var(--border)] bg-[color:var(--panel)] p-6 shadow-sm">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[color:var(--muted)]">
-              {t.sectionsTitle}
-            </p>
-            <h2 className="mt-2 text-2xl font-semibold text-[color:var(--foreground)]">
-              Project shell is ready for Firebase integration.
-            </h2>
-          </div>
-          <Link className="button-primary" href="/admin">
-            Open App Map
-          </Link>
         </div>
       </section>
     </main>

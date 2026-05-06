@@ -26,7 +26,7 @@ export function AdminLoginForm() {
 
     try {
       await signInWithEmailAndPassword(auth, email.trim(), password);
-      router.push("/admin/members");
+      router.push("/admin");
     } catch (loginError) {
       setError(
         loginError instanceof Error ? loginError.message : "Failed to log in.",
@@ -76,7 +76,7 @@ export function AdminLoginForm() {
       ) : null}
 
       <button
-        className="button-primary w-full sm:w-fit disabled:cursor-not-allowed disabled:opacity-60"
+        className="button-primary w-full disabled:cursor-not-allowed disabled:opacity-60"
         disabled={isSubmitting || !isFirebaseConfigured}
         type="submit"
       >

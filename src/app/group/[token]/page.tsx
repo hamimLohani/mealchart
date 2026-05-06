@@ -1,5 +1,6 @@
-import { PageCard } from "@/components/layout/page-card";
 import { GroupDashboard } from "@/components/group/group-dashboard";
+import { GroupNavbar } from "@/components/group/group-navbar";
+
 
 export default async function GroupDashboardPage({
   params,
@@ -9,12 +10,11 @@ export default async function GroupDashboardPage({
   const { token } = await params;
 
   return (
-    <PageCard
-      eyebrow={`Group ${token}`}
-      title="Shared group dashboard"
-      description="This route will show today’s meal inputs for every member and act as the main group entry point after a token lookup."
-    >
+    <main className="mx-auto w-full max-w-7xl px-4 pb-16 sm:px-8">
+      <GroupNavbar token={token} searchValue={""} />
       <GroupDashboard token={token} />
-    </PageCard>
+    </main>
   );
 }
+
+
