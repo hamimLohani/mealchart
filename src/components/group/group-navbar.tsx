@@ -7,13 +7,14 @@ import { useMemo } from "react";
 import type { Member } from "@/types/domain";
 
 
-type NavKey = "chart" | "money" | "history" | "notices";
+type NavKey = "chart" | "money" | "history" | "notices" | "members";
 
 const navItems: Array<{ key: NavKey; label: string }> = [
   { key: "chart", label: "Chart" },
   { key: "money", label: "Money" },
   { key: "history", label: "History" },
   { key: "notices", label: "Notices" },
+  { key: "members", label: "Members" },
 ];
 
 export function GroupNavbar({
@@ -33,7 +34,7 @@ export function GroupNavbar({
     const parts = pathname.split("/").filter(Boolean);
     // expected: group / [token] / [section]
     const last = parts[parts.length - 1] as NavKey | undefined;
-    if (last === "chart" || last === "money" || last === "history" || last === "notices") return last;
+    if (last === "chart" || last === "money" || last === "history" || last === "notices" || last === "members") return last;
     return "chart";
   }, [pathname]);
 
@@ -78,4 +79,3 @@ export function GroupNavbar({
     </div>
   );
 }
-

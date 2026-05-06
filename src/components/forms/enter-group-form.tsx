@@ -6,15 +6,9 @@ import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { findGroupByToken, listMembers } from "@/lib/firebase/repositories";
 import type { Member } from "@/types/domain";
 
-type Step = "token" | "member";
-
 export function EnterGroupForm() {
   const router = useRouter();
-  const [step, setStep] = useState<Step>("token");
   const [token, setToken] = useState("");
-  const [members, setMembers] = useState<Member[]>([]);
-  const [groupId, setGroupId] = useState(""); // kept for potential future use
-  const [groupToken, setGroupToken] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -47,52 +41,13 @@ export function EnterGroupForm() {
         return;
       }
 
-      setGroupId(group.id);
-      setGroupToken(group.token);
-      setMembers(memberList);
-      setStep("member");
+      // Navigate directly to the group members page
+      router.push(`/group/${group.token}/members`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to find that group.");
     } finally {
       setIsSubmitting(false);
     }
-  }
-
-  function handleMemberSelect(member: Member) {
-    sessionStorage.setItem("mc_member_id", member.id);
-    sessionStorage.setItem("mc_member_name", member.fullName);
-    router.push(`/group/${groupToken}`);
-  }
-
-  if (step === "member") {
-    return (
-      <div className="mt-6 grid gap-3">
-        <p className="text-sm font-medium text-[color:var(--foreground)]">
-          Who are you? Pick your name:
-        </p>
-        {members.map((member) => (
-          <button
-            key={member.id}
-            type="button"
-            onClick={() => handleMemberSelect(member)}
-            className="flex items-center justify-between rounded-2xl border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3 text-left transition hover:border-[color:var(--accent)] active:scale-[0.98]"
-          >
-            <div>
-              <p className="font-semibold text-[color:var(--foreground)]">{member.fullName}</p>
-              <p className="text-xs text-[color:var(--muted)]">Joined {member.joinDate}</p>
-            </div>
-            <span className="text-[color:var(--accent)]">→</span>
-          </button>
-        ))}
-        <button
-          type="button"
-          onClick={() => { setStep("token"); setError(null); }}
-          className="mt-1 text-sm text-[color:var(--soft-foreground)] underline underline-offset-2"
-        >
-          ← Use a different token
-        </button>
-      </div>
-    );
   }
 
   return (

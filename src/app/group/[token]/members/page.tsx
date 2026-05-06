@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { GroupDashboard } from "@/components/group/group-dashboard";
 import { GroupNavbar } from "@/components/group/group-navbar";
+import { GroupMembersList } from "@/components/group/group-members-list";
 import { use } from "react";
 
-export default function GroupDashboardPage({
+export default function GroupMembersPage({
   params,
 }: {
   params: Promise<{ token: string }>;
@@ -20,7 +20,7 @@ export default function GroupDashboardPage({
         searchValue={searchValue} 
         onSearchValueChange={setSearchValue} 
       />
-      <GroupDashboard token={token} memberSearch={searchValue} />
+      <GroupMembersList token={token} memberSearch={searchValue} />
     </main>
   );
 }

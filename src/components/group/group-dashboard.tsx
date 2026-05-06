@@ -32,12 +32,16 @@ function localDateString() {
   return `${y}-${m}-${day}`;
 }
 
-export function GroupDashboard({ token }: { token: string }) {
-
+export function GroupDashboard({ 
+  token, 
+  memberSearch = "" 
+}: { 
+  token: string; 
+  memberSearch?: string; 
+}) {
   const router = useRouter();
   const [group, setGroup] = useState<Group | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
-  const [memberSearch, setMemberSearch] = useState<string>("");
 
 
 
@@ -56,25 +60,20 @@ export function GroupDashboard({ token }: { token: string }) {
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   useEffect(() => {
-    // Read who selected themselves on the enter-group page
+    // Check if a member has already been selected
     const storedId = sessionStorage.getItem("mc_member_id");
     const storedName = sessionStorage.getItem("mc_member_name");
 
-    if (!storedId) {
-      // No member selected — send back to enter-group
-      router.replace("/enter-group");
-      return;
-    }
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    queueMicrotask(() => {
+    if (storedId && storedName) {
+      // Member already selected, set the active member
       setActiveMemberId(storedId);
       setActiveMemberName(storedName);
-    });
-  }, [router]);
+    }
+    // If no member is selected, we stay in selection mode
+  }, []);
 
   useEffect(() => {
-    if (!activeMemberId) return;
+    if (!token) return;
     let active = true;
 
     async function load() {
@@ -87,19 +86,20 @@ export function GroupDashboard({ token }: { token: string }) {
         const currentGroup = await findGroupByToken(token);
         if (!currentGroup) throw new Error("No group found for this token.");
 
-        const [currentMembers, todayMeals] = await Promise.all([
-          listMembers(currentGroup.id),
-          getMealsForDate(currentGroup.id, today),
-        ]);
+        const currentMembers = await listMembers(currentGroup.id);
 
         if (!active) return;
 
-        const mealMap: Record<string, number> = {};
-        todayMeals.forEach((m: MealEntry) => { mealMap[m.memberId] = m.quantity; });
-
         setGroup(currentGroup);
         setMembers(currentMembers);
-        setMeals(mealMap);
+        
+        // If we already have an active member, load their meal data too
+        if (activeMemberId) {
+          const todayMeals = await getMealsForDate(currentGroup.id, today);
+          const mealMap: Record<string, number> = {};
+          todayMeals.forEach((m: MealEntry) => { mealMap[m.memberId] = m.quantity; });
+          setMeals(mealMap);
+        }
       } catch (err) {
         if (!active) return;
         setError(err instanceof Error ? err.message : "Failed to load group.");
@@ -111,6 +111,24 @@ export function GroupDashboard({ token }: { token: string }) {
     void load();
     return () => { active = false; };
   }, [token, today, activeMemberId]);
+
+  const handleMemberSelect = (member: Member) => {
+    sessionStorage.setItem("mc_member_id", member.id);
+    sessionStorage.setItem("mc_member_name", member.fullName);
+    setActiveMemberId(member.id);
+    setActiveMemberName(member.fullName);
+    
+    // Reload meals after setting the active member
+    if (group) {
+      getMealsForDate(group.id, today).then(todayMeals => {
+        const mealMap: Record<string, number> = {};
+        todayMeals.forEach((m: MealEntry) => { mealMap[m.memberId] = m.quantity; });
+        setMeals(mealMap);
+      }).catch(err => {
+        setError(err instanceof Error ? err.message : "Failed to load meals.");
+      });
+    }
+  };
 
   function handleMealChange(memberId: string, value: number) {
     // Only the active member can change their own meals
@@ -135,10 +153,15 @@ export function GroupDashboard({ token }: { token: string }) {
     }, 500);
   }
 
+  function handleMemberClick(memberId: string) {
+    router.push(`/group/${token}/member/${memberId}`);
+  }
+
   function handleLeave() {
     sessionStorage.removeItem("mc_member_id");
     sessionStorage.removeItem("mc_member_name");
-    router.push("/enter-group");
+    setActiveMemberId(null);
+    setActiveMemberName(null);
   }
 
   if (isLoading) {
@@ -155,20 +178,64 @@ export function GroupDashboard({ token }: { token: string }) {
 
   if (!group) return null;
 
+  // If no member has been selected yet, show the member selection screen
+  if (!activeMemberId || !activeMemberName) {
+    return (
+      <div className="py-6 grid gap-4">
+        {/* Group header */}
+        <div className="flex items-center justify-between gap-3 rounded-[1.5rem] border border-[color:var(--border)] bg-[color:var(--panel)] px-4 py-3 sm:px-5 sm:py-4">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
+              {group.name}
+            </p>
+            <p className="mt-0.5 truncate text-base font-semibold text-[color:var(--foreground)]">
+              Select Your Name
+            </p>
+          </div>
+        </div>
+
+        {/* Members selection */}
+        <div className="rounded-[1.5rem] border border-[color:var(--border)] bg-[color:var(--panel)] p-4 sm:p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
+            Who are you? Pick your name:
+          </p>
+          <div className="mt-3 grid gap-2">
+            {members.map((member) => (
+              <div
+                key={member.id}
+                onClick={() => handleMemberSelect(member)}
+                className="flex items-center justify-between rounded-[1rem] border px-3 py-2.5 cursor-pointer border-[color:var(--border)] bg-[color:var(--background)] hover:bg-[color-mix(in_srgb,var(--accent)_8%,transparent)] hover:border-[color:var(--accent)]"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-[color:var(--foreground)]">
+                    {member.fullName}
+                  </p>
+                  <p className="text-xs text-[color:var(--muted)]">
+                    Joined {new Date(member.joinDate).toLocaleDateString()}
+                  </p>
+                </div>
+                <span className="text-[color:var(--accent)]">→</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const totalMeals = Object.values(meals).reduce((sum, q) => sum + q, 0);
   const myMeals = activeMemberId ? (meals[activeMemberId] ?? 0) : 0;
 
   return (
     <div className="py-6 grid gap-4">
       {/* Top bar */}
-
       <div className="flex items-center justify-between gap-3 rounded-[1.5rem] border border-[color:var(--border)] bg-[color:var(--panel)] px-4 py-3 sm:px-5 sm:py-4">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
             {group.name}
           </p>
           <p className="mt-0.5 truncate text-base font-semibold text-[color:var(--foreground)]">
-            {activeMemberName ?? "Member"}
+            {activeMemberName}
           </p>
         </div>
         <button
@@ -176,7 +243,7 @@ export function GroupDashboard({ token }: { token: string }) {
           type="button"
           className="shrink-0 rounded-full border border-[color:var(--border)] px-3 py-1.5 text-xs font-semibold text-[color:var(--soft-foreground)] transition hover:border-[color:var(--accent)]"
         >
-          Leave
+          Change
         </button>
       </div>
 
@@ -232,10 +299,10 @@ export function GroupDashboard({ token }: { token: string }) {
         </div>
       </div>
 
-      {/* All members today */}
+      {/* All members - clickable to go to meal adding page */}
       <div className="rounded-[1.5rem] border border-[color:var(--border)] bg-[color:var(--panel)] p-4 sm:p-5">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
-          Today&apos;s meals — all members
+          Group Members
         </p>
         <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {members
@@ -250,10 +317,11 @@ export function GroupDashboard({ token }: { token: string }) {
               return (
                 <div
                   key={member.id}
-                  className={`flex items-center justify-between rounded-[1rem] border px-3 py-2.5 ${
+                  onClick={() => handleMemberClick(member.id)}
+                  className={`flex items-center justify-between rounded-[1rem] border px-3 py-2.5 cursor-pointer ${
                     isMe
                       ? "border-[color:var(--accent)] bg-[color-mix(in_srgb,var(--accent)_8%,transparent)]"
-                      : "border-[color:var(--border)] bg-[color:var(--background)]"
+                      : "border-[color:var(--border)] bg-[color:var(--background)] hover:bg-[color-mix(in_srgb,var(--accent)_8%,transparent)] hover:border-[color:var(--accent)]"
                   }`}
                 >
                   <div className="min-w-0">
@@ -264,10 +332,11 @@ export function GroupDashboard({ token }: { token: string }) {
                     >
                       {member.fullName} {isMe && "(you)"}
                     </p>
+                    <p className="text-xs text-[color:var(--muted)]">
+                      Today: {formatMeal(qty)} meal{qty !== 1 ? 's' : ''}
+                    </p>
                   </div>
-                  <span className="ml-3 shrink-0 text-lg font-bold text-[color:var(--foreground)]">
-                    {formatMeal(qty)}
-                  </span>
+                  <span className="text-[color:var(--accent)]">→</span>
                 </div>
               );
             })}
