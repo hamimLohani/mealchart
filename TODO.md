@@ -1,5 +1,0 @@
-- [ ] Locate the existing chart/money/history/notices quick-links bar and remove it from member sub-pages (chart/money/history/notices) if present
-- [ ] Move/add the quick-links bar so it appears immediately on `/group/[token]` (dashboard) right after entering with token
-- [ ] Ensure links point to `/group/${token}/{chart|money|history|notices}` using the correct token
-- [ ] Run lint/build to confirm Next/TS compiles
-- [ ] Smoke-test in browser: enter token -> dashboard shows bar; sub-pages should not show the bar

@@ -210,6 +210,7 @@ export function CostsManager() {
               type="date"
               min={dateBounds.min}
               max={dateBounds.max}
+              placeholder={toDateInputValue(new Date())}
               value={date}
               onChange={(e) => setDate(e.target.value)}
               required

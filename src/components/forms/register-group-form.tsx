@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import Link from "next/link";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase/client";
@@ -151,13 +152,24 @@ export function RegisterGroupForm() {
       )}
 
       {createdToken ? (
-        <button
-          className="button-primary w-full"
-          onClick={() => void handleCopyToken()}
-          type="button"
-        >
-          {hasCopiedToken ? "✓ Token copied" : "Copy token"}
-        </button>
+        <div className="grid gap-3">
+          <button
+            className="button-primary w-full"
+            onClick={() => void handleCopyToken()}
+            type="button"
+          >
+            {hasCopiedToken ? "✓ Token copied" : "Copy token"}
+          </button>
+          <Link href="/admin/login" className="button-secondary w-full text-center">
+            Go to admin login
+          </Link>
+          <p className="text-center text-xs text-[color:var(--soft-foreground)]">
+            You are already signed in after registration — you can open the dashboard directly or use admin login on another device.
+          </p>
+          <Link href="/admin" className="text-center text-sm font-semibold text-[color:var(--accent)] underline-offset-2 hover:underline">
+            Open admin dashboard →
+          </Link>
+        </div>
       ) : (
         <button
           className="button-primary w-full"

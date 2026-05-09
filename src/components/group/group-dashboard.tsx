@@ -12,7 +12,8 @@ import {
   listDepositsForChart,
 } from "@/lib/firebase/repositories";
 import type { Chart, CostEntry, DepositEntry, Group, MealEntry, Member } from "@/types/domain";
-import { daysInMonth } from "@/lib/utils/date";
+import { GroupTokenMismatchHint } from "@/components/forms/group-token-mismatch-hint";
+import { readStoredChartFromSession } from "@/lib/utils/group-chart-session";
 import { formatMeal, getMonthTotals } from "@/lib/utils/meal-money";
 
 export function GroupDashboard({
@@ -31,35 +32,9 @@ export function GroupDashboard({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Session state
-  const [activeChart, setActiveChart] = useState<Chart | null>(null);
+  // Session state (restored synchronously from sessionStorage on client mount)
+  const [activeChart, setActiveChart] = useState<Chart | null>(() => readStoredChartFromSession());
   const [memberSearch, setMemberSearch] = useState("");
-
-  // Restore session
-  useEffect(() => {
-    const storedChartId = sessionStorage.getItem("mc_chart_id");
-    const storedChartLabel = sessionStorage.getItem("mc_chart_label");
-    const storedChartMonthKey = sessionStorage.getItem("mc_chart_month_key");
-    const storedChartYear = sessionStorage.getItem("mc_chart_year");
-    const storedChartMonth = sessionStorage.getItem("mc_chart_month");
-    const storedChartLocked = sessionStorage.getItem("mc_chart_locked");
-
-    if (storedChartId && storedChartLabel && storedChartMonthKey && storedChartYear && storedChartMonth) {
-      queueMicrotask(() => {
-        setActiveChart({
-          id: storedChartId,
-          label: storedChartLabel,
-          monthKey: storedChartMonthKey,
-          year: Number(storedChartYear),
-          month: Number(storedChartMonth),
-          totalDays: daysInMonth(Number(storedChartYear), Number(storedChartMonth)),
-          active: true,
-          locked: storedChartLocked === "true",
-          createdAt: "",
-        });
-      });
-    }
-  }, []);
 
   // Load group, members, charts
   useEffect(() => {
@@ -147,7 +122,14 @@ export function GroupDashboard({
   }
 
   if (isLoading) return <p className="py-16 text-center text-sm text-[color:var(--soft-foreground)]">Loading group…</p>;
-  if (error) return <div className="mt-8 alert-error">{error}</div>;
+  if (error) {
+    return (
+      <div className="mt-8">
+        <div className="alert-error">{error}</div>
+        <GroupTokenMismatchHint message={error} />
+      </div>
+    );
+  }
   if (!group) return null;
 
   const { totalMeals: monthTotalMeals, totalCost: monthTotalCost, totalPaid: monthTotalPaid, mealRate, remainingTaka } =

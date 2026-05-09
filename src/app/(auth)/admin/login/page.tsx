@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AdminLoginForm } from "@/components/forms/admin-login-form";
 
 export default function AdminLoginPage() {
@@ -14,6 +15,14 @@ export default function AdminLoginPage() {
         Enter your admin email and password to continue.
       </p>
       <AdminLoginForm />
+      <div className="mt-8 border-t border-[color:var(--border)] pt-6">
+        <p className="text-center text-xs font-medium text-[color:var(--muted)]">
+          Need a group and token?
+        </p>
+        <Link href="/register" className="button-secondary mt-3 block w-full text-center">
+          Register a group
+        </Link>
+      </div>
     </div>
   );
 }

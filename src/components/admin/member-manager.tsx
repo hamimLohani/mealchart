@@ -156,6 +156,7 @@ export function MemberManager() {
             <input
               className="input"
               onChange={(e) => setForm((c) => ({ ...c, joinDate: e.target.value }))}
+              placeholder={toDateInputValue(new Date())}
               type="date"
               value={form.joinDate}
             />

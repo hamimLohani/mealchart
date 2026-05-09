@@ -252,6 +252,7 @@ export function AddMoneyManager() {
               min={depositDateBounds.min}
               max={depositDateBounds.max}
               onChange={(e) => setForm((c) => ({ ...c, date: e.target.value }))}
+              placeholder={toDateInputValue(new Date())}
               type="date"
               value={form.date}
             />

@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { findGroupByToken, listMembers } from "@/lib/firebase/repositories";
+import { GroupTokenMismatchHint } from "@/components/forms/group-token-mismatch-hint";
 
 export function EnterGroupForm() {
   const router = useRouter();
@@ -67,6 +68,7 @@ export function EnterGroupForm() {
       )}
 
       {error && <p className="alert-error">{error}</p>}
+      <GroupTokenMismatchHint message={error} />
 
       <button
         className="button-primary w-full"

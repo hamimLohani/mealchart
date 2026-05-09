@@ -12,6 +12,7 @@ import {
 } from "@/lib/firebase/repositories";
 import { useGroupSession } from "@/lib/hooks/use-group-session";
 import type { CostEntry, DepositEntry, Group, MealEntry, Member } from "@/types/domain";
+import { GroupTokenMismatchHint } from "@/components/forms/group-token-mismatch-hint";
 import { memberDisplayName, memberIdsForMoneyRows } from "@/lib/utils/chart-members";
 import { formatMeal, getMonthTotals } from "@/lib/utils/meal-money";
 
@@ -69,7 +70,14 @@ export function GroupMoneyView({ token }: { token: string }) {
   }, [group, chart]);
 
   if (isLoading) return <p className="py-16 text-center text-sm text-[color:var(--soft-foreground)]">Loading…</p>;
-  if (error) return <div className="mt-8 alert-error">{error}</div>;
+  if (error) {
+    return (
+      <div className="mt-8">
+        <div className="alert-error">{error}</div>
+        <GroupTokenMismatchHint message={error} />
+      </div>
+    );
+  }
   if (!group) return null;
 
   if (!chart) {

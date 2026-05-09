@@ -8,7 +8,7 @@ export default async function GroupNoticesPage({
 }) {
   const { token } = await params;
   return (
-    <main className="group-workspace">
+    <main className="mx-auto w-full max-w-7xl px-4 pb-16 sm:px-8">
       <GroupNavbar token={token} />
       <GroupNoticesView token={token} />
     </main>

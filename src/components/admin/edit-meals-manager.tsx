@@ -100,17 +100,30 @@ export function EditMealsManager() {
     return members.some((m) => m.id === memberId);
   }
 
+  function parseMealQuantity(raw: string): number {
+    if (raw === "") return 0;
+    const n = Number(raw);
+    if (!Number.isFinite(n) || n < 0) return 0;
+    return Math.min(20, n);
+  }
+
   function handleChange(memberId: string, date: string, raw: string) {
     if (!adminProfile || !selectedChart || selectedChart.locked || !isActiveMember(memberId)) return;
-    const val = raw === "" ? 0 : Math.max(0, Number(raw));
+    const val = parseMealQuantity(raw);
     setMeals((prev) => ({
       ...prev,
       [memberId]: { ...(prev[memberId] ?? {}), [date]: val },
     }));
     const key = `${memberId}_${date}`;
     clearTimeout(savingRef.current[key]);
-    savingRef.current[key] = setTimeout(async () => {
-      await saveMealEntry({ groupId: adminProfile.groupId, memberId, date, quantity: val });
+    savingRef.current[key] = setTimeout(() => {
+      void (async () => {
+        try {
+          await saveMealEntry({ groupId: adminProfile.groupId, memberId, date, quantity: val });
+        } catch (e) {
+          setError(e instanceof Error ? e.message : "Failed to save meal.");
+        }
+      })();
     }, 600);
   }
 

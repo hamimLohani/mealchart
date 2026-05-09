@@ -12,15 +12,11 @@ import {
   listMembers,
   saveMealEntry,
 } from "@/lib/firebase/repositories";
+import { GroupTokenMismatchHint } from "@/components/forms/group-token-mismatch-hint";
 import { useGroupSession } from "@/lib/hooks/use-group-session";
 import type { CostEntry, DepositEntry, Group, MealEntry, Member } from "@/types/domain";
-import { daysInMonth } from "@/lib/utils/date";
+import { chartMonthDateBounds, daysInMonth, toDateInputValue } from "@/lib/utils/date";
 import { formatMeal, getMemberTotals, getMonthTotals } from "@/lib/utils/meal-money";
-
-function localDateString() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
 
 export default function MemberPage({
   params,
@@ -35,7 +31,7 @@ export default function MemberPage({
   const [meals, setMeals] = useState<MealEntry[]>([]);
   const [costs, setCosts] = useState<CostEntry[]>([]);
   const [deposits, setDeposits] = useState<DepositEntry[]>([]);
-  const [selectedDate, setSelectedDate] = useState<string>(localDateString());
+  const [selectedDate, setSelectedDate] = useState<string>(() => toDateInputValue(new Date()));
   const [mealCount, setMealCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isMonthLoading, setIsMonthLoading] = useState(false);
@@ -71,6 +67,14 @@ export default function MemberPage({
     void load();
     return () => { active = false; };
   }, [token, memberId]);
+
+  useEffect(() => {
+    if (!chart) return;
+    const bounds = chartMonthDateBounds(chart);
+    const today = toDateInputValue(new Date());
+    const clamped = today < bounds.min ? bounds.min : today > bounds.max ? bounds.max : today;
+    queueMicrotask(() => setSelectedDate(clamped));
+  }, [chart]);
 
   useEffect(() => {
     if (!group || !chart) return;
@@ -125,7 +129,14 @@ export default function MemberPage({
   }, [group, chart, selectedDate, memberId]);
 
   if (isLoading) return <p className="py-16 text-center text-sm text-[color:var(--soft-foreground)]">Loading member…</p>;
-  if (error) return <div className="mt-8 alert-error">{error}</div>;
+  if (error) {
+    return (
+      <div className="mt-8">
+        <div className="alert-error">{error}</div>
+        <GroupTokenMismatchHint message={error} />
+      </div>
+    );
+  }
   if (!group || !member) return null;
   if (!chart) {
     return (
@@ -157,7 +168,7 @@ export default function MemberPage({
   });
 
   async function handleMealChange(value: number) {
-    if (!group || !selectedDate || chart.locked) return;
+    if (!group || !selectedDate || !chart || chart.locked) return;
     const clamped = Math.max(0, value);
     setMealCount(clamped);
     setSaved(false);
@@ -221,6 +232,7 @@ export default function MemberPage({
                   className="input"
                   min={monthStart}
                   max={monthEnd}
+                  placeholder={toDateInputValue(new Date())}
                   value={selectedDate}
                   onChange={(event) => setSelectedDate(event.target.value)}
                   disabled={chart.locked}

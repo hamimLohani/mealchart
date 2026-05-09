@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
+import { GroupTokenMismatchHint } from "@/components/forms/group-token-mismatch-hint";
 import { findGroupByToken, listMembers } from "@/lib/firebase/repositories";
 import type { Group, Member } from "@/types/domain";
 
@@ -45,7 +46,14 @@ export function GroupMemberDashboard({ token }: { token: string }) {
     );
   }
 
-  if (error) return <div className="mt-8 alert-error">{error}</div>;
+  if (error) {
+    return (
+      <div className="mt-8">
+        <div className="alert-error">{error}</div>
+        <GroupTokenMismatchHint message={error} />
+      </div>
+    );
+  }
   if (!group) return null;
 
   return (

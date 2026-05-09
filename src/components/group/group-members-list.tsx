@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
+import { GroupTokenMismatchHint } from "@/components/forms/group-token-mismatch-hint";
 import { findGroupByToken, listMembers } from "@/lib/firebase/repositories";
 import { useGroupSession } from "@/lib/hooks/use-group-session";
 import type { Group, Member } from "@/types/domain";
@@ -44,7 +45,14 @@ export function GroupMembersList({
   }, [token]);
 
   if (isLoading) return <p className="py-16 text-center text-sm text-[color:var(--soft-foreground)]">Loading members…</p>;
-  if (error) return <div className="mt-8 alert-error">{error}</div>;
+  if (error) {
+    return (
+      <div className="mt-8">
+        <div className="alert-error">{error}</div>
+        <GroupTokenMismatchHint message={error} />
+      </div>
+    );
+  }
   if (!group) return null;
 
   const filtered = members.filter((m) => {
