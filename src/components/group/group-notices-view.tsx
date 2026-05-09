@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { Timestamp } from "firebase/firestore";
+import { useRouter } from "next/navigation";
 import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { GroupTokenMismatchHint } from "@/components/forms/group-token-mismatch-hint";
-import { findGroupByToken, listNotices } from "@/lib/firebase/repositories";
+import { findGroupByToken, listNoticesForChart } from "@/lib/firebase/repositories";
+import { useGroupSession } from "@/lib/hooks/use-group-session";
 import type { Group, Notice } from "@/types/domain";
 
 function formatNoticeCreatedAt(raw: unknown, locale: string): string {
@@ -28,12 +30,16 @@ function formatNoticeCreatedAt(raw: unknown, locale: string): string {
 }
 
 export function GroupNoticesView({ token }: { token: string }) {
+  const router = useRouter();
   const { t, tx, language } = useT();
   const locale = language === "bn" ? "bn" : "en";
+  const { chart } = useGroupSession();
+  
   const [group, setGroup] = useState<Group | null>(null);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -46,10 +52,8 @@ export function GroupNoticesView({ token }: { token: string }) {
       try {
         const g = await findGroupByToken(token);
         if (!g) throw new Error("Group not found.");
-        const list = await listNotices(g.id);
         if (!active) return;
         setGroup(g);
-        setNotices(list);
       } catch (e) {
         if (!active) return;
         setError(tx(e instanceof Error ? e.message : t("errors.loadNoticesFailed")));
@@ -62,6 +66,28 @@ export function GroupNoticesView({ token }: { token: string }) {
       active = false;
     };
   }, [t, tx, token]);
+
+  useEffect(() => {
+    if (!group || !chart) return;
+    let active = true;
+    setDataLoading(true);
+
+    listNoticesForChart(group.id, chart.id)
+      .then((list) => {
+        if (!active) return;
+        setNotices(list);
+      })
+      .catch((e) => {
+        if (active) setError(tx(e instanceof Error ? e.message : t("errors.genericLoad")));
+      })
+      .finally(() => {
+        if (active) setDataLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [group, chart, t, tx]);
 
   if (isLoading) {
     return <p className="py-16 text-center text-sm text-[color:var(--soft-foreground)]">{t("common.loading")}</p>;
@@ -76,6 +102,27 @@ export function GroupNoticesView({ token }: { token: string }) {
   }
   if (!group) return null;
 
+  if (!chart) {
+    return (
+      <div className="group-page-grid">
+        <div className="group-hero">
+          <div className="min-w-0">
+            <p className="group-kicker">{group.name}</p>
+            <p className="group-title">{t("groupNotices.pageTitle")}</p>
+            <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">{t("groupChart.noMonthBody")}</p>
+          </div>
+          <button type="button" onClick={() => router.push(`/group/${token}`)} className="button-secondary shrink-0">
+            ← {t("groupNav.home")}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (dataLoading) {
+    return <p className="py-16 text-center text-sm text-[color:var(--soft-foreground)]">{t("common.loading")}</p>;
+  }
+
   const subtitle =
     notices.length === 0
       ? t("groupNotices.noneTitle")
@@ -89,6 +136,7 @@ export function GroupNoticesView({ token }: { token: string }) {
         <div className="min-w-0">
           <p className="group-kicker">{group.name}</p>
           <p className="group-title">{t("groupNotices.pageTitle")}</p>
+          <p className="mt-1 text-sm font-medium text-[color:var(--accent)]">{chart.label}</p>
           <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">{subtitle}</p>
         </div>
       </div>

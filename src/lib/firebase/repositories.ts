@@ -29,7 +29,7 @@ import {
   chartDepositsCollection,
   mealsCollection,
   membersCollection,
-  noticesCollection,
+  chartNoticesCollection,
   groupsCollection,
   lockedMonthsCollection,
 } from "@/lib/firebase/paths";
@@ -145,14 +145,7 @@ export async function createMember(input: {
     record,
   );
 
-  await addDoc(collection(database, noticesCollection(input.groupId)), {
-    ...buildNoticeRecord({
-      title: "Member added",
-      body: `${input.fullName} was added to the group.`,
-      systemGenerated: true,
-    }),
-    createdAt: serverTimestamp(),
-  });
+  await addSystemNoticeToCurrentChart(database, input.groupId, "Member added", `${input.fullName} was added to the group.`);
 
   return record;
 }
@@ -175,14 +168,7 @@ export async function updateMember(input: {
 
   await updateDoc(memberRef, payload);
 
-  await addDoc(collection(database, noticesCollection(input.groupId)), {
-    ...buildNoticeRecord({
-      title: "Member updated",
-      body: `${input.fullName} was updated.`,
-      systemGenerated: true,
-    }),
-    createdAt: serverTimestamp(),
-  });
+  await addSystemNoticeToCurrentChart(database, input.groupId, "Member updated", `${input.fullName} was updated.`);
 
   return { id: input.memberId, ...payload } as Member;
 }
@@ -197,14 +183,7 @@ export async function deleteMember(groupId: string, memberId: string) {
   const data = snapshot.data();
   await deleteDoc(memberRef);
 
-  await addDoc(collection(database, noticesCollection(groupId)), {
-    ...buildNoticeRecord({
-      title: "Member removed",
-      body: `${String(data.fullName ?? "A member")} was removed from the group.`,
-      systemGenerated: true,
-    }),
-    createdAt: serverTimestamp(),
-  });
+  await addSystemNoticeToCurrentChart(database, groupId, "Member removed", `${String(data.fullName ?? "A member")} was removed from the group.`);
 }
 
 // ── Charts ────────────────────────────────────────────────────────────
@@ -276,7 +255,7 @@ export async function createChart(input: {
     currentChartMonth: monthKey,
   });
 
-  await addDoc(collection(database, noticesCollection(input.groupId)), {
+  await addDoc(collection(database, chartNoticesCollection(input.groupId, chartId)), {
     ...buildNoticeRecord({
       title: "New chart created",
       body: `${record.label} chart was created with ${record.totalDays} days and set as active.`,
@@ -390,6 +369,7 @@ export async function createDeposit(input: {
   amount: number;
   date: string;
   collectedByAdminId: string;
+  memberName?: string;
 }) {
   await assertDateBelongsToChart(input.groupId, input.chartId, input.date);
   const database = ensureDb();
@@ -407,12 +387,12 @@ export async function createDeposit(input: {
     record,
   );
 
-  await addDoc(collection(database, noticesCollection(input.groupId)), {
+  await addDoc(collection(database, chartNoticesCollection(input.groupId, input.chartId)), {
     ...buildNoticeRecord({
       title: input.amount < 0 ? "Money deducted" : "Money added",
       body: input.amount < 0 
-        ? `An amount of ${Math.abs(input.amount).toFixed(2)} tk was deducted/returned.` 
-        : `A deposit of ${input.amount.toFixed(2)} tk was added.`,
+        ? `An amount of ${Math.abs(input.amount).toFixed(2)} tk was deducted/returned for ${input.memberName || 'a member'}.` 
+        : `A deposit of ${input.amount.toFixed(2)} tk was added for ${input.memberName || 'a member'}.`,
       systemGenerated: true,
     }),
     createdAt: serverTimestamp(),
@@ -452,6 +432,8 @@ export async function saveMealEntry(input: {
   memberId: string;
   date: string;
   quantity: number;
+  chartId?: string;
+  memberName?: string;
 }) {
   const database = ensureDb();
   const docId = `${input.memberId}_${input.date}`;
@@ -462,6 +444,17 @@ export async function saveMealEntry(input: {
     quantity: input.quantity,
     monthKey,
   });
+
+  if (input.chartId && input.memberName) {
+    await addDoc(collection(database, chartNoticesCollection(input.groupId, input.chartId)), {
+      ...buildNoticeRecord({
+        title: "Meal updated",
+        body: `Meal entry for ${input.memberName} on ${input.date} was updated to ${input.quantity}.`,
+        systemGenerated: true,
+      }),
+      createdAt: serverTimestamp(),
+    });
+  }
 }
 
 export async function getMealsForMemberInDateRange(
@@ -536,7 +529,7 @@ export async function createCost(input: {
     payload,
   );
 
-  await addDoc(collection(database, noticesCollection(input.groupId)), {
+  await addDoc(collection(database, chartNoticesCollection(input.groupId, input.chartId)), {
     ...buildNoticeRecord({
       title: "Cost added",
       body: `${input.itemName} — ${input.amount.toFixed(2)} tk on ${input.date}.`,
@@ -553,23 +546,39 @@ export async function deleteCost(groupId: string, chartId: string, costId: strin
   await deleteDoc(doc(database, chartCostsCollection(groupId, chartId), costId));
 }
 
+async function addSystemNoticeToCurrentChart(database: any, groupId: string, title: string, body: string) {
+  const groupSnap = await getDoc(doc(database, groupsCollection, groupId));
+  if (!groupSnap.exists()) return;
+  const currentChartId = groupSnap.data().currentChartId;
+  if (!currentChartId) return;
+
+  await addDoc(collection(database, chartNoticesCollection(groupId, currentChartId)), {
+    ...buildNoticeRecord({
+      title,
+      body,
+      systemGenerated: true,
+    }),
+    createdAt: serverTimestamp(),
+  });
+}
+
 // ── Notices ───────────────────────────────────────────────────────────
 
-export async function listNotices(groupId: string) {
+export async function listNoticesForChart(groupId: string, chartId: string) {
   const database = ensureDb();
   const snapshot = await getDocs(
     query(
-      collection(database, noticesCollection(groupId)),
+      collection(database, chartNoticesCollection(groupId, chartId)),
       orderBy("createdAt", "desc"),
     ),
   );
   return snapshot.docs.map((entry) => normalizeDoc<Notice>(entry.id, entry.data()));
 }
 
-export async function createNotice(input: { groupId: string; title: string; body: string }) {
+export async function createNotice(input: { groupId: string; chartId: string; title: string; body: string }) {
   const database = ensureDb();
   const record = buildNoticeRecord({ title: input.title, body: input.body, systemGenerated: false });
-  const ref = await addDoc(collection(database, noticesCollection(input.groupId)), {
+  const ref = await addDoc(collection(database, chartNoticesCollection(input.groupId, input.chartId)), {
     ...record,
     createdAt: serverTimestamp(),
   });
@@ -578,18 +587,19 @@ export async function createNotice(input: { groupId: string; title: string; body
 
 export async function updateNotice(input: {
   groupId: string;
+  chartId: string;
   noticeId: string;
   title: string;
   body: string;
 }) {
   const database = ensureDb();
-  await updateDoc(doc(database, noticesCollection(input.groupId), input.noticeId), {
+  await updateDoc(doc(database, chartNoticesCollection(input.groupId, input.chartId), input.noticeId), {
     title: input.title,
     body: input.body,
   });
 }
 
-export async function deleteNotice(groupId: string, noticeId: string) {
+export async function deleteNotice(groupId: string, chartId: string, noticeId: string) {
   const database = ensureDb();
-  await deleteDoc(doc(database, noticesCollection(groupId), noticeId));
+  await deleteDoc(doc(database, chartNoticesCollection(groupId, chartId), noticeId));
 }

@@ -5,10 +5,10 @@ import Link from "next/link";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase/client";
-import { buildAdminProfile, buildGroupRecord, buildNoticeRecord } from "@/lib/firebase/factories";
+import { buildAdminProfile, buildGroupRecord } from "@/lib/firebase/factories";
 import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
-import { groupsCollection, adminsCollection, noticesCollection } from "@/lib/firebase/paths";
+import { groupsCollection, adminsCollection } from "@/lib/firebase/paths";
 import { generateGroupToken, slugifyGroupName } from "@/lib/utils/group-token";
 
 type FormState = { groupName: string; email: string; password: string };
@@ -56,14 +56,7 @@ export function RegisterGroupForm() {
         createdAt: serverTimestamp(),
       });
 
-      await setDoc(doc(db, noticesCollection(groupId), crypto.randomUUID()), {
-        ...buildNoticeRecord({
-          title: t("registerForm.noticeTitle"),
-          body: t("registerForm.noticeBody", { name: nameTrim }),
-          systemGenerated: true,
-        }),
-        createdAt: serverTimestamp(),
-      });
+
 
       setCreatedToken(groupToken);
       setForm(initialState);

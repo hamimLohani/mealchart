@@ -111,6 +111,7 @@ export function AddMoneyManager() {
     }
     setIsSubmitting(true);
     try {
+      const member = members.find(m => m.id === form.memberId);
       const deposit = await createDeposit({
         groupId: adminProfile.groupId,
         chartId: selectedChart.id,
@@ -118,8 +119,12 @@ export function AddMoneyManager() {
         amount,
         date: form.date,
         collectedByAdminId: adminProfile.id,
+        memberName: member?.fullName,
       });
-      setDeposits((c) => [deposit, ...c]);
+      setDeposits((prev) => {
+        if (prev.some((d) => d.id === deposit.id)) return prev;
+        return [deposit, ...prev];
+      });
       setForm((c) => ({ ...c, amount: "" }));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to add money.");

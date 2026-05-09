@@ -190,14 +190,13 @@ service cloud.firestore {
         allow update: if isValidChartCostWrite(groupId, chartId);
         allow delete: if isGroupAdmin(groupId) && isChartUnlocked(groupId, chartId);
       }
-    }
 
-    match /groups/{groupId}/notices/{noticeId} {
-      allow read: if true;
-      allow create: if isGroupAdmin(groupId) || isGroupOwner(groupId);
-      allow update, delete: if isGroupAdmin(groupId);
+      match /notices/{noticeId} {
+        allow read: if true;
+        allow create: if (isGroupAdmin(groupId) || isGroupOwner(groupId)) && isChartUnlocked(groupId, chartId);
+        allow update, delete: if isGroupAdmin(groupId) && isChartUnlocked(groupId, chartId);
+      }
     }
-
     match /groups/{groupId}/meals/{mealId} {
       allow read: if true;
       allow create: if isValidMealWrite(groupId, mealId);

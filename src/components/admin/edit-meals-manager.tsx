@@ -135,7 +135,15 @@ export function EditMealsManager() {
     savingRef.current[key] = setTimeout(() => {
       void (async () => {
         try {
-          await saveMealEntry({ groupId: adminProfile.groupId, memberId, date, quantity: val });
+          const member = members.find(m => m.id === memberId);
+          await saveMealEntry({
+            groupId: adminProfile.groupId,
+            memberId,
+            date,
+            quantity: val,
+            chartId: selectedChart.id,
+            memberName: member?.fullName,
+          });
         } catch (e) {
           setError(tx(e instanceof Error ? e.message : t("errors.saveMealFailed")));
         }

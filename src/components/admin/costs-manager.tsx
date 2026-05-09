@@ -90,7 +90,10 @@ export function CostsManager() {
         amount: amt,
         date,
       });
-      setCosts((prev) => [created, ...prev]);
+      setCosts((prev) => {
+        if (prev.some((c) => c.id === created.id)) return prev;
+        return [created, ...prev];
+      });
       setItemName(""); setAmount("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to add cost.");
