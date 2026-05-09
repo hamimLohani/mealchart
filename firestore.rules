@@ -44,14 +44,103 @@ service cloud.firestore {
         && request.resource.data.email is string;
     }
 
+    function isMonthKeyLocked(groupId, monthKey) {
+      return exists(/databases/$(database)/documents/groups/$(groupId)/lockedMonths/$(monthKey))
+        && get(/databases/$(database)/documents/groups/$(groupId)/lockedMonths/$(monthKey)).data.locked == true;
+    }
+
     function isValidMealWrite(groupId, mealId) {
-      return hasOnlyFields(["memberId", "date", "quantity"])
+      return hasOnlyFields(["memberId", "date", "quantity", "monthKey"])
         && request.resource.data.memberId is string
+        && request.resource.data.monthKey is string
+        && request.resource.data.monthKey.matches("^\\d{4}-\\d{2}$")
         && isDateString(request.resource.data.date)
+        && request.resource.data.date.matches("^" + request.resource.data.monthKey + "-\\d{2}$")
         && request.resource.data.quantity is number
         && request.resource.data.quantity >= 0
         && request.resource.data.quantity <= 20
         && mealId == request.resource.data.memberId + "_" + request.resource.data.date
+        && !isMonthKeyLocked(groupId, request.resource.data.monthKey)
+        && exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.resource.data.memberId));
+    }
+
+    function canDeleteMeal(groupId) {
+      return resource.data.keys().hasAll(["memberId", "date", "quantity", "monthKey"])
+        && resource.data.monthKey is string
+        && !isMonthKeyLocked(groupId, resource.data.monthKey);
+    }
+
+    /** Admin-only: add monthKey to legacy meal docs (allowed even when month is locked). */
+    function isAdminMealMonthKeyBackfill(groupId) {
+      return isGroupAdmin(groupId)
+        && resource.data.keys().hasOnly(["memberId", "date", "quantity"])
+        && request.resource.data.keys().hasOnly(["memberId", "date", "quantity", "monthKey"])
+        && request.resource.data.memberId == resource.data.memberId
+        && request.resource.data.date == resource.data.date
+        && request.resource.data.quantity == resource.data.quantity
+        && request.resource.data.monthKey is string
+        && request.resource.data.monthKey.matches("^\\d{4}-\\d{2}$")
+        && request.resource.data.date.matches("^" + request.resource.data.monthKey + "-\\d{2}$");
+    }
+
+    function isGroupOwner(groupId) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/groups/$(groupId))
+        && get(/databases/$(database)/documents/groups/$(groupId)).data.adminId == request.auth.uid;
+    }
+
+    function isChartUnlocked(groupId, chartId) {
+      return exists(/databases/$(database)/documents/groups/$(groupId)/charts/$(chartId))
+        && get(/databases/$(database)/documents/groups/$(groupId)/charts/$(chartId)).data.locked != true;
+    }
+
+    function chartYearMonthPair(c) {
+      return (c.year is int || c.year is float)
+        && (c.month is int || c.month is float)
+        && c.month >= 1
+        && c.month <= 12;
+    }
+
+    /** YYYY-MM for the chart (stored monthKey or derived from year + month). */
+    function chartEffectiveMonthKey(groupId, chartId) {
+      let c = get(/databases/$(database)/documents/groups/$(groupId)/charts/$(chartId)).data;
+      return c.monthKey is string && c.monthKey.matches("^\\d{4}-\\d{2}$")
+        ? c.monthKey
+        : (chartYearMonthPair(c)
+            ? string(int(c.year)) + "-" + (int(c.month) < 10 ? "0" : "") + string(int(c.month))
+            : "");
+    }
+
+    /** Cost/deposit date must fall in this chart's month (YYYY-MM) so edits never apply to another month. */
+    function requestDateMatchesChartMonth(groupId, chartId) {
+      let mk = chartEffectiveMonthKey(groupId, chartId);
+      return exists(/databases/$(database)/documents/groups/$(groupId)/charts/$(chartId))
+        && mk != ""
+        && isDateString(request.resource.data.date)
+        && request.resource.data.date.matches("^" + mk + "-\\d{2}$");
+    }
+
+    function isValidChartCostWrite(groupId, chartId) {
+      return isGroupAdmin(groupId)
+        && isChartUnlocked(groupId, chartId)
+        && requestDateMatchesChartMonth(groupId, chartId)
+        && hasOnlyFields(["id", "itemName", "amount", "date"])
+        && request.resource.data.id is string
+        && request.resource.data.itemName is string
+        && request.resource.data.amount is number
+        && request.resource.data.amount > 0;
+    }
+
+    function isValidChartDepositWrite(groupId, chartId) {
+      return isGroupAdmin(groupId)
+        && isChartUnlocked(groupId, chartId)
+        && requestDateMatchesChartMonth(groupId, chartId)
+        && hasOnlyFields(["id", "memberId", "amount", "date", "collectedByAdminId"])
+        && request.resource.data.id is string
+        && request.resource.data.memberId is string
+        && request.resource.data.amount is number
+        && request.resource.data.amount > 0
+        && request.resource.data.collectedByAdminId is string
         && exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.resource.data.memberId));
     }
 
@@ -79,43 +168,43 @@ service cloud.firestore {
       allow create, update, delete: if isGroupAdmin(groupId);
     }
 
+    match /groups/{groupId}/lockedMonths/{monthKey} {
+      allow read: if true;
+      allow create, update, delete: if isGroupAdmin(groupId);
+    }
+
     match /groups/{groupId}/charts/{chartId} {
       allow read: if true;
       allow create, update, delete: if isGroupAdmin(groupId);
 
       match /deposits/{depositId} {
         allow read: if true;
-        allow create, update, delete: if isGroupAdmin(groupId);
+        allow create: if isValidChartDepositWrite(groupId, chartId);
+        allow update: if isValidChartDepositWrite(groupId, chartId);
+        allow delete: if isGroupAdmin(groupId) && isChartUnlocked(groupId, chartId);
       }
 
       match /costs/{costId} {
         allow read: if true;
-        allow create, update, delete: if isGroupAdmin(groupId);
+        allow create: if isValidChartCostWrite(groupId, chartId);
+        allow update: if isValidChartCostWrite(groupId, chartId);
+        allow delete: if isGroupAdmin(groupId) && isChartUnlocked(groupId, chartId);
       }
-    }
-
-    match /groups/{groupId}/deposits/{depositId} {
-      allow read: if true;
-      allow create, update, delete: if isGroupAdmin(groupId);
     }
 
     match /groups/{groupId}/notices/{noticeId} {
       allow read: if true;
-      // Allow both admin writes and system-generated notices during registration
-      // (the group creator writes the first notice before the admin doc exists)
-      allow create: if isSignedIn();
+      allow create: if isGroupAdmin(groupId) || isGroupOwner(groupId);
       allow update, delete: if isGroupAdmin(groupId);
     }
 
     match /groups/{groupId}/meals/{mealId} {
       allow read: if true;
-      allow create, update: if isValidMealWrite(groupId, mealId);
-      allow delete: if isGroupAdmin(groupId);
+      allow create: if isValidMealWrite(groupId, mealId);
+      allow update: if isValidMealWrite(groupId, mealId) || isAdminMealMonthKeyBackfill(groupId);
+      allow delete: if isGroupAdmin(groupId) && canDeleteMeal(groupId);
     }
 
-    match /groups/{groupId}/costs/{costId} {
-      allow read: if true;
-      allow create, update, delete: if isGroupAdmin(groupId);
-    }
+    // Legacy flat costs/deposits removed — all money data must live under charts/{chartId}/…
   }
 }

@@ -11,7 +11,7 @@ import {
   listDepositsForChart,
   listMembers,
 } from "@/lib/firebase/repositories";
-import { toDateInputValue } from "@/lib/utils/date";
+import { chartMonthDateBounds, toDateInputValue } from "@/lib/utils/date";
 import type { AdminProfile, Chart, DepositEntry, Member } from "@/types/domain";
 
 type DepositFormState = { memberId: string; amount: string; date: string };
@@ -83,6 +83,15 @@ export function AddMoneyManager() {
     return () => { active = false; };
   }, [adminProfile, selectedChart]);
 
+  useEffect(() => {
+    if (!selectedChart) return;
+    const { min, max } = chartMonthDateBounds(selectedChart);
+    setForm((c) => ({
+      ...c,
+      date: c.date < min || c.date > max ? min : c.date,
+    }));
+  }, [selectedChart]);
+
   const memberTotals = useMemo(() => {
     const totals = new Map<string, number>();
     for (const d of deposits) totals.set(d.memberId, (totals.get(d.memberId) ?? 0) + d.amount);
@@ -95,6 +104,7 @@ export function AddMoneyManager() {
     event.preventDefault();
     setError(null);
     if (!adminProfile || !selectedChart) return;
+    if (selectedChart.locked) { setError("This month is locked."); return; }
     const amount = Number(form.amount);
     if (!form.memberId || Number.isNaN(amount) || amount <= 0) {
       setError("Select a member and enter a valid deposit amount.");
@@ -165,6 +175,8 @@ export function AddMoneyManager() {
   }
 
   // ── Deposit management for selected chart ─────────────────────────
+  const depositDateBounds = chartMonthDateBounds(selectedChart);
+
   return (
     <div className="mt-6 grid gap-5">
       {error && <p className="alert-error">{error}</p>}
@@ -174,6 +186,9 @@ export function AddMoneyManager() {
         <div>
           <p className="admin-section-label">Add Money</p>
           <p className="mt-0.5 font-semibold">{selectedChart.label}</p>
+          {selectedChart.locked && (
+            <p className="mt-1 text-xs font-semibold text-[color:var(--danger)]">Month locked: deposits disabled</p>
+          )}
         </div>
         <button
           type="button"
@@ -234,6 +249,8 @@ export function AddMoneyManager() {
             Date
             <input
               className="input"
+              min={depositDateBounds.min}
+              max={depositDateBounds.max}
               onChange={(e) => setForm((c) => ({ ...c, date: e.target.value }))}
               type="date"
               value={form.date}
@@ -242,7 +259,7 @@ export function AddMoneyManager() {
         </div>
         <button
           className="button-primary w-full sm:w-fit"
-          disabled={!adminProfile || !members.length || isSubmitting}
+          disabled={!adminProfile || !members.length || isSubmitting || selectedChart.locked}
           type="submit"
         >
           {isSubmitting ? "Adding…" : "Add money"}

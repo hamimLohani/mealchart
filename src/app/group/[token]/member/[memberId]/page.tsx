@@ -14,20 +14,8 @@ import {
 } from "@/lib/firebase/repositories";
 import { useGroupSession } from "@/lib/hooks/use-group-session";
 import type { CostEntry, DepositEntry, Group, MealEntry, Member } from "@/types/domain";
-
-function formatMeal(n: number): string {
-  const whole = Math.floor(n);
-  const frac = Math.round((n - whole) * 4);
-  const fracStr = [" ", "¼", "½", "¾"][frac] ?? "";
-  if (whole === 0 && frac === 0) return "0";
-  if (whole === 0) return fracStr.trim();
-  if (frac === 0) return String(whole);
-  return `${whole}${fracStr}`;
-}
-
-function daysInMonth(year: number, month: number) {
-  return new Date(year, month, 0).getDate();
-}
+import { daysInMonth } from "@/lib/utils/date";
+import { formatMeal, getMemberTotals, getMonthTotals } from "@/lib/utils/meal-money";
 
 function localDateString() {
   const d = new Date();
@@ -152,15 +140,14 @@ export default function MemberPage({
 
   const monthStart = `${chart.monthKey}-01`;
   const monthEnd = `${chart.monthKey}-${String(daysInMonth(chart.year, chart.month)).padStart(2, "0")}`;
-  const allMeals = meals.reduce((sum, meal) => sum + meal.quantity, 0);
-  const totalCost = costs.reduce((sum, cost) => sum + cost.amount, 0);
-  const mealRate = allMeals > 0 ? totalCost / allMeals : 0;
-  const myMeals = meals.filter((meal) => meal.memberId === memberId).sort((a, b) => a.date.localeCompare(b.date));
+  const { mealRate } = getMonthTotals(meals, costs, deposits);
   const myDeposits = deposits.filter((deposit) => deposit.memberId === memberId);
-  const myTotalMeals = myMeals.reduce((sum, meal) => sum + meal.quantity, 0);
-  const myTotalPaid = myDeposits.reduce((sum, deposit) => sum + deposit.amount, 0);
-  const myCost = myTotalMeals * mealRate;
-  const myBalance = myTotalPaid - myCost;
+  const memberTotals = getMemberTotals(memberId, meals, deposits, mealRate);
+  const myMeals = memberTotals.memberMeals.sort((a, b) => a.date.localeCompare(b.date));
+  const myTotalMeals = memberTotals.totalMeals;
+  const myTotalPaid = memberTotals.totalPaid;
+  const myCost = memberTotals.totalCost;
+  const myBalance = memberTotals.balance;
   const maxQty = Math.max(...myMeals.map((meal) => meal.quantity), 1);
   const days = Array.from({ length: daysInMonth(chart.year, chart.month) }, (_, i) => {
     const day = i + 1;
@@ -170,7 +157,7 @@ export default function MemberPage({
   });
 
   async function handleMealChange(value: number) {
-    if (!group || !selectedDate) return;
+    if (!group || !selectedDate || chart.locked) return;
     const clamped = Math.max(0, value);
     setMealCount(clamped);
     setSaved(false);
@@ -197,6 +184,11 @@ export default function MemberPage({
             <p className="group-kicker">{group.name} · {chart.label}</p>
             <p className="group-title">{member.fullName}</p>
             <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">All information for selected month</p>
+            {chart.locked && (
+              <p className="mt-1 inline-flex rounded-full border border-[color:var(--danger-border)] bg-[color:var(--danger-bg)] px-2 py-0.5 text-xs font-semibold text-[color:var(--danger)]">
+                Month locked: meal editing disabled
+              </p>
+            )}
           </div>
           <button type="button" onClick={() => router.push(`/group/${token}`)} className="button-secondary shrink-0">
             ← Back
@@ -231,18 +223,19 @@ export default function MemberPage({
                   max={monthEnd}
                   value={selectedDate}
                   onChange={(event) => setSelectedDate(event.target.value)}
+                  disabled={chart.locked}
                 />
                 {isMealLoading ? (
                   <p className="text-sm text-[color:var(--soft-foreground)]">Loading meal…</p>
                 ) : (
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
-                      <button className="meal-stepper-button" disabled={mealCount <= 0} onClick={() => handleMealChange(mealCount - 0.25)} type="button">−</button>
+                      <button className="meal-stepper-button" disabled={mealCount <= 0 || chart.locked} onClick={() => handleMealChange(mealCount - 0.25)} type="button">−</button>
                       <span className="w-16 text-center text-4xl font-bold tabular-nums">{formatMeal(mealCount)}</span>
-                      <button className="meal-stepper-button" onClick={() => handleMealChange(mealCount + 0.25)} type="button">+</button>
+                      <button className="meal-stepper-button" disabled={chart.locked} onClick={() => handleMealChange(mealCount + 0.25)} type="button">+</button>
                     </div>
                     <p className="text-sm font-medium text-[color:var(--muted)]">
-                      {isSaving ? "Saving…" : saved ? "✓ Saved" : "Tap to update"}
+                      {chart.locked ? "Month is locked" : isSaving ? "Saving…" : saved ? "✓ Saved" : "Tap to update"}
                     </p>
                   </div>
                 )}

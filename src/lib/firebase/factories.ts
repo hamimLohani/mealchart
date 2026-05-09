@@ -8,6 +8,7 @@ import type {
   Member,
   Notice,
 } from "@/types/domain";
+import { daysInMonth } from "@/lib/utils/date";
 
 export function buildGroupRecord(input: {
   id: string;
@@ -31,15 +32,16 @@ export function buildChartRecord(input: {
   monthKey: string;
   year: number;
   month: number;
-}) : Chart {
+}): Chart {
   return {
     id: input.id,
     label: input.label,
     monthKey: input.monthKey,
     year: input.year,
     month: input.month,
-    totalDays: 31,
+    totalDays: daysInMonth(input.year, input.month),
     active: true,
+    locked: false,
     createdAt: new Date().toISOString(),
   };
 }

@@ -13,6 +13,7 @@ import {
   Timestamp,
   updateDoc,
   where,
+  writeBatch,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import {
@@ -30,9 +31,11 @@ import {
   membersCollection,
   noticesCollection,
   groupsCollection,
+  lockedMonthsCollection,
 } from "@/lib/firebase/paths";
 import {
   formatChartLabel,
+  monthKeyFromDate,
   toMonthKey,
 } from "@/lib/utils/date";
 import type { AdminProfile, Chart, CostEntry, DepositEntry, Group, MealEntry, Member, Notice } from "@/types/domain";
@@ -44,6 +47,31 @@ function ensureDb() {
 
 function normalizeDoc<T>(id: string, data: Record<string, unknown>) {
   return { ...data, id } as T;
+}
+
+async function assertDateBelongsToChart(groupId: string, chartId: string, date: string) {
+  const database = ensureDb();
+  const chartSnap = await getDoc(doc(database, chartsCollection(groupId), chartId));
+  if (!chartSnap.exists()) throw new Error("Chart not found.");
+  const data = chartSnap.data();
+  let chartMk = typeof data.monthKey === "string" && data.monthKey.length >= 7 ? data.monthKey : "";
+  if (!chartMk && typeof data.year === "number" && typeof data.month === "number") {
+    chartMk = toMonthKey(data.year, data.month);
+  }
+  if (!chartMk) throw new Error("Chart is missing month information.");
+  if (monthKeyFromDate(date) !== chartMk) {
+    throw new Error(`Date must fall within ${chartMk} for this month’s chart.`);
+  }
+}
+
+function mapMealEntryDoc(id: string, data: Record<string, unknown>): MealEntry {
+  const mk =
+    typeof data.monthKey === "string" && data.monthKey.length >= 7
+      ? data.monthKey
+      : typeof data.date === "string" && data.date.length >= 7
+        ? data.date.slice(0, 7)
+        : undefined;
+  return { ...normalizeDoc<MealEntry>(id, data), ...(mk ? { monthKey: mk } : {}) };
 }
 
 function serializeDate(value: unknown) {
@@ -188,8 +216,24 @@ export async function listCharts(groupId: string) {
   );
   return snapshot.docs.map((entry) => {
     const data = entry.data();
+    const year = Number(data.year);
+    const month = Number(data.month);
+    const monthKey =
+      typeof data.monthKey === "string" && data.monthKey.length >= 7
+        ? data.monthKey
+        : !Number.isNaN(year) && !Number.isNaN(month) && month >= 1 && month <= 12
+          ? toMonthKey(year, month)
+          : "";
     return {
       ...normalizeDoc<Chart>(entry.id, data),
+      monthKey,
+      totalDays:
+        typeof data.totalDays === "number"
+          ? data.totalDays
+          : !Number.isNaN(year) && !Number.isNaN(month)
+            ? new Date(year, month, 0).getDate()
+            : 31,
+      locked: data.locked === true,
       createdAt: serializeDate(data.createdAt),
     };
   });
@@ -235,13 +279,95 @@ export async function createChart(input: {
   await addDoc(collection(database, noticesCollection(input.groupId)), {
     ...buildNoticeRecord({
       title: "New chart created",
-      body: `${record.label} chart was created with 31 days and set as active.`,
+      body: `${record.label} chart was created with ${record.totalDays} days and set as active.`,
       systemGenerated: true,
     }),
     createdAt: serverTimestamp(),
   });
 
   return record;
+}
+
+export async function updateChartLock(input: {
+  groupId: string;
+  chartId: string;
+  locked: boolean;
+}) {
+  const database = ensureDb();
+  const chartRef = doc(database, chartsCollection(input.groupId), input.chartId);
+  const chartSnap = await getDoc(chartRef);
+  if (!chartSnap.exists()) throw new Error("Chart not found.");
+  const data = chartSnap.data();
+  let monthKey = typeof data.monthKey === "string" && data.monthKey.length >= 7 ? data.monthKey : "";
+  if (!monthKey && typeof data.year === "number" && typeof data.month === "number") {
+    monthKey = toMonthKey(data.year, data.month);
+  }
+  if (!monthKey) throw new Error("Chart is missing month information.");
+
+  const lockRef = doc(database, lockedMonthsCollection(input.groupId), monthKey);
+  const batch = writeBatch(database);
+  batch.update(chartRef, { locked: input.locked });
+  if (input.locked) {
+    batch.set(lockRef, { locked: true, chartId: input.chartId }, { merge: true });
+  } else {
+    batch.delete(lockRef);
+  }
+  await batch.commit();
+}
+
+/** Writes lockedMonths docs for any chart already marked locked (repair / older data). */
+export async function syncLockedMonthDocsFromCharts(groupId: string) {
+  const database = ensureDb();
+  const snapshot = await getDocs(collection(database, chartsCollection(groupId)));
+  let batch = writeBatch(database);
+  let ops = 0;
+  for (const d of snapshot.docs) {
+    const data = d.data();
+    if (data.locked != true) continue;
+    let monthKey = typeof data.monthKey === "string" && data.monthKey.length >= 7 ? data.monthKey : "";
+    if (!monthKey && typeof data.year === "number" && typeof data.month === "number") {
+      monthKey = toMonthKey(data.year, data.month);
+    }
+    if (!monthKey) continue;
+    batch.set(
+      doc(database, lockedMonthsCollection(groupId), monthKey),
+      { locked: true, chartId: d.id },
+      { merge: true },
+    );
+    ops++;
+    if (ops >= 400) {
+      await batch.commit();
+      batch = writeBatch(database);
+      ops = 0;
+    }
+  }
+  if (ops > 0) await batch.commit();
+}
+
+/** Adds monthKey to older meal docs (YYYY-MM from date) so lock rules and deletes work. */
+export async function backfillMealMonthKeys(groupId: string) {
+  const database = ensureDb();
+  const lockedSnap = await getDocs(collection(database, lockedMonthsCollection(groupId)));
+  const lockedMonthKeys = new Set(lockedSnap.docs.map((docSnap) => docSnap.id));
+
+  const snapshot = await getDocs(collection(database, mealsCollection(groupId)));
+  let batch = writeBatch(database);
+  let ops = 0;
+  for (const d of snapshot.docs) {
+    const data = d.data();
+    if (typeof data.monthKey === "string") continue;
+    if (typeof data.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(data.date)) continue;
+    const mk = data.date.slice(0, 7);
+    if (lockedMonthKeys.has(mk)) continue;
+    batch.update(d.ref, { monthKey: mk });
+    ops++;
+    if (ops >= 400) {
+      await batch.commit();
+      batch = writeBatch(database);
+      ops = 0;
+    }
+  }
+  if (ops > 0) await batch.commit();
 }
 
 // ── Deposits (chart-scoped) ──────────────────────────────────────────
@@ -265,6 +391,7 @@ export async function createDeposit(input: {
   date: string;
   collectedByAdminId: string;
 }) {
+  await assertDateBelongsToChart(input.groupId, input.chartId, input.date);
   const database = ensureDb();
   const depositId = crypto.randomUUID();
   const record = buildDepositRecord({
@@ -302,7 +429,7 @@ export async function getMealsForDate(groupId: string, date: string) {
       where("date", "==", date),
     ),
   );
-  return snapshot.docs.map((entry) => normalizeDoc<MealEntry>(entry.id, entry.data()));
+  return snapshot.docs.map((entry) => mapMealEntryDoc(entry.id, entry.data()));
 }
 
 export async function getMealsForMonth(groupId: string, monthKey: string) {
@@ -314,7 +441,7 @@ export async function getMealsForMonth(groupId: string, monthKey: string) {
       where("date", "<=", `${monthKey}-31`),
     ),
   );
-  return snapshot.docs.map((entry) => normalizeDoc<MealEntry>(entry.id, entry.data()));
+  return snapshot.docs.map((entry) => mapMealEntryDoc(entry.id, entry.data()));
 }
 
 // Deterministic doc ID: memberId_date — allows setDoc upsert without a prior read
@@ -326,10 +453,12 @@ export async function saveMealEntry(input: {
 }) {
   const database = ensureDb();
   const docId = `${input.memberId}_${input.date}`;
+  const monthKey = monthKeyFromDate(input.date);
   await setDoc(doc(database, mealsCollection(input.groupId), docId), {
     memberId: input.memberId,
     date: input.date,
     quantity: input.quantity,
+    monthKey,
   });
 }
 
@@ -395,6 +524,7 @@ export async function createCost(input: {
   amount: number;
   date: string;
 }) {
+  await assertDateBelongsToChart(input.groupId, input.chartId, input.date);
   const database = ensureDb();
   const costId = crypto.randomUUID();
   const payload = { id: costId, itemName: input.itemName, amount: input.amount, date: input.date };

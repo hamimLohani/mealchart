@@ -12,16 +12,8 @@ import {
 } from "@/lib/firebase/repositories";
 import { useGroupSession } from "@/lib/hooks/use-group-session";
 import type { CostEntry, DepositEntry, Group, MealEntry, Member } from "@/types/domain";
-
-function formatMeal(n: number): string {
-  const whole = Math.floor(n);
-  const frac = Math.round((n - whole) * 4);
-  const fracStr = [" ", "\u00bc", "\u00bd", "\u00be"][frac] ?? "";
-  if (whole === 0 && frac === 0) return "0";
-  if (whole === 0) return fracStr.trim();
-  if (frac === 0) return String(whole);
-  return `${whole}${fracStr}`;
-}
+import { memberDisplayName, memberIdsForMoneyRows } from "@/lib/utils/chart-members";
+import { formatMeal, getMonthTotals } from "@/lib/utils/meal-money";
 
 export function GroupMoneyView({ token }: { token: string }) {
   const router = useRouter();
@@ -108,10 +100,13 @@ export function GroupMoneyView({ token }: { token: string }) {
   deposits.forEach((d) => { memberDeposits[d.memberId] = (memberDeposits[d.memberId] ?? 0) + d.amount; });
 
   const grandTotal = Object.values(memberMeals).reduce((s, v) => s + v, 0);
-  const totalCost = costs.reduce((s, c) => s + c.amount, 0);
-  const totalPaid = deposits.reduce((s, d) => s + d.amount, 0);
-  const mealRate = grandTotal > 0 ? totalCost / grandTotal : 0;
-  const balance = totalPaid - totalCost;
+  const { totalCost, totalPaid, mealRate, remainingTaka: balance } = getMonthTotals(meals, costs, deposits);
+  const balanceRowIds = memberIdsForMoneyRows(
+    members,
+    meals,
+    deposits.map((d) => d.memberId),
+    chart.monthKey,
+  );
 
   return (
     <div className="group-page-grid">
@@ -150,16 +145,16 @@ export function GroupMoneyView({ token }: { token: string }) {
       <div className="group-card">
         <p className="group-kicker">Member Balances</p>
         <div className="mt-3 grid gap-2">
-          {members.map((member) => {
-            const eaten = (memberMeals[member.id] ?? 0) * mealRate;
-            const paid = memberDeposits[member.id] ?? 0;
+          {balanceRowIds.map((memberId) => {
+            const eaten = (memberMeals[memberId] ?? 0) * mealRate;
+            const paid = memberDeposits[memberId] ?? 0;
             const remaining = paid - eaten;
             return (
-              <div key={member.id} className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3">
+              <div key={memberId} className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3">
                 <div className="min-w-0">
-                  <p className="font-semibold">{member.fullName}</p>
+                  <p className="font-semibold">{memberDisplayName(memberId, members)}</p>
                   <p className="group-stat-label">
-                    {formatMeal(memberMeals[member.id] ?? 0)} meals · eaten {eaten.toFixed(2)} tk · paid {paid.toFixed(2)} tk
+                    {formatMeal(memberMeals[memberId] ?? 0)} meals · eaten {eaten.toFixed(2)} tk · paid {paid.toFixed(2)} tk
                   </p>
                 </div>
                 <p className={`shrink-0 font-bold ${remaining >= 0 ? "text-[color:var(--accent)]" : "text-[color:var(--danger)]"}`}>

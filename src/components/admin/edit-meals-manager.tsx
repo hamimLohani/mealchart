@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
@@ -12,6 +12,7 @@ import {
   saveMealEntry,
 } from "@/lib/firebase/repositories";
 import type { AdminProfile, Chart, MealEntry, Member } from "@/types/domain";
+import { memberDisplayName, memberIdsForChartRows } from "@/lib/utils/chart-members";
 
 function daysInMonth(year: number, month: number) {
   return new Date(year, month, 0).getDate();
@@ -77,8 +78,30 @@ export function EditMealsManager() {
     return () => { active = false; };
   }, [adminProfile, selectedChart]);
 
+  const mealsAsEntries: MealEntry[] = useMemo(
+    () =>
+      Object.entries(meals).flatMap(([memberId, byDate]) =>
+        Object.entries(byDate).map(([date, quantity]) => ({
+          id: "",
+          memberId,
+          date,
+          quantity,
+        })),
+      ),
+    [meals],
+  );
+
+  const rowMemberIds = useMemo(() => {
+    if (!selectedChart) return [];
+    return memberIdsForChartRows(members, mealsAsEntries, selectedChart.monthKey);
+  }, [members, mealsAsEntries, selectedChart]);
+
+  function isActiveMember(memberId: string) {
+    return members.some((m) => m.id === memberId);
+  }
+
   function handleChange(memberId: string, date: string, raw: string) {
-    if (!adminProfile) return;
+    if (!adminProfile || !selectedChart || selectedChart.locked || !isActiveMember(memberId)) return;
     const val = raw === "" ? 0 : Math.max(0, Number(raw));
     setMeals((prev) => ({
       ...prev,
@@ -96,7 +119,7 @@ export function EditMealsManager() {
   }
 
   function dayTotal(date: string) {
-    return members.reduce((s, m) => s + (meals[m.id]?.[date] ?? 0), 0);
+    return rowMemberIds.reduce((s, id) => s + (meals[id]?.[date] ?? 0), 0);
   }
 
   if (isLoading) return <p className="mt-8 text-sm text-[color:var(--soft-foreground)]">Loading…</p>;
@@ -148,7 +171,7 @@ export function EditMealsManager() {
     const d = String(i + 1).padStart(2, "0");
     return `${selectedChart.monthKey}-${d}`;
   });
-  const grandTotal = members.reduce((s, m) => s + memberTotal(m.id), 0);
+  const grandTotal = rowMemberIds.reduce((s, id) => s + memberTotal(id), 0);
 
   return (
     <div className="mt-6 grid gap-5">
@@ -159,6 +182,9 @@ export function EditMealsManager() {
         <div>
           <p className="admin-section-label">Edit Meals</p>
           <p className="mt-0.5 font-semibold">{selectedChart.label}</p>
+          {selectedChart.locked && (
+            <p className="mt-1 text-xs font-semibold text-[color:var(--danger)]">Month locked: meal editing disabled</p>
+          )}
         </div>
         <button
           type="button"
@@ -196,13 +222,13 @@ export function EditMealsManager() {
               </tr>
             </thead>
             <tbody>
-              {members.map((member, ri) => (
-                <tr key={member.id} className={ri % 2 === 0 ? "bg-[color:var(--background)]" : "bg-[color:var(--panel)]"}>
+              {rowMemberIds.map((memberId, ri) => (
+                <tr key={memberId} className={ri % 2 === 0 ? "bg-[color:var(--background)]" : "bg-[color:var(--panel)]"}>
                   <td className={`sticky left-0 z-10 px-3 py-2 text-sm font-medium ${ri % 2 === 0 ? "bg-[color:var(--background)]" : "bg-[color:var(--panel)]"}`}>
-                    {member.fullName}
+                    {memberDisplayName(memberId, members)}
                   </td>
                   {days.map((date) => {
-                    const val = meals[member.id]?.[date] ?? 0;
+                    const val = meals[memberId]?.[date] ?? 0;
                     return (
                       <td key={date} className="px-1 py-1 text-center">
                         <input
@@ -212,13 +238,14 @@ export function EditMealsManager() {
                           type="number"
                           value={val === 0 ? "" : val}
                           placeholder="0"
-                          onChange={(e) => handleChange(member.id, date, e.target.value)}
+                          disabled={selectedChart.locked || !isActiveMember(memberId)}
+                          onChange={(e) => handleChange(memberId, date, e.target.value)}
                         />
                       </td>
                     );
                   })}
                   <td className="px-3 py-2 text-center text-sm font-bold text-[color:var(--accent)]">
-                    {memberTotal(member.id)}
+                    {memberTotal(memberId)}
                   </td>
                 </tr>
               ))}

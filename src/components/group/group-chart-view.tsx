@@ -12,20 +12,9 @@ import {
 } from "@/lib/firebase/repositories";
 import { useGroupSession } from "@/lib/hooks/use-group-session";
 import type { CostEntry, DepositEntry, Group, MealEntry, Member } from "@/types/domain";
-
-function formatMeal(n: number): string {
-  const whole = Math.floor(n);
-  const frac = Math.round((n - whole) * 4);
-  const fracStr = [" ", "\u00bc", "\u00bd", "\u00be"][frac] ?? "";
-  if (whole === 0 && frac === 0) return "0";
-  if (whole === 0) return fracStr.trim();
-  if (frac === 0) return String(whole);
-  return `${whole}${fracStr}`;
-}
-
-function daysInMonth(year: number, month: number) {
-  return new Date(year, month, 0).getDate();
-}
+import { memberDisplayName, memberIdsForChartRows } from "@/lib/utils/chart-members";
+import { daysInMonth } from "@/lib/utils/date";
+import { formatMeal, getMonthTotals } from "@/lib/utils/meal-money";
 
 export function GroupChartView({ token }: { token: string }) {
   const router = useRouter();
@@ -112,13 +101,11 @@ export function GroupChartView({ token }: { token: string }) {
     mealMap[m.memberId][m.date] = m.quantity;
   });
 
+  const rowMemberIds = memberIdsForChartRows(members, meals, chart.monthKey);
   const memberTotal = (id: string) => Object.values(mealMap[id] ?? {}).reduce((s, v) => s + v, 0);
-  const grandTotal = members.reduce((s, m) => s + memberTotal(m.id), 0);
-  const totalCost = costs.reduce((s, c) => s + c.amount, 0);
-  const totalPaid = deposits.reduce((s, d) => s + d.amount, 0);
-  const mealRate = grandTotal > 0 ? totalCost / grandTotal : 0;
-  const remainingTaka = totalPaid - totalCost;
-  const totalMembers = members.length;
+  const grandTotal = meals.reduce((s, m) => s + m.quantity, 0);
+  const { totalCost, totalPaid, mealRate, remainingTaka } = getMonthTotals(meals, costs, deposits);
+  const totalMembers = rowMemberIds.length;
 
   return (
     <div className="group-page-grid">
@@ -158,21 +145,21 @@ export function GroupChartView({ token }: { token: string }) {
             </tr>
           </thead>
           <tbody>
-            {members.map((member, ri) => (
-              <tr key={member.id} className={ri % 2 === 0 ? "bg-[color:var(--background)]" : "bg-[color:var(--panel)]"}>
-                <td className={`sticky left-0 z-10 px-3 py-2 text-sm font-medium ${ri % 2 === 0 ? "bg-[color:var(--background)]" : "bg-[color:var(--panel)]"}`}>{member.fullName}</td>
+            {rowMemberIds.map((memberId, ri) => (
+              <tr key={memberId} className={ri % 2 === 0 ? "bg-[color:var(--background)]" : "bg-[color:var(--panel)]"}>
+                <td className={`sticky left-0 z-10 px-3 py-2 text-sm font-medium ${ri % 2 === 0 ? "bg-[color:var(--background)]" : "bg-[color:var(--panel)]"}`}>{memberDisplayName(memberId, members)}</td>
                 {days.map((d) => (
                   <td key={d} className="px-1 py-2 text-center text-xs">
-                    {mealMap[member.id]?.[d] ? formatMeal(mealMap[member.id][d]) : ""}
+                    {mealMap[memberId]?.[d] ? formatMeal(mealMap[memberId][d]) : ""}
                   </td>
                 ))}
-                <td className="px-3 py-2 text-center text-sm font-bold text-[color:var(--accent)]">{formatMeal(memberTotal(member.id))}</td>
+                <td className="px-3 py-2 text-center text-sm font-bold text-[color:var(--accent)]">{formatMeal(memberTotal(memberId))}</td>
               </tr>
             ))}
             <tr className="border-t border-[color:var(--border)] bg-[color:var(--panel)]">
               <td className="sticky left-0 z-10 bg-[color:var(--panel)] px-3 py-2 text-xs font-bold uppercase tracking-[0.15em] text-[color:var(--muted)]">Total</td>
               {days.map((d) => {
-                const s = members.reduce((sum, m) => sum + (mealMap[m.id]?.[d] ?? 0), 0);
+                const s = rowMemberIds.reduce((sum, id) => sum + (mealMap[id]?.[d] ?? 0), 0);
                 return <td key={d} className="px-1 py-2 text-center text-xs text-[color:var(--soft-foreground)]">{s ? formatMeal(s) : ""}</td>;
               })}
               <td className="px-3 py-2 text-center text-sm font-bold">{formatMeal(grandTotal)}</td>

@@ -24,6 +24,7 @@ export type Chart = {
   month: number;
   totalDays: number;
   active: boolean;
+  locked: boolean;
   createdAt: string;
 };
 
@@ -40,6 +41,8 @@ export type MealEntry = {
   memberId: string;
   date: string;
   quantity: number;
+  /** YYYY-MM; required on new writes for lock enforcement */
+  monthKey?: string;
 };
 
 export type CostEntry = {

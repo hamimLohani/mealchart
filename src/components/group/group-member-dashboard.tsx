@@ -63,7 +63,7 @@ export function GroupMemberDashboard({ token }: { token: string }) {
           {members.map((member) => (
             <div
               key={member.id}
-              onClick={() => router.push(`/group/${token}/member/${member.id}/meals`)}
+              onClick={() => router.push(`/group/${token}/member/${member.id}`)}
               className="member-row"
             >
               <div className="min-w-0">

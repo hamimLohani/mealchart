@@ -22,3 +22,21 @@ export function formatChartLabel(year: number, month: number) {
     year: "numeric",
   });
 }
+
+export function daysInMonth(year: number, month: number) {
+  return new Date(year, month, 0).getDate();
+}
+
+export function chartMonthDateBounds(chart: { monthKey: string; year: number; month: number }) {
+  const lastDay = daysInMonth(chart.year, chart.month);
+  return {
+    min: `${chart.monthKey}-01`,
+    max: `${chart.monthKey}-${String(lastDay).padStart(2, "0")}`,
+  };
+}
+
+/** Derive YYYY-MM from an ISO date string YYYY-MM-DD */
+export function monthKeyFromDate(date: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("Invalid date format.");
+  return date.slice(0, 7);
+}

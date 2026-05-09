@@ -4,8 +4,16 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
-import { createChart, getAdminProfile, listCharts } from "@/lib/firebase/repositories";
+import {
+  backfillMealMonthKeys,
+  createChart,
+  getAdminProfile,
+  listCharts,
+  syncLockedMonthDocsFromCharts,
+  updateChartLock,
+} from "@/lib/firebase/repositories";
 import { formatChartLabel } from "@/lib/utils/date";
+import { daysInMonth } from "@/lib/utils/date";
 import type { AdminProfile, Chart } from "@/types/domain";
 
 type ChartFormState = { year: string; month: string };
@@ -44,6 +52,8 @@ export function CreateChartManager() {
         const profile = await getAdminProfile(user.uid);
         if (!profile) throw new Error("No admin profile was found for the current user.");
         const currentCharts = await listCharts(profile.groupId);
+        await backfillMealMonthKeys(profile.groupId);
+        await syncLockedMonthDocsFromCharts(profile.groupId);
         setAdminProfile(profile);
         setCharts(currentCharts);
       } catch (e) {
@@ -60,7 +70,7 @@ export function CreateChartManager() {
     const y = Number(form.year);
     const m = Number(form.month);
     if (Number.isNaN(y) || Number.isNaN(m) || m < 1 || m > 12) return "Invalid month";
-    return `${formatChartLabel(y, m)} · 31 days`;
+    return `${formatChartLabel(y, m)} · ${daysInMonth(y, m)} days`;
   }, [form.month, form.year]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -81,6 +91,25 @@ export function CreateChartManager() {
       setError(e instanceof Error ? e.message : "Failed to create the chart.");
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleToggleLock(chart: Chart) {
+    if (!adminProfile) return;
+    setError(null);
+    try {
+      await updateChartLock({
+        groupId: adminProfile.groupId,
+        chartId: chart.id,
+        locked: !chart.locked,
+      });
+      setCharts((prev) =>
+        prev.map((current) =>
+          current.id === chart.id ? { ...current, locked: !current.locked } : current,
+        ),
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to update chart lock.");
     }
   }
 
@@ -159,7 +188,21 @@ export function CreateChartManager() {
                     {chart.totalDays} days · {chart.monthKey}
                   </p>
                 </div>
-                {index === 0 && <span className="badge-accent">active</span>}
+                <div className="flex items-center gap-2">
+                  {chart.locked ? (
+                    <span className="rounded-full border border-[color:var(--danger-border)] bg-[color:var(--danger-bg)] px-2 py-0.5 text-xs font-semibold text-[color:var(--danger)]">
+                      locked
+                    </span>
+                  ) : null}
+                  {index === 0 && <span className="badge-accent">active</span>}
+                  <button
+                    type="button"
+                    onClick={() => void handleToggleLock(chart)}
+                    className="button-secondary"
+                  >
+                    {chart.locked ? "Unlock" : "Lock"}
+                  </button>
+                </div>
               </article>
             ))
           ) : (

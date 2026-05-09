@@ -12,16 +12,8 @@ import {
   listDepositsForChart,
 } from "@/lib/firebase/repositories";
 import type { Chart, CostEntry, DepositEntry, Group, MealEntry, Member } from "@/types/domain";
-
-function formatMeal(n: number): string {
-  const whole = Math.floor(n);
-  const frac = Math.round((n - whole) * 4);
-  const fracStr = [" ", "¼", "½", "¾"][frac] ?? "";
-  if (whole === 0 && frac === 0) return "0";
-  if (whole === 0) return fracStr.trim();
-  if (frac === 0) return String(whole);
-  return `${whole}${fracStr}`;
-}
+import { daysInMonth } from "@/lib/utils/date";
+import { formatMeal, getMonthTotals } from "@/lib/utils/meal-money";
 
 export function GroupDashboard({
   token,
@@ -50,6 +42,7 @@ export function GroupDashboard({
     const storedChartMonthKey = sessionStorage.getItem("mc_chart_month_key");
     const storedChartYear = sessionStorage.getItem("mc_chart_year");
     const storedChartMonth = sessionStorage.getItem("mc_chart_month");
+    const storedChartLocked = sessionStorage.getItem("mc_chart_locked");
 
     if (storedChartId && storedChartLabel && storedChartMonthKey && storedChartYear && storedChartMonth) {
       queueMicrotask(() => {
@@ -59,8 +52,9 @@ export function GroupDashboard({
           monthKey: storedChartMonthKey,
           year: Number(storedChartYear),
           month: Number(storedChartMonth),
-          totalDays: 31,
+          totalDays: daysInMonth(Number(storedChartYear), Number(storedChartMonth)),
           active: true,
+          locked: storedChartLocked === "true",
           createdAt: "",
         });
       });
@@ -138,6 +132,7 @@ export function GroupDashboard({
     sessionStorage.setItem("mc_chart_month_key", chart.monthKey);
     sessionStorage.setItem("mc_chart_year", String(chart.year));
     sessionStorage.setItem("mc_chart_month", String(chart.month));
+    sessionStorage.setItem("mc_chart_locked", String(chart.locked));
     setActiveChart(chart);
   }
 
@@ -147,6 +142,7 @@ export function GroupDashboard({
     sessionStorage.removeItem("mc_chart_month_key");
     sessionStorage.removeItem("mc_chart_year");
     sessionStorage.removeItem("mc_chart_month");
+    sessionStorage.removeItem("mc_chart_locked");
     setActiveChart(null);
   }
 
@@ -154,11 +150,8 @@ export function GroupDashboard({
   if (error) return <div className="mt-8 alert-error">{error}</div>;
   if (!group) return null;
 
-  const monthTotalMeals = monthMeals.reduce((sum, item) => sum + item.quantity, 0);
-  const monthTotalCost = monthCosts.reduce((sum, item) => sum + item.amount, 0);
-  const monthTotalPaid = monthDeposits.reduce((sum, item) => sum + item.amount, 0);
-  const mealRate = monthTotalMeals > 0 ? monthTotalCost / monthTotalMeals : 0;
-  const remainingTaka = monthTotalPaid - monthTotalCost;
+  const { totalMeals: monthTotalMeals, totalCost: monthTotalCost, totalPaid: monthTotalPaid, mealRate, remainingTaka } =
+    getMonthTotals(monthMeals, monthCosts, monthDeposits);
 
   // Step 1: Select month/chart first
   if (!activeChart) {
@@ -214,6 +207,11 @@ export function GroupDashboard({
           <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">
             Review month totals, then select a member.
           </p>
+          {activeChart.locked && (
+            <p className="mt-1 inline-flex rounded-full border border-[color:var(--danger-border)] bg-[color:var(--danger-bg)] px-2 py-0.5 text-xs font-semibold text-[color:var(--danger)]">
+              Month locked: meal editing disabled
+            </p>
+          )}
         </div>
         <button type="button" onClick={handleChangeChart} className="button-secondary shrink-0">
           ← Back

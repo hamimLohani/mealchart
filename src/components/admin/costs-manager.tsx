@@ -11,7 +11,7 @@ import {
   listCharts,
   listCostsForChart,
 } from "@/lib/firebase/repositories";
-import { toDateInputValue } from "@/lib/utils/date";
+import { chartMonthDateBounds, toDateInputValue } from "@/lib/utils/date";
 import type { AdminProfile, Chart, CostEntry } from "@/types/domain";
 
 export function CostsManager() {
@@ -64,11 +64,18 @@ export function CostsManager() {
     return () => { active = false; };
   }, [adminProfile, selectedChart]);
 
+  useEffect(() => {
+    if (!selectedChart) return;
+    const { min, max } = chartMonthDateBounds(selectedChart);
+    setDate((d) => (d < min || d > max ? min : d));
+  }, [selectedChart]);
+
   const total = costs.reduce((s, c) => s + c.amount, 0);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!adminProfile || !selectedChart) return;
+    if (selectedChart.locked) { setError("This month is locked."); return; }
     const amt = Number(amount);
     if (!itemName.trim() || isNaN(amt) || amt <= 0) {
       setError("Item name and a valid amount are required.");
@@ -92,6 +99,7 @@ export function CostsManager() {
 
   async function handleDelete(costId: string) {
     if (!adminProfile || !selectedChart) return;
+    if (selectedChart.locked) { setError("This month is locked."); return; }
     try {
       await deleteCost(adminProfile.groupId, selectedChart.id, costId);
       setCosts((prev) => prev.filter((c) => c.id !== costId));
@@ -144,6 +152,8 @@ export function CostsManager() {
   }
 
   // ── Cost management for selected chart ────────────────────────────
+  const dateBounds = chartMonthDateBounds(selectedChart);
+
   return (
     <div className="mt-6 grid gap-5">
       {error && <p className="alert-error">{error}</p>}
@@ -153,6 +163,9 @@ export function CostsManager() {
         <div>
           <p className="admin-section-label">Costs</p>
           <p className="mt-0.5 font-semibold">{selectedChart.label}</p>
+          {selectedChart.locked && (
+            <p className="mt-1 text-xs font-semibold text-[color:var(--danger)]">Month locked: add/delete disabled</p>
+          )}
         </div>
         <button
           type="button"
@@ -192,10 +205,18 @@ export function CostsManager() {
           </label>
           <label className="grid gap-1.5 text-sm font-medium">
             Date
-            <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+            <input
+              className="input"
+              type="date"
+              min={dateBounds.min}
+              max={dateBounds.max}
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              required
+            />
           </label>
         </div>
-        <button className="button-primary w-full sm:w-fit" disabled={!adminProfile || isSubmitting} type="submit">
+        <button className="button-primary w-full sm:w-fit" disabled={!adminProfile || isSubmitting || selectedChart.locked} type="submit">
           {isSubmitting ? "Adding…" : "Add cost"}
         </button>
       </form>
@@ -222,6 +243,7 @@ export function CostsManager() {
               <button
                 onClick={() => void handleDelete(cost.id)}
                 type="button"
+                disabled={selectedChart.locked}
                 className="rounded-full border border-[color:var(--danger-border)] px-3 py-1 text-xs font-semibold text-[color:var(--danger)] transition hover:bg-[color:var(--danger)] hover:text-white"
               >
                 Delete
