@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { GroupDashboard } from "@/components/group/group-dashboard";
 import { GroupNavbar } from "@/components/group/group-navbar";
 import { use } from "react";
@@ -11,16 +10,11 @@ export default function GroupDashboardPage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = use(params);
-  const [searchValue, setSearchValue] = useState("");
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 pb-16 sm:px-8">
-      <GroupNavbar 
-        token={token} 
-        searchValue={searchValue} 
-        onSearchValueChange={setSearchValue} 
-      />
-      <GroupDashboard token={token} memberSearch={searchValue} />
+      <GroupNavbar token={token} />
+      <GroupDashboard token={token} />
     </main>
   );
 }

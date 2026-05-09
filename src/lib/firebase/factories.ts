@@ -20,8 +20,6 @@ export function buildGroupRecord(input: {
     name: input.name,
     token: input.token,
     adminId: input.adminId,
-    currentChartId: undefined,
-    currentChartMonth: undefined,
     createdAt: new Date().toISOString(),
     active: true,
   };

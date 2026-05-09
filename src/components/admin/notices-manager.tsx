@@ -81,13 +81,13 @@ export function NoticesManager() {
 
   return (
     <div className="mt-6 grid gap-5">
-      {error && <p className="rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+      {error && <p className="alert-error">{error}</p>}
 
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="grid gap-4 rounded-[1.5rem] border border-[color:var(--border)] bg-[color:var(--panel)] p-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
-          {editingId ? "Edit Notice" : "Add Notice"}
-        </p>
+      <form
+        onSubmit={handleSubmit}
+        className="grid gap-4 rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]"
+      >
+        <p className="admin-section-label">{editingId ? "Edit Notice" : "Add Notice"}</p>
         <label className="grid gap-1.5 text-sm font-medium">
           Title
           <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Notice title" required />
@@ -97,33 +97,53 @@ export function NoticesManager() {
           <textarea className="input min-h-[80px] resize-y" value={body} onChange={(e) => setBody(e.target.value)} placeholder="Notice details…" required />
         </label>
         <div className="flex gap-3">
-          <button className="button-primary disabled:opacity-60" disabled={!adminProfile || isSubmitting} type="submit">
+          <button className="button-primary" disabled={!adminProfile || isSubmitting} type="submit">
             {isSubmitting ? "Saving…" : editingId ? "Update" : "Add notice"}
           </button>
-          {editingId && <button className="button-secondary" type="button" onClick={cancelEdit}>Cancel</button>}
+          {editingId && (
+            <button className="button-secondary" type="button" onClick={cancelEdit}>Cancel</button>
+          )}
         </div>
       </form>
 
-      {/* List */}
       <div className="grid gap-3">
-        {notices.length === 0 && <p className="text-sm text-[color:var(--soft-foreground)]">No notices yet.</p>}
+        {notices.length === 0 && (
+          <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">No notices yet.</p>
+        )}
         {notices.map((notice) => (
-          <div key={notice.id} className="rounded-[1.25rem] border border-[color:var(--border)] bg-[color:var(--panel)] p-4">
+          <div
+            key={notice.id}
+            className="rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--panel)] p-4"
+          >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="font-semibold">{notice.title}</p>
                   {notice.systemGenerated && (
-                    <span className="rounded-full bg-[color-mix(in_srgb,var(--accent)_12%,transparent)] px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-[color:var(--accent)]">auto</span>
+                    <span className="badge-accent">auto</span>
                   )}
                 </div>
                 <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">{notice.body}</p>
-                <p className="mt-1.5 text-xs text-[color:var(--muted)]">{new Date(notice.createdAt).toLocaleString()}</p>
+                <p className="mt-1.5 text-xs text-[color:var(--muted)]">
+                  {new Date(notice.createdAt).toLocaleString()}
+                </p>
               </div>
               {!notice.systemGenerated && (
                 <div className="flex shrink-0 gap-2">
-                  <button onClick={() => startEdit(notice)} type="button" className="text-xs text-[color:var(--accent)] hover:underline">Edit</button>
-                  <button onClick={() => void handleDelete(notice.id)} type="button" className="text-xs text-red-500 hover:underline">Delete</button>
+                  <button
+                    onClick={() => startEdit(notice)}
+                    type="button"
+                    className="rounded-full border border-[color:var(--border)] px-3 py-1 text-xs font-semibold text-[color:var(--soft-foreground)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => void handleDelete(notice.id)}
+                    type="button"
+                    className="rounded-full border border-[color:var(--danger-border)] px-3 py-1 text-xs font-semibold text-[color:var(--danger)] transition hover:bg-[color:var(--danger)] hover:text-white"
+                  >
+                    Delete
+                  </button>
                 </div>
               )}
             </div>

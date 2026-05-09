@@ -6,6 +6,27 @@ import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 
+function getAuthErrorMessage(error: unknown) {
+  const code =
+    typeof error === "object" && error !== null && "code" in error
+      ? String(error.code)
+      : "";
+
+  if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found") {
+    return "Invalid email or password. Use the admin account that created the group in this Firebase project.";
+  }
+  if (code === "auth/too-many-requests") {
+    return "Too many failed login attempts. Wait a bit, then try again.";
+  }
+  if (code === "auth/network-request-failed") {
+    return "Network error while contacting Firebase Auth. Check your connection and try again.";
+  }
+  if (code === "auth/operation-not-allowed") {
+    return "Email/password login is not enabled in Firebase Authentication.";
+  }
+  return error instanceof Error ? error.message : "Failed to log in.";
+}
+
 export function AdminLoginForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -23,26 +44,23 @@ export function AdminLoginForm() {
     }
 
     setIsSubmitting(true);
-
     try {
       await signInWithEmailAndPassword(auth, email.trim(), password);
       router.push("/admin");
     } catch (loginError) {
-      setError(
-        loginError instanceof Error ? loginError.message : "Failed to log in.",
-      );
+      setError(getAuthErrorMessage(loginError));
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <form className="mt-8 grid gap-5" onSubmit={handleSubmit}>
-      <label className="grid gap-2 text-sm font-medium text-[color:var(--foreground)]">
+    <form className="mt-6 grid gap-4" onSubmit={handleSubmit}>
+      <label className="grid gap-1.5 text-sm font-medium text-[color:var(--foreground)]">
         Email
         <input
-          className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3 outline-none transition focus:border-[color:var(--accent)]"
-          onChange={(event) => setEmail(event.target.value)}
+          className="input"
+          onChange={(e) => setEmail(e.target.value)}
           placeholder="admin@example.com"
           required
           type="email"
@@ -50,12 +68,12 @@ export function AdminLoginForm() {
         />
       </label>
 
-      <label className="grid gap-2 text-sm font-medium text-[color:var(--foreground)]">
+      <label className="grid gap-1.5 text-sm font-medium text-[color:var(--foreground)]">
         Password
         <input
-          className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3 outline-none transition focus:border-[color:var(--accent)]"
+          className="input"
           minLength={6}
-          onChange={(event) => setPassword(event.target.value)}
+          onChange={(e) => setPassword(e.target.value)}
           placeholder="Your admin password"
           required
           type="password"
@@ -63,24 +81,20 @@ export function AdminLoginForm() {
         />
       </label>
 
-      {!isFirebaseConfigured ? (
-        <p className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+      {!isFirebaseConfigured && (
+        <p className="alert-warn">
           Firebase keys are missing. Add them in <span className="font-mono">.env.local</span> before logging in.
         </p>
-      ) : null}
+      )}
 
-      {error ? (
-        <p className="rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </p>
-      ) : null}
+      {error && <p className="alert-error">{error}</p>}
 
       <button
-        className="button-primary w-full disabled:cursor-not-allowed disabled:opacity-60"
+        className="button-primary w-full"
         disabled={isSubmitting || !isFirebaseConfigured}
         type="submit"
       >
-        {isSubmitting ? "Logging in..." : "Login"}
+        {isSubmitting ? "Signing in…" : "Sign in"}
       </button>
     </form>
   );

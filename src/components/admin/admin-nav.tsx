@@ -10,22 +10,22 @@ const navGroups = [
   {
     label: "People",
     items: [
-      { href: "/admin/members",  label: "Members",  hint: "Add, edit, remove" },
-      { href: "/admin/add-money",label: "Add Money", hint: "Member deposits" },
+      { href: "/admin/members", label: "Members", hint: "Add, edit, remove" },
+      { href: "/admin/add-money", label: "Add Money", hint: "Member deposits" },
     ],
   },
   {
     label: "Meals & Costs",
     items: [
       { href: "/admin/edit-meals", label: "Edit Meals", hint: "Daily meal table" },
-      { href: "/admin/costs",      label: "Costs",      hint: "Bazar and expenses" },
+      { href: "/admin/costs", label: "Costs", hint: "Bazar and expenses" },
     ],
   },
   {
     label: "Reports",
     items: [
       { href: "/admin/create-chart", label: "Create Chart", hint: "New monthly sheet" },
-      { href: "/admin/notices",      label: "Notices",      hint: "Updates and alerts" },
+      { href: "/admin/notices", label: "Notices", hint: "Updates and alerts" },
     ],
   },
 ];
@@ -43,7 +43,6 @@ export function AdminNav() {
 
   return (
     <nav className="admin-sidebar">
-      {/* Identity */}
       <div className="admin-sidebar-identity">
         <div className="admin-sidebar-avatar">
           {isLoggedIn ? (admin.email?.[0]?.toUpperCase() ?? "A") : "A"}
@@ -77,7 +76,7 @@ export function AdminNav() {
           </div>
           <button className="admin-sidebar-logout" onClick={handleLogout} type="button">
             <span>↩</span>
-            <span>Logout</span>
+            <span>Sign out</span>
           </button>
         </>
       ) : (

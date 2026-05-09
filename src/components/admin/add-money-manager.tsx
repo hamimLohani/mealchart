@@ -4,72 +4,62 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
-import { createDeposit, getAdminProfile, listDepositsForMonth, listMembers } from "@/lib/firebase/repositories";
-import { getCurrentMonthRange, toDateInputValue } from "@/lib/utils/date";
-import type { AdminProfile, DepositEntry, Member } from "@/types/domain";
+import {
+  createDeposit,
+  getAdminProfile,
+  listCharts,
+  listDepositsForChart,
+  listMembers,
+} from "@/lib/firebase/repositories";
+import { toDateInputValue } from "@/lib/utils/date";
+import type { AdminProfile, Chart, DepositEntry, Member } from "@/types/domain";
 
-type DepositFormState = {
-  memberId: string;
-  amount: string;
-  date: string;
-};
-
-const initialForm: DepositFormState = {
-  memberId: "",
-  amount: "",
-  date: toDateInputValue(new Date()),
-};
+type DepositFormState = { memberId: string; amount: string; date: string };
 
 export function AddMoneyManager() {
   const configurationError =
     !isFirebaseConfigured || !auth
       ? "Firebase is not configured yet. Add your keys in .env.local first."
       : null;
+
   const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
-  const [deposits, setDeposits] = useState<DepositEntry[]>([]);
-  const [form, setForm] = useState<DepositFormState>(initialForm);
+  const [charts, setCharts] = useState<Chart[]>([]);
   const [error, setError] = useState<string | null>(configurationError);
   const [isLoading, setIsLoading] = useState(!configurationError);
+
+  // Chart selection
+  const [selectedChart, setSelectedChart] = useState<Chart | null>(null);
+  const [deposits, setDeposits] = useState<DepositEntry[]>([]);
+  const [depositsLoading, setDepositsLoading] = useState(false);
+  const [form, setForm] = useState<DepositFormState>({ memberId: "", amount: "", date: toDateInputValue(new Date()) });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Load admin profile, members, charts
   useEffect(() => {
-    if (configurationError || !auth) {
-      return;
-    }
+    if (configurationError || !auth) return;
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        setAdminProfile(null);
-        setMembers([]);
-        setDeposits([]);
+        setAdminProfile(null); setMembers([]); setCharts([]);
         setError("Log in as an admin to add money for members.");
         setIsLoading(false);
         return;
       }
-
       try {
         setError(null);
         const profile = await getAdminProfile(user.uid);
-
-        if (!profile) {
-          throw new Error("No admin profile was found for the current user.");
-        }
-
-        const [currentMembers, currentDeposits] = await Promise.all([
+        if (!profile) throw new Error("No admin profile was found for the current user.");
+        const [currentMembers, currentCharts] = await Promise.all([
           listMembers(profile.groupId),
-          listDepositsForMonth(profile.groupId, new Date()),
+          listCharts(profile.groupId),
         ]);
-
         setAdminProfile(profile);
         setMembers(currentMembers);
-        setDeposits(currentDeposits);
-        setForm((current) => ({
-          ...current,
-          memberId: current.memberId || currentMembers[0]?.id || "",
-        }));
-      } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : "Failed to load money data.");
+        setCharts(currentCharts);
+        setForm((c) => ({ ...c, memberId: c.memberId || currentMembers[0]?.id || "" }));
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to load data.");
       } finally {
         setIsLoading(false);
       }
@@ -78,204 +68,232 @@ export function AddMoneyManager() {
     return unsubscribe;
   }, [configurationError]);
 
+  // Load deposits when chart is selected
+  useEffect(() => {
+    if (!adminProfile || !selectedChart) return;
+    let active = true;
+    setDepositsLoading(true);
+    setDeposits([]);
+
+    listDepositsForChart(adminProfile.groupId, selectedChart.id)
+      .then((list) => { if (active) setDeposits(list); })
+      .catch((e) => { if (active) setError(e instanceof Error ? e.message : "Failed to load deposits."); })
+      .finally(() => { if (active) setDepositsLoading(false); });
+
+    return () => { active = false; };
+  }, [adminProfile, selectedChart]);
+
   const memberTotals = useMemo(() => {
     const totals = new Map<string, number>();
-
-    for (const deposit of deposits) {
-      totals.set(deposit.memberId, (totals.get(deposit.memberId) ?? 0) + deposit.amount);
-    }
-
+    for (const d of deposits) totals.set(d.memberId, (totals.get(d.memberId) ?? 0) + d.amount);
     return totals;
   }, [deposits]);
 
-  const totalPaidTaka = useMemo(
-    () => deposits.reduce((sum, deposit) => sum + deposit.amount, 0),
-    [deposits],
-  );
-
-  const monthLabel = useMemo(() => {
-    const { start } = getCurrentMonthRange(new Date());
-
-    return start.toLocaleDateString("en-US", {
-      month: "long",
-      year: "numeric",
-    });
-  }, []);
+  const totalDeposited = useMemo(() => deposits.reduce((s, d) => s + d.amount, 0), [deposits]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-
-    if (!adminProfile) {
-      setError("Admin profile is required before creating deposits.");
-      return;
-    }
-
+    if (!adminProfile || !selectedChart) return;
     const amount = Number(form.amount);
     if (!form.memberId || Number.isNaN(amount) || amount <= 0) {
       setError("Select a member and enter a valid deposit amount.");
       return;
     }
-
     setIsSubmitting(true);
-
     try {
       const deposit = await createDeposit({
         groupId: adminProfile.groupId,
+        chartId: selectedChart.id,
         memberId: form.memberId,
         amount,
         date: form.date,
         collectedByAdminId: adminProfile.id,
       });
-
-      setDeposits((current) => [deposit, ...current]);
-      setForm((current) => ({ ...current, amount: "" }));
-    } catch (submissionError) {
-      setError(
-        submissionError instanceof Error
-          ? submissionError.message
-          : "Failed to add money.",
-      );
+      setDeposits((c) => [deposit, ...c]);
+      setForm((c) => ({ ...c, amount: "" }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to add money.");
     } finally {
       setIsSubmitting(false);
     }
   }
 
   if (isLoading) {
-    return <p className="mt-8 text-sm text-[color:var(--soft-foreground)]">Loading add-money data...</p>;
+    return <p className="mt-8 text-sm text-[color:var(--soft-foreground)]">Loading…</p>;
   }
 
-  return (
-    <div className="mt-8 grid gap-6">
-      {error ? (
-        <p className="rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </p>
-      ) : null}
+  // ── Chart selection ───────────────────────────────────────────────
+  if (!selectedChart) {
+    return (
+      <div className="mt-6 grid gap-5">
+        {error && <p className="alert-error">{error}</p>}
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-[1.5rem] border border-[color:var(--border)] bg-[color:var(--background)] p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
-            Current month
+        <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]">
+          <p className="admin-section-label">Select Month</p>
+          <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">
+            Choose the monthly chart to add deposits to.
           </p>
-          <p className="mt-2 text-2xl font-semibold">{monthLabel}</p>
-        </div>
-        <div className="rounded-[1.5rem] border border-[color:var(--border)] bg-[color:var(--background)] p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
-            Total money
-          </p>
-          <p className="mt-2 text-2xl font-semibold">{totalPaidTaka.toFixed(2)} tk</p>
-        </div>
-        <div className="rounded-[1.5rem] border border-[color:var(--border)] bg-[color:var(--background)] p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
-            Members
-          </p>
-          <p className="mt-2 text-2xl font-semibold">{members.length}</p>
+          {charts.length === 0 ? (
+            <p className="mt-4 py-6 text-center text-sm text-[color:var(--soft-foreground)]">
+              No charts created yet. Create a chart first.
+            </p>
+          ) : (
+            <div className="mt-4 grid gap-2">
+              {charts.map((chart, i) => (
+                <button
+                  key={chart.id}
+                  type="button"
+                  onClick={() => setSelectedChart(chart)}
+                  className="flex items-center justify-between rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3.5 text-left transition hover:border-[color:var(--accent)] hover:bg-[color:var(--accent-dim)]"
+                >
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold">{chart.label}</p>
+                      {i === 0 && <span className="badge-accent">active</span>}
+                    </div>
+                    <p className="mt-0.5 text-xs text-[color:var(--muted)]">{chart.monthKey}</p>
+                  </div>
+                  <span className="text-[color:var(--accent)]">→</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
+    );
+  }
 
-      <form className="grid gap-4 rounded-[1.5rem] border border-[color:var(--border)] bg-[color:var(--background)] p-5" onSubmit={handleSubmit}>
+  // ── Deposit management for selected chart ─────────────────────────
+  return (
+    <div className="mt-6 grid gap-5">
+      {error && <p className="alert-error">{error}</p>}
+
+      {/* Header with back */}
+      <div className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--panel)] px-4 py-3">
+        <div>
+          <p className="admin-section-label">Add Money</p>
+          <p className="mt-0.5 font-semibold">{selectedChart.label}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => { setSelectedChart(null); setDeposits([]); }}
+          className="button-secondary shrink-0"
+        >
+          ← Months
+        </button>
+      </div>
+
+      {/* Stats */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        {[
+          { label: "Month", value: selectedChart.label },
+          { label: "Total deposited", value: `${totalDeposited.toFixed(2)} tk` },
+          { label: "Members", value: String(members.length) },
+        ].map((s) => (
+          <div key={s.label} className="group-stat-card">
+            <p className="group-stat-label">{s.label}</p>
+            <p className="group-stat-value">{s.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Add deposit form */}
+      <form
+        className="grid gap-4 rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]"
+        onSubmit={handleSubmit}
+      >
+        <p className="admin-section-label">Add Deposit</p>
         <div className="grid gap-4 md:grid-cols-3">
-          <label className="grid gap-2 text-sm font-medium">
+          <label className="grid gap-1.5 text-sm font-medium">
             Member
             <select
-              className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--panel)] px-4 py-3 outline-none transition focus:border-[color:var(--accent)]"
-              onChange={(event) =>
-                setForm((current) => ({ ...current, memberId: event.target.value }))
-              }
+              className="input"
+              onChange={(e) => setForm((c) => ({ ...c, memberId: e.target.value }))}
               value={form.memberId}
             >
               <option value="">Select member</option>
-              {members.map((member) => (
-                <option key={member.id} value={member.id}>
-                  {member.fullName}
-                </option>
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>{m.fullName}</option>
               ))}
             </select>
           </label>
-
-          <label className="grid gap-2 text-sm font-medium">
-            Amount
+          <label className="grid gap-1.5 text-sm font-medium">
+            Amount (tk)
             <input
-              className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--panel)] px-4 py-3 outline-none transition focus:border-[color:var(--accent)]"
+              className="input"
               min="0"
-              onChange={(event) =>
-                setForm((current) => ({ ...current, amount: event.target.value }))
-              }
+              onChange={(e) => setForm((c) => ({ ...c, amount: e.target.value }))}
               placeholder="500"
               step="0.01"
               type="number"
               value={form.amount}
             />
           </label>
-
-          <label className="grid gap-2 text-sm font-medium">
+          <label className="grid gap-1.5 text-sm font-medium">
             Date
             <input
-              className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--panel)] px-4 py-3 outline-none transition focus:border-[color:var(--accent)]"
-              onChange={(event) =>
-                setForm((current) => ({ ...current, date: event.target.value }))
-              }
+              className="input"
+              onChange={(e) => setForm((c) => ({ ...c, date: e.target.value }))}
               type="date"
               value={form.date}
             />
           </label>
         </div>
-
         <button
-          className="button-primary w-full sm:w-fit disabled:cursor-not-allowed disabled:opacity-60"
+          className="button-primary w-full sm:w-fit"
           disabled={!adminProfile || !members.length || isSubmitting}
           type="submit"
         >
-          {isSubmitting ? "Adding money..." : "Add money"}
+          {isSubmitting ? "Adding…" : "Add money"}
         </button>
       </form>
 
-      <div className="rounded-[1.5rem] border border-[color:var(--border)] bg-[color:var(--background)] p-5">
-        <div className="grid gap-3 md:grid-cols-2">
+      {/* Member totals */}
+      <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]">
+        <p className="admin-section-label">Member Totals — {selectedChart.label}</p>
+        <div className="mt-3 grid gap-2.5 md:grid-cols-2">
           {members.map((member) => (
-            <article
+            <div
               key={member.id}
-              className="rounded-[1.25rem] border border-[color:var(--border)] bg-[color:var(--panel)] p-4"
+              className="flex items-center justify-between rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3"
             >
               <p className="font-semibold">{member.fullName}</p>
-              <p className="mt-2 text-sm text-[color:var(--soft-foreground)]">
-                Previous taka: {(memberTotals.get(member.id) ?? 0).toFixed(2)} tk
+              <p className="font-bold text-[color:var(--accent)]">
+                {(memberTotals.get(member.id) ?? 0).toFixed(2)} tk
               </p>
-            </article>
+            </div>
           ))}
         </div>
       </div>
 
-      <div className="rounded-[1.5rem] border border-[color:var(--border)] bg-[color:var(--background)] p-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
-          Current month deposit history
-        </p>
-        <div className="mt-4 grid gap-3">
-          {deposits.length ? (
-            deposits.map((deposit) => {
-              const member = members.find((entry) => entry.id === deposit.memberId);
-
-              return (
-                <article
-                  key={deposit.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-[1.25rem] border border-[color:var(--border)] bg-[color:var(--panel)] p-4"
-                >
-                  <div>
-                    <p className="font-semibold">{member?.fullName ?? "Unknown member"}</p>
-                    <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">
-                      {deposit.date}
-                    </p>
-                  </div>
-                  <p className="text-lg font-semibold">{deposit.amount.toFixed(2)} tk</p>
-                </article>
-              );
-            })
-          ) : (
-            <p className="text-sm text-[color:var(--soft-foreground)]">
-              No money has been added for this month yet.
+      {/* Deposit history */}
+      <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]">
+        <p className="admin-section-label">Deposit History — {selectedChart.label}</p>
+        <div className="mt-3 grid gap-2.5">
+          {depositsLoading && (
+            <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">Loading…</p>
+          )}
+          {!depositsLoading && deposits.length === 0 && (
+            <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">
+              No deposits for this month yet.
             </p>
           )}
+          {deposits.map((deposit) => {
+            const member = members.find((m) => m.id === deposit.memberId);
+            return (
+              <article
+                key={deposit.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3"
+              >
+                <div>
+                  <p className="font-semibold">{member?.fullName ?? "Unknown member"}</p>
+                  <p className="mt-0.5 text-xs text-[color:var(--muted)]">{deposit.date}</p>
+                </div>
+                <p className="text-base font-bold text-[color:var(--accent)]">{deposit.amount.toFixed(2)} tk</p>
+              </article>
+            );
+          })}
         </div>
       </div>
     </div>

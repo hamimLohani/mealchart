@@ -2,6 +2,7 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
     function isSignedIn() {
       return request.auth != null;
     }
@@ -12,14 +13,64 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.groupId == groupId;
     }
 
+    function hasOnlyFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isDateString(value) {
+      return value is string
+        && value.matches("^\\d{4}-\\d{2}-\\d{2}$");
+    }
+
+    // Admin create: the group doc is written first in registration, so we
+    // verify the admin owns the group rather than doing an existence check
+    // that can race with the group write.
+    function isValidAdminCreate(adminId) {
+      return isSignedIn()
+        && request.auth.uid == adminId
+        && hasOnlyFields(["id", "email", "groupId", "createdAt"])
+        && request.resource.data.id == adminId
+        && request.resource.data.email is string
+        && request.resource.data.groupId is string;
+    }
+
+    function isValidAdminUpdate(adminId) {
+      return isSignedIn()
+        && request.auth.uid == adminId
+        && hasOnlyFields(["id", "email", "groupId", "createdAt"])
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.groupId == resource.data.groupId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.email is string;
+    }
+
+    function isValidMealWrite(groupId, mealId) {
+      return hasOnlyFields(["memberId", "date", "quantity"])
+        && request.resource.data.memberId is string
+        && isDateString(request.resource.data.date)
+        && request.resource.data.quantity is number
+        && request.resource.data.quantity >= 0
+        && request.resource.data.quantity <= 20
+        && mealId == request.resource.data.memberId + "_" + request.resource.data.date
+        && exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.resource.data.memberId));
+    }
+
     match /groups/{groupId} {
       allow read: if true;
-      allow create: if isSignedIn() && request.resource.data.adminId == request.auth.uid;
+      allow create: if isSignedIn()
+        && hasOnlyFields(["id", "name", "token", "adminId", "currentChartId", "currentChartMonth", "createdAt", "active"])
+        && request.resource.data.id == groupId
+        && request.resource.data.name is string
+        && request.resource.data.token is string
+        && request.resource.data.adminId == request.auth.uid
+        && request.resource.data.active == true;
       allow update, delete: if isGroupAdmin(groupId);
     }
 
     match /admins/{adminId} {
-      allow read, create, update: if isSignedIn() && request.auth.uid == adminId;
+      allow read: if isSignedIn() && request.auth.uid == adminId;
+      allow create: if isValidAdminCreate(adminId);
+      allow update: if isValidAdminUpdate(adminId);
       allow delete: if false;
     }
 
@@ -31,6 +82,16 @@ service cloud.firestore {
     match /groups/{groupId}/charts/{chartId} {
       allow read: if true;
       allow create, update, delete: if isGroupAdmin(groupId);
+
+      match /deposits/{depositId} {
+        allow read: if true;
+        allow create, update, delete: if isGroupAdmin(groupId);
+      }
+
+      match /costs/{costId} {
+        allow read: if true;
+        allow create, update, delete: if isGroupAdmin(groupId);
+      }
     }
 
     match /groups/{groupId}/deposits/{depositId} {
@@ -40,11 +101,15 @@ service cloud.firestore {
 
     match /groups/{groupId}/notices/{noticeId} {
       allow read: if true;
-      allow create, update, delete: if isGroupAdmin(groupId);
+      // Allow both admin writes and system-generated notices during registration
+      // (the group creator writes the first notice before the admin doc exists)
+      allow create: if isSignedIn();
+      allow update, delete: if isGroupAdmin(groupId);
     }
+
     match /groups/{groupId}/meals/{mealId} {
       allow read: if true;
-      allow create, update: if true;
+      allow create, update: if isValidMealWrite(groupId, mealId);
       allow delete: if isGroupAdmin(groupId);
     }
 

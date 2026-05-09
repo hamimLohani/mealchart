@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import {
   findGroupByToken,
   getMealsForMonth,
-  listCostsForMonth,
-  listDepositsForMonth,
+  listCostsForChart,
+  listDepositsForChart,
   listMembers,
 } from "@/lib/firebase/repositories";
-import { toMonthKey } from "@/lib/utils/date";
+import { useGroupSession } from "@/lib/hooks/use-group-session";
 import type { CostEntry, DepositEntry, Group, MealEntry, Member } from "@/types/domain";
 
 function formatMeal(n: number): string {
@@ -27,6 +28,8 @@ function daysInMonth(year: number, month: number) {
 }
 
 export function GroupChartView({ token }: { token: string }) {
+  const router = useRouter();
+  const { chart } = useGroupSession();
   const [group, setGroup] = useState<Group | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [meals, setMeals] = useState<MealEntry[]>([]);
@@ -42,28 +45,11 @@ export function GroupChartView({ token }: { token: string }) {
       try {
         const g = await findGroupByToken(token);
         if (!g) throw new Error("Group not found.");
-
-        const now = new Date();
-        const monthKey = g.currentChartMonth ?? toMonthKey(now.getFullYear(), now.getMonth() + 1);
-        const [year, mon] = monthKey.split("-").map(Number);
-        const monthDate = new Date(year, mon - 1, 1);
-
-        const [memberList, mealList, costList, depositList] = await Promise.all([
-          listMembers(g.id),
-          getMealsForMonth(g.id, monthKey),
-          listCostsForMonth(g.id, monthKey),
-          listDepositsForMonth(g.id, monthDate),
-        ]);
-
         if (!active) return;
         setGroup(g);
-        setMembers(memberList);
-        setMeals(mealList);
-        setCosts(costList);
-        setDeposits(depositList);
       } catch (e) {
         if (!active) return;
-        setError(e instanceof Error ? e.message : "Failed to load chart.");
+        setError(e instanceof Error ? e.message : "Failed to load.");
       } finally {
         if (active) setIsLoading(false);
       }
@@ -72,16 +58,54 @@ export function GroupChartView({ token }: { token: string }) {
     return () => { active = false; };
   }, [token]);
 
-  if (isLoading) return <p className="py-16 text-center text-sm text-[color:var(--soft-foreground)]">Loading chart…</p>;
-  if (error) return <p className="mt-8 rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>;
+  useEffect(() => {
+    if (!group || !chart) return;
+    let active = true;
+
+    Promise.all([
+      listMembers(group.id),
+      getMealsForMonth(group.id, chart.monthKey),
+      listCostsForChart(group.id, chart.id),
+      listDepositsForChart(group.id, chart.id),
+    ])
+      .then(([memberList, mealList, costList, depositList]) => {
+        if (!active) return;
+        setMembers(memberList);
+        setMeals(mealList);
+        setCosts(costList);
+        setDeposits(depositList);
+      })
+      .catch((e) => { if (active) setError(e instanceof Error ? e.message : "Failed to load chart."); });
+
+    return () => { active = false; };
+  }, [group, chart]);
+
+  if (isLoading) return <p className="py-16 text-center text-sm text-[color:var(--soft-foreground)]">Loading…</p>;
+  if (error) return <div className="mt-8 alert-error">{error}</div>;
   if (!group) return null;
 
-  const monthKey = group.currentChartMonth ?? toMonthKey(new Date().getFullYear(), new Date().getMonth() + 1);
-  const [year, mon] = monthKey.split("-").map(Number);
-  const totalDays = daysInMonth(year, mon);
-  const days = Array.from({ length: totalDays }, (_, i) => `${monthKey}-${String(i + 1).padStart(2, "0")}`);
+  if (!chart) {
+    return (
+      <div className="group-page-grid">
+        <div className="group-hero">
+          <div className="min-w-0">
+            <p className="group-kicker">{group.name}</p>
+            <p className="group-title">No month selected</p>
+            <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">
+              Go back to the home tab and select a month first.
+            </p>
+          </div>
+          <button type="button" onClick={() => router.push(`/group/${token}`)} className="button-secondary shrink-0">
+            ← Home
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-  // meal map: memberId → date → quantity
+  const totalDays = daysInMonth(chart.year, chart.month);
+  const days = Array.from({ length: totalDays }, (_, i) => `${chart.monthKey}-${String(i + 1).padStart(2, "0")}`);
+
   const mealMap: Record<string, Record<string, number>> = {};
   meals.forEach((m) => {
     if (!mealMap[m.memberId]) mealMap[m.memberId] = {};
@@ -93,63 +117,65 @@ export function GroupChartView({ token }: { token: string }) {
   const totalCost = costs.reduce((s, c) => s + c.amount, 0);
   const totalPaid = deposits.reduce((s, d) => s + d.amount, 0);
   const mealRate = grandTotal > 0 ? totalCost / grandTotal : 0;
-
-  const monthLabel = new Date(year, mon - 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const remainingTaka = totalPaid - totalCost;
+  const totalMembers = members.length;
 
   return (
-    <div className="py-6 grid gap-5">
-      {/* Header */}
-      <div className="rounded-[1.5rem] border border-[color:var(--border)] bg-[color:var(--panel)] p-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">Chart View</p>
-        <h1 className="mt-1 text-2xl font-semibold">{group.name}</h1>
-        <p className="mt-0.5 text-sm text-[color:var(--soft-foreground)]">{monthLabel}</p>
+    <div className="group-page-grid">
+      <div className="group-hero">
+        <div className="min-w-0">
+          <p className="group-kicker">{group.name}</p>
+          <p className="group-title">Chart</p>
+          <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">{chart.label}</p>
+        </div>
       </div>
 
-      {/* Summary stats */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {[
           { label: "Total Meals", value: formatMeal(grandTotal) },
+          { label: "Total Members", value: String(totalMembers) },
           { label: "Total Cost", value: `${totalCost.toFixed(2)} tk` },
           { label: "Total Paid", value: `${totalPaid.toFixed(2)} tk` },
+          { label: "Remaining Taka", value: `${remainingTaka.toFixed(2)} tk` },
           { label: "Meal Rate", value: `${mealRate.toFixed(2)} tk` },
         ].map((s) => (
-          <div key={s.label} className="rounded-[1.25rem] border border-[color:var(--border)] bg-[color:var(--panel)] p-3 text-center">
-            <p className="text-xs text-[color:var(--muted)]">{s.label}</p>
-            <p className="mt-1 text-base font-bold">{s.value}</p>
+          <div key={s.label} className="group-stat-card">
+            <p className="group-stat-label">{s.label}</p>
+            <p className="group-stat-value">{s.value}</p>
           </div>
         ))}
       </div>
 
-      {/* Meal table */}
-      <div className="overflow-x-auto rounded-[1.5rem] border border-[color:var(--border)]">
+      <div className="overflow-x-auto rounded-[var(--radius)] border border-[color:var(--border)] shadow-[var(--shadow-sm)]">
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="bg-[color:var(--panel)]">
-              <th className="sticky left-0 z-10 bg-[color:var(--panel)] px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-[0.15em] text-[color:var(--muted)]">Member</th>
+              <th className="sticky left-0 z-10 min-w-[120px] bg-[color:var(--panel)] px-3 py-2.5 text-left text-xs font-bold uppercase tracking-[0.15em] text-[color:var(--muted)]">Member</th>
               {days.map((d) => (
                 <th key={d} className="min-w-[36px] px-1 py-2.5 text-center text-xs font-semibold text-[color:var(--muted)]">{d.slice(8)}</th>
               ))}
-              <th className="px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-[0.15em] text-[color:var(--accent)]">Total</th>
+              <th className="px-3 py-2.5 text-center text-xs font-bold uppercase tracking-[0.15em] text-[color:var(--accent)]">Total</th>
             </tr>
           </thead>
           <tbody>
             {members.map((member, ri) => (
               <tr key={member.id} className={ri % 2 === 0 ? "bg-[color:var(--background)]" : "bg-[color:var(--panel)]"}>
-                <td className={`sticky left-0 z-10 px-3 py-2 font-medium ${ri % 2 === 0 ? "bg-[color:var(--background)]" : "bg-[color:var(--panel)]"}`}>{member.fullName}</td>
+                <td className={`sticky left-0 z-10 px-3 py-2 text-sm font-medium ${ri % 2 === 0 ? "bg-[color:var(--background)]" : "bg-[color:var(--panel)]"}`}>{member.fullName}</td>
                 {days.map((d) => (
-                  <td key={d} className="px-1 py-2 text-center text-xs">{mealMap[member.id]?.[d] ? formatMeal(mealMap[member.id][d]) : ""}</td>
+                  <td key={d} className="px-1 py-2 text-center text-xs">
+                    {mealMap[member.id]?.[d] ? formatMeal(mealMap[member.id][d]) : ""}
+                  </td>
                 ))}
-                <td className="px-3 py-2 text-center font-bold text-[color:var(--accent)]">{formatMeal(memberTotal(member.id))}</td>
+                <td className="px-3 py-2 text-center text-sm font-bold text-[color:var(--accent)]">{formatMeal(memberTotal(member.id))}</td>
               </tr>
             ))}
-            <tr className="border-t border-[color:var(--border)] bg-[color:var(--panel)] font-semibold">
-              <td className="sticky left-0 z-10 bg-[color:var(--panel)] px-3 py-2 text-xs uppercase tracking-[0.15em] text-[color:var(--muted)]">Total</td>
-              {days.map((d) => (
-                <td key={d} className="px-1 py-2 text-center text-xs text-[color:var(--soft-foreground)]">
-                  {members.reduce((s, m) => s + (mealMap[m.id]?.[d] ?? 0), 0) ? formatMeal(members.reduce((s, m) => s + (mealMap[m.id]?.[d] ?? 0), 0)) : ""}
-                </td>
-              ))}
-              <td className="px-3 py-2 text-center font-bold">{formatMeal(grandTotal)}</td>
+            <tr className="border-t border-[color:var(--border)] bg-[color:var(--panel)]">
+              <td className="sticky left-0 z-10 bg-[color:var(--panel)] px-3 py-2 text-xs font-bold uppercase tracking-[0.15em] text-[color:var(--muted)]">Total</td>
+              {days.map((d) => {
+                const s = members.reduce((sum, m) => sum + (mealMap[m.id]?.[d] ?? 0), 0);
+                return <td key={d} className="px-1 py-2 text-center text-xs text-[color:var(--soft-foreground)]">{s ? formatMeal(s) : ""}</td>;
+              })}
+              <td className="px-3 py-2 text-center text-sm font-bold">{formatMeal(grandTotal)}</td>
             </tr>
           </tbody>
         </table>

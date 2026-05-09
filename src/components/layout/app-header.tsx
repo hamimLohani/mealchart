@@ -7,36 +7,36 @@ export function AppHeader() {
   const { language, setLanguage, theme, setTheme } = useUiStore();
 
   return (
-    <header className="sticky top-0 z-30 border-b border-[color:var(--border)] bg-[color:var(--background)]/90 backdrop-blur">
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-8 sm:py-4">
-        <Link className="flex items-center gap-2.5 sm:gap-3" href="/">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[color:var(--accent)] text-xs font-bold text-white sm:h-10 sm:w-10 sm:rounded-2xl sm:text-sm">
+    <header className="sticky top-0 z-30 border-b border-[color:var(--border)] bg-[color:var(--panel)] backdrop-blur-md">
+      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-8">
+        <Link className="flex items-center gap-2.5" href="/">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[color:var(--accent)] text-[0.7rem] font-bold text-white shadow-[0_4px_10px_var(--accent-glow)] sm:h-9 sm:w-9">
             MC
           </span>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)] sm:text-sm">
+          <div className="leading-tight">
+            <p className="text-[0.7rem] font-bold uppercase tracking-[0.22em] text-[color:var(--muted)]">
               Meat Chart
             </p>
-            <p className="hidden text-xs text-[color:var(--soft-foreground)] sm:block sm:text-sm">
-              Hostel and mess accounting
+            <p className="hidden text-xs font-medium text-[color:var(--soft-foreground)] sm:block">
+              Hostel & mess accounting
             </p>
           </div>
         </Link>
 
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="flex items-center gap-1.5">
           <button
-            className="rounded-full border border-[color:var(--border)] px-2.5 py-1.5 text-xs font-medium text-[color:var(--foreground)] transition hover:border-[color:var(--accent)] sm:px-3 sm:py-2 sm:text-sm"
+            className="rounded-full border border-[color:var(--border)] bg-[color:var(--background)] px-3 py-1.5 text-xs font-semibold text-[color:var(--soft-foreground)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]"
             onClick={() => setLanguage(language === "en" ? "bn" : "en")}
             type="button"
           >
             {language === "en" ? "বাংলা" : "English"}
           </button>
           <button
-            className="rounded-full border border-[color:var(--border)] px-2.5 py-1.5 text-xs font-medium text-[color:var(--foreground)] transition hover:border-[color:var(--accent)] sm:px-3 sm:py-2 sm:text-sm"
+            className="rounded-full border border-[color:var(--border)] bg-[color:var(--background)] px-3 py-1.5 text-xs font-semibold text-[color:var(--soft-foreground)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]"
             onClick={() => setTheme(theme === "light" ? "dark" : "light")}
             type="button"
           >
-            {theme === "light" ? "Dark" : "Light"}
+            {theme === "light" ? "🌙 Dark" : "☀️ Light"}
           </button>
         </div>
       </div>

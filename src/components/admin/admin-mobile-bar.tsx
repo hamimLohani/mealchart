@@ -4,13 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const pageLabels: Record<string, string> = {
-  "/admin":              "Admin Panel",
-  "/admin/members":      "Members",
-  "/admin/add-money":    "Add Money",
-  "/admin/edit-meals":   "Edit Meals",
-  "/admin/costs":        "Costs",
+  "/admin": "Admin Panel",
+  "/admin/members": "Members",
+  "/admin/add-money": "Add Money",
+  "/admin/edit-meals": "Edit Meals",
+  "/admin/costs": "Costs",
   "/admin/create-chart": "Create Chart",
-  "/admin/notices":      "Notices",
+  "/admin/notices": "Notices",
 };
 
 export function AdminMobileBar() {
@@ -19,11 +19,11 @@ export function AdminMobileBar() {
   const isHome = pathname === "/admin";
 
   return (
-    <div className="flex items-center gap-3 rounded-[1.25rem] border border-[color:var(--border)] bg-[color:var(--panel)] px-4 py-3">
+    <div className="flex items-center gap-3 rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] px-4 py-2.5 shadow-[var(--shadow-sm)]">
       {!isHome && (
         <Link
           href="/admin"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[color:var(--border)] text-sm text-[color:var(--foreground)] transition hover:border-[color:var(--accent)]"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[color:var(--border)] text-sm text-[color:var(--soft-foreground)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]"
         >
           ←
         </Link>

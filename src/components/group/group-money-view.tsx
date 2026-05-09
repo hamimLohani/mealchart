@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import {
   findGroupByToken,
   getMealsForMonth,
-  listCostsForMonth,
-  listDepositsForMonth,
+  listCostsForChart,
+  listDepositsForChart,
   listMembers,
 } from "@/lib/firebase/repositories";
-import { toMonthKey } from "@/lib/utils/date";
+import { useGroupSession } from "@/lib/hooks/use-group-session";
 import type { CostEntry, DepositEntry, Group, MealEntry, Member } from "@/types/domain";
 
 function formatMeal(n: number): string {
@@ -23,13 +24,16 @@ function formatMeal(n: number): string {
 }
 
 export function GroupMoneyView({ token }: { token: string }) {
+  const router = useRouter();
+  const { chart } = useGroupSession();
   const [group, setGroup] = useState<Group | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [meals, setMeals] = useState<MealEntry[]>([]);
   const [costs, setCosts] = useState<CostEntry[]>([]);
   const [deposits, setDeposits] = useState<DepositEntry[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -38,33 +42,64 @@ export function GroupMoneyView({ token }: { token: string }) {
       try {
         const g = await findGroupByToken(token);
         if (!g) throw new Error("Group not found.");
-        const now = new Date();
-        const monthKey = g.currentChartMonth ?? toMonthKey(now.getFullYear(), now.getMonth() + 1);
-        const [year, mon] = monthKey.split("-").map(Number);
-        const [memberList, mealList, costList, depositList] = await Promise.all([
-          listMembers(g.id),
-          getMealsForMonth(g.id, monthKey),
-          listCostsForMonth(g.id, monthKey),
-          listDepositsForMonth(g.id, new Date(year, mon - 1, 1)),
-        ]);
         if (!active) return;
-        setGroup(g); setMembers(memberList); setMeals(mealList); setCosts(costList); setDeposits(depositList);
+        setGroup(g);
       } catch (e) {
         if (!active) return;
         setError(e instanceof Error ? e.message : "Failed to load.");
-      } finally { if (active) setIsLoading(false); }
+      } finally {
+        if (active) setIsLoading(false);
+      }
     }
     void load();
     return () => { active = false; };
   }, [token]);
 
+  useEffect(() => {
+    if (!group || !chart) return;
+    let active = true;
+    setDataLoading(true);
+
+    Promise.all([
+      listMembers(group.id),
+      getMealsForMonth(group.id, chart.monthKey),
+      listCostsForChart(group.id, chart.id),
+      listDepositsForChart(group.id, chart.id),
+    ])
+      .then(([memberList, mealList, costList, depositList]) => {
+        if (!active) return;
+        setMembers(memberList); setMeals(mealList); setCosts(costList); setDeposits(depositList);
+      })
+      .catch((e) => { if (active) setError(e instanceof Error ? e.message : "Failed to load."); })
+      .finally(() => { if (active) setDataLoading(false); });
+
+    return () => { active = false; };
+  }, [group, chart]);
+
   if (isLoading) return <p className="py-16 text-center text-sm text-[color:var(--soft-foreground)]">Loading…</p>;
-  if (error) return <p className="mt-8 rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>;
+  if (error) return <div className="mt-8 alert-error">{error}</div>;
   if (!group) return null;
 
-  const monthKey = group.currentChartMonth ?? toMonthKey(new Date().getFullYear(), new Date().getMonth() + 1);
-  const [year, mon] = monthKey.split("-").map(Number);
-  const monthLabel = new Date(year, mon - 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  if (!chart) {
+    return (
+      <div className="group-page-grid">
+        <div className="group-hero">
+          <div className="min-w-0">
+            <p className="group-kicker">{group.name}</p>
+            <p className="group-title">No month selected</p>
+            <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">
+              Go back to the home tab and select a month first.
+            </p>
+          </div>
+          <button type="button" onClick={() => router.push(`/group/${token}`)} className="button-secondary shrink-0">
+            ← Home
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (dataLoading) return <p className="py-16 text-center text-sm text-[color:var(--soft-foreground)]">Loading…</p>;
 
   const memberMeals: Record<string, number> = {};
   meals.forEach((m) => { memberMeals[m.memberId] = (memberMeals[m.memberId] ?? 0) + m.quantity; });
@@ -76,47 +111,58 @@ export function GroupMoneyView({ token }: { token: string }) {
   const totalCost = costs.reduce((s, c) => s + c.amount, 0);
   const totalPaid = deposits.reduce((s, d) => s + d.amount, 0);
   const mealRate = grandTotal > 0 ? totalCost / grandTotal : 0;
+  const balance = totalPaid - totalCost;
 
   return (
-    <div className="py-6 grid gap-5">
-      <div className="rounded-[1.5rem] border border-[color:var(--border)] bg-[color:var(--panel)] p-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">Money Management</p>
-        <h1 className="mt-1 text-2xl font-semibold">{group.name}</h1>
-        <p className="mt-0.5 text-sm text-[color:var(--soft-foreground)]">{monthLabel}</p>
+    <div className="group-page-grid">
+      <div className="group-hero">
+        <div className="min-w-0">
+          <p className="group-kicker">{group.name}</p>
+          <p className="group-title">Money</p>
+          <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">{chart.label}</p>
+        </div>
       </div>
 
-      {/* Summary */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           { label: "Total Cost", value: `${totalCost.toFixed(2)} tk` },
           { label: "Total Paid", value: `${totalPaid.toFixed(2)} tk` },
-          { label: "Total Meals", value: String(grandTotal) },
+          { label: "Total Meals", value: formatMeal(grandTotal) },
           { label: "Meal Rate", value: `${mealRate.toFixed(2)} tk` },
         ].map((s) => (
-          <div key={s.label} className="rounded-[1.25rem] border border-[color:var(--border)] bg-[color:var(--panel)] p-3 text-center">
-            <p className="text-xs text-[color:var(--muted)]">{s.label}</p>
-            <p className="mt-1 text-base font-bold">{s.value}</p>
+          <div key={s.label} className="group-stat-card">
+            <p className="group-stat-label">{s.label}</p>
+            <p className="group-stat-value">{s.value}</p>
           </div>
         ))}
       </div>
 
-      {/* Per-member balance */}
-      <div className="rounded-[1.5rem] border border-[color:var(--border)] bg-[color:var(--panel)] p-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">Member Balances</p>
+      <div className={`rounded-[var(--radius-sm)] border px-4 py-3 ${balance >= 0 ? "border-[color:var(--success-border)] bg-[color:var(--success-bg)]" : "border-[color:var(--danger-border)] bg-[color:var(--danger-bg)]"}`}>
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-[color:var(--muted)]">Group Balance</p>
+        <p className={`mt-1 text-xl font-bold ${balance >= 0 ? "text-[color:var(--success-text)]" : "text-[color:var(--danger)]"}`}>
+          {balance >= 0 ? "+" : ""}{balance.toFixed(2)} tk
+        </p>
+        <p className="mt-0.5 text-xs text-[color:var(--muted)]">
+          {balance >= 0 ? "Surplus — more paid than spent" : "Deficit — more spent than paid"}
+        </p>
+      </div>
+
+      <div className="group-card">
+        <p className="group-kicker">Member Balances</p>
         <div className="mt-3 grid gap-2">
           {members.map((member) => {
             const eaten = (memberMeals[member.id] ?? 0) * mealRate;
             const paid = memberDeposits[member.id] ?? 0;
             const remaining = paid - eaten;
             return (
-              <div key={member.id} className="flex flex-wrap items-center justify-between gap-2 rounded-[1rem] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3">
-                <div>
+              <div key={member.id} className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3">
+                <div className="min-w-0">
                   <p className="font-semibold">{member.fullName}</p>
-                  <p className="text-xs text-[color:var(--muted)]">
+                  <p className="group-stat-label">
                     {formatMeal(memberMeals[member.id] ?? 0)} meals · eaten {eaten.toFixed(2)} tk · paid {paid.toFixed(2)} tk
                   </p>
                 </div>
-                <p className={`font-bold ${remaining >= 0 ? "text-[color:var(--accent)]" : "text-red-500"}`}>
+                <p className={`shrink-0 font-bold ${remaining >= 0 ? "text-[color:var(--accent)]" : "text-[color:var(--danger)]"}`}>
                   {remaining >= 0 ? "+" : ""}{remaining.toFixed(2)} tk
                 </p>
               </div>
@@ -125,18 +171,36 @@ export function GroupMoneyView({ token }: { token: string }) {
         </div>
       </div>
 
-      {/* Cost history */}
-      <div className="rounded-[1.5rem] border border-[color:var(--border)] bg-[color:var(--panel)] p-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">Cost History</p>
+      <div className="group-card">
+        <p className="group-kicker">Deposits</p>
         <div className="mt-3 grid gap-2">
-          {costs.length === 0 && <p className="text-sm text-[color:var(--soft-foreground)]">No costs recorded.</p>}
+          {deposits.length === 0 && <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">No deposits recorded.</p>}
+          {deposits.map((d) => {
+            const member = members.find((m) => m.id === d.memberId);
+            return (
+              <div key={d.id} className="flex items-center justify-between rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-2.5">
+                <div>
+                  <p className="text-sm font-semibold">{member?.fullName ?? "Unknown"}</p>
+                  <p className="group-stat-label">{d.date}</p>
+                </div>
+                <p className="font-bold text-[color:var(--accent)]">{d.amount.toFixed(2)} tk</p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="group-card">
+        <p className="group-kicker">Cost History</p>
+        <div className="mt-3 grid gap-2">
+          {costs.length === 0 && <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">No costs recorded.</p>}
           {costs.map((c) => (
-            <div key={c.id} className="flex items-center justify-between rounded-[1rem] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-2.5">
+            <div key={c.id} className="flex items-center justify-between rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-2.5">
               <div>
                 <p className="text-sm font-semibold">{c.itemName}</p>
-                <p className="text-xs text-[color:var(--muted)]">{c.date}</p>
+                <p className="group-stat-label">{c.date}</p>
               </div>
-              <p className="font-bold">{c.amount.toFixed(2)} tk</p>
+              <p className="font-bold text-[color:var(--accent)]">{c.amount.toFixed(2)} tk</p>
             </div>
           ))}
         </div>

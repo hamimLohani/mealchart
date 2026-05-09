@@ -31,28 +31,38 @@ export function GroupNoticesView({ token }: { token: string }) {
   }, [token]);
 
   if (isLoading) return <p className="py-16 text-center text-sm text-[color:var(--soft-foreground)]">Loading…</p>;
-  if (error) return <p className="mt-8 rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>;
+  if (error) return <div className="mt-8 alert-error">{error}</div>;
   if (!group) return null;
 
   return (
-    <div className="py-6 grid gap-5">
-      <div className="rounded-[1.5rem] border border-[color:var(--border)] bg-[color:var(--panel)] p-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">Notices</p>
-        <h1 className="mt-1 text-2xl font-semibold">{group.name}</h1>
+    <div className="group-page-grid">
+      <div className="group-hero">
+        <div className="min-w-0">
+          <p className="group-kicker">{group.name}</p>
+          <p className="group-title">Notices</p>
+          <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">
+            {notices.length} notice{notices.length !== 1 ? "s" : ""}
+          </p>
+        </div>
       </div>
 
       <div className="grid gap-3">
-        {notices.length === 0 && <p className="text-sm text-[color:var(--soft-foreground)]">No notices yet.</p>}
+        {notices.length === 0 && (
+          <p className="py-8 text-center text-sm text-[color:var(--soft-foreground)]">No notices yet.</p>
+        )}
         {notices.map((n) => (
-          <div key={n.id} className="rounded-[1.25rem] border border-[color:var(--border)] bg-[color:var(--panel)] p-4">
+          <div
+            key={n.id}
+            className="rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--panel)] p-4"
+          >
             <div className="flex items-center gap-2">
               <p className="font-semibold">{n.title}</p>
-              {n.systemGenerated && (
-                <span className="rounded-full bg-[color-mix(in_srgb,var(--accent)_12%,transparent)] px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-[color:var(--accent)]">auto</span>
-              )}
+              {n.systemGenerated && <span className="badge-accent">auto</span>}
             </div>
-            <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">{n.body}</p>
-            <p className="mt-1.5 text-xs text-[color:var(--muted)]">{new Date(n.createdAt).toLocaleString()}</p>
+            <p className="mt-1.5 text-sm text-[color:var(--soft-foreground)]">{n.body}</p>
+            <p className="mt-2 text-xs text-[color:var(--muted)]">
+              {new Date(n.createdAt).toLocaleString()}
+            </p>
           </div>
         ))}
       </div>
