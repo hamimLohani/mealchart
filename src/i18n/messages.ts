@@ -3,7 +3,7 @@ import type { Language } from "@/store/ui-store";
 /** English strings — source of truth for keys. */
 export const en = {
   // Header
-  "header.brand": "Meat Chart",
+  "header.brand": "Meal Chart",
   "header.tagline": "Hostel & mess accounting",
   "header.themeDark": "🌙 Dark",
   "header.themeLight": "☀️ Light",
@@ -471,7 +471,7 @@ export type MessageKey = keyof typeof en;
 
 /** Bengali — must include every `MessageKey`. */
 export const bn: Record<MessageKey, string> = {
-  "header.brand": "মিট চার্ট",
+  "header.brand": "মিল চার্ট",
   "header.tagline": "হোস্টেল ও মেস হিসাব",
   "header.themeDark": "🌙 ডার্ক",
   "header.themeLight": "☀️ লাইট",
