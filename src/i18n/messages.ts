@@ -22,6 +22,40 @@ export const en = {
   "home.statFirebase": "Firebase",
   "home.statMultiGroup": "Multi-Group",
   "home.statHostelMess": "Hostel & Mess",
+  "home.ctaAbout": "Learn More ↓",
+
+  // About section
+  "about.sectionTitle": "How It Works",
+  "about.sectionSubtitle": "Everything you need to manage your hostel or mess meals, money, and members — explained step by step.",
+
+  "about.step1Title": "1. Register Your Group",
+  "about.step1Body": "The admin creates a group by entering a group name, email, and password. After registration, a unique Group Token is generated. Share this token with all hostel/mess members so they can join.",
+
+  "about.step2Title": "2. Add Members",
+  "about.step2Body": "Go to Admin Panel → Members. Add each member's name, phone number, and join date. Members will appear in the meal chart and money tracking.",
+
+  "about.step3Title": "3. Create Monthly Chart",
+  "about.step3Body": "Go to Admin Panel → Create Chart. Select the month and year. This creates a fresh monthly sheet that tracks meals, costs, deposits, and notices for that month.",
+
+  "about.step4Title": "4. Track Daily Meals",
+  "about.step4Body": "Admin: Go to Edit Meals → select the month → enter meal counts in the grid (rows = members, columns = days). Members: Enter the group with your token → select a month → tap your name → add your own meals for today.",
+
+  "about.step5Title": "5. Record Money & Costs",
+  "about.step5Body": "Admin collects money from members? Go to Add Money → select month → pick member → enter amount. Bought groceries? Go to Costs → select month → add item name, amount, and date. The app automatically calculates meal rate, balance, and who owes what.",
+
+  "about.step6Title": "6. View Reports",
+  "about.step6Body": "Members can see all details by entering the group with the token: Chart (meal grid), Money (deposits, costs, balances), Notices (announcements), and their individual meal history.",
+
+  "about.step7Title": "7. Lock the Month",
+  "about.step7Body": "When a month is complete, the admin can Lock it from Create Chart. This prevents any further changes to meals, money, or costs for that month — keeping the records permanent.",
+
+  "about.step8Title": "8. Notices & Announcements",
+  "about.step8Body": "Admin can post notices for any month. The system also auto-generates notices when members are added, money is collected, or costs are recorded. Members see these under Notices.",
+
+  "about.adminTitle": "For Admins",
+  "about.adminBody": "Register → Add Members → Create Monthly Chart → Edit Meals → Collect Money → Add Costs → Post Notices → Lock Month when done.",
+  "about.memberTitle": "For Members",
+  "about.memberBody": "Get token from admin → Enter Group → Select Month → Add your meals → View chart, money balance, and notices.",
 
   // Common
   "common.loading": "Loading…",
@@ -490,6 +524,39 @@ export const bn: Record<MessageKey, string> = {
   "home.statFirebase": "Firebase",
   "home.statMultiGroup": "মাল্টি-গ্রুপ",
   "home.statHostelMess": "হোস্টেল ও মেস",
+  "home.ctaAbout": "বিস্তারিত জানুন ↓",
+
+  "about.sectionTitle": "কিভাবে কাজ করে",
+  "about.sectionSubtitle": "আপনার হোস্টেল বা মেসের মিল, টাকা ও সদস্য ব্যবস্থাপনার সবকিছু — ধাপে ধাপে বোঝানো হলো।",
+
+  "about.step1Title": "১. গ্রুপ রেজিস্টার করুন",
+  "about.step1Body": "অ্যাডমিন গ্রুপের নাম, ইমেইল ও পাসওয়ার্ড দিয়ে রেজিস্টার করবে। রেজিস্ট্রেশনের পর একটি ইউনিক গ্রুপ টোকেন তৈরি হবে। এই টোকেন হোস্টেল/মেসের সব সদস্যের সাথে শেয়ার করুন।",
+
+  "about.step2Title": "২. সদস্য যোগ করুন",
+  "about.step2Body": "অ্যাডমিন প্যানেল → সদস্য-তে যান। প্রতিটি সদস্যের নাম, ফোন নম্বর ও যোগদানের তারিখ দিন। সদস্যরা মিল চার্ট ও টাকার হিসাবে দেখা যাবে।",
+
+  "about.step3Title": "৩. মাসিক চার্ট তৈরি করুন",
+  "about.step3Body": "অ্যাডমিন প্যানেল → চার্ট তৈরি-তে যান। মাস ও বছর নির্বাচন করুন। এটি একটি নতুন মাসিক শীট তৈরি করবে যেখানে ওই মাসের মিল, খরচ, জমা ও নোটিশ ট্র্যাক হবে।",
+
+  "about.step4Title": "৪. দৈনিক মিল হিসাব রাখুন",
+  "about.step4Body": "অ্যাডমিন: মিল সম্পাদনা → মাস বাছুন → গ্রিডে মিল সংখ্যা লিখুন (সারি = সদস্য, কলাম = দিন)। সদস্য: টোকেন দিয়ে গ্রুপে ঢুকুন → মাস বাছুন → নাম ট্যাপ করুন → আজকের মিল যোগ করুন।",
+
+  "about.step5Title": "৫. টাকা ও খরচ রেকর্ড করুন",
+  "about.step5Body": "অ্যাডমিন সদস্যদের থেকে টাকা নিয়েছে? টাকা জমা → মাস বাছুন → সদস্য বাছুন → পরিমাণ দিন। বাজার করেছে? খরচ → মাস বাছুন → আইটেমের নাম, পরিমাণ ও তারিখ দিন। অ্যাপ স্বয়ংক্রিয়ভাবে মিল রেট, ব্যালান্স ও কার কত পাওনা হিসাব করবে।",
+
+  "about.step6Title": "৬. রিপোর্ট দেখুন",
+  "about.step6Body": "সদস্যরা টোকেন দিয়ে গ্রুপে ঢুকে সব বিবরণ দেখতে পারবে: চার্ট (মিল গ্রিড), টাকা (জমা, খরচ, ব্যালান্স), নোটিশ (ঘোষণা), এবং নিজের মিলের ইতিহাস।",
+
+  "about.step7Title": "৭. মাস লক করুন",
+  "about.step7Body": "মাস শেষ হলে অ্যাডমিন চার্ট তৈরি থেকে লক করতে পারবে। এতে ওই মাসের মিল, টাকা বা খরচে আর কোনো পরিবর্তন করা যাবে না — রেকর্ড স্থায়ী থাকবে।",
+
+  "about.step8Title": "৮. নোটিশ ও ঘোষণা",
+  "about.step8Body": "অ্যাডমিন যেকোনো মাসের জন্য নোটিশ দিতে পারবে। সদস্য যোগ, টাকা জমা বা খরচ রেকর্ড হলে সিস্টেম স্বয়ংক্রিয় নোটিশ তৈরি করে। সদস্যরা নোটিশ অংশে এগুলো দেখবে।",
+
+  "about.adminTitle": "অ্যাডমিনদের জন্য",
+  "about.adminBody": "রেজিস্টার → সদস্য যোগ → মাসিক চার্ট তৈরি → মিল সম্পাদনা → টাকা সংগ্রহ → খরচ যোগ → নোটিশ দিন → শেষ হলে মাস লক।",
+  "about.memberTitle": "সদস্যদের জন্য",
+  "about.memberBody": "অ্যাডমিনের কাছ থেকে টোকেন নিন → গ্রুপে ঢুকুন → মাস বাছুন → মিল যোগ করুন → চার্ট, টাকার ব্যালান্স ও নোটিশ দেখুন।",
 
   "common.loading": "লোড হচ্ছে…",
   "common.back": "← পিছনে",
