@@ -139,7 +139,7 @@ service cloud.firestore {
         && request.resource.data.id is string
         && request.resource.data.memberId is string
         && request.resource.data.amount is number
-        && request.resource.data.amount > 0
+        && request.resource.data.amount != 0
         && request.resource.data.collectedByAdminId is string
         && exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.resource.data.memberId));
     }
