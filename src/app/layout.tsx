@@ -7,6 +7,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Meat Chart",
   description: "Realtime hostel and mess meal management app",
+  icons: {
+    icon: "/logo.png",
+  },
 };
 
 export default function RootLayout({

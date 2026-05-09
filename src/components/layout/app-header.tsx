@@ -13,8 +13,8 @@ export function AppHeader() {
     <header className="sticky top-0 z-30 border-b border-[color:var(--border)] bg-[color:var(--panel)] backdrop-blur-md">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-8">
         <Link className="flex items-center gap-2.5" href="/">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white shadow-[0_4px_10px_var(--accent-glow)] sm:h-9 sm:w-9">
-            <Image src="/logo.png" alt="Meal Chart Logo" width={36} height={36} className="h-full w-full object-cover" />
+          <div className="flex h-10 w-auto shrink-0 items-center overflow-hidden rounded-lg">
+            <Image src="/logo.png" alt="Meal Chart Logo" width={140} height={40} className="h-full w-auto object-contain" />
           </div>
           <div className="leading-tight">
             <p className="text-[0.7rem] font-bold uppercase tracking-[0.22em] text-[color:var(--muted)]">
