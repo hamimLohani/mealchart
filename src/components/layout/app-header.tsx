@@ -14,7 +14,7 @@ export function AppHeader() {
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-8">
         <Link className="flex items-center gap-2.5" href="/">
           <div className="flex h-10 w-auto shrink-0 items-center overflow-hidden rounded-lg">
-            <Image src="/logo.png" alt="Meal Chart Logo" width={140} height={40} className="h-full w-auto object-contain" />
+            <Image src="/logo.png" alt="Meal Chart Logo" width={140} height={40} className="h-full w-auto object-contain" style={{ width: "auto" }} />
           </div>
           <div className="leading-tight">
             <p className="text-[0.7rem] font-bold uppercase tracking-[0.22em] text-[color:var(--muted)]">

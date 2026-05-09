@@ -163,15 +163,12 @@ export function RegisterGroupForm() {
           >
             {hasCopiedToken ? t("registerForm.copied") : t("registerForm.copyToken")}
           </button>
-          <Link href="/admin/login" className="button-secondary w-full text-center">
-            {t("registerForm.goAdminLogin")}
+          <Link href="/admin" className="button-secondary w-full text-center">
+            {t("registerForm.openDashboard")}
           </Link>
           <p className="text-center text-xs text-[color:var(--soft-foreground)]">
             {t("registerForm.postSignupNote")}
           </p>
-          <Link href="/admin" className="text-center text-sm font-semibold text-[color:var(--accent)] underline-offset-2 hover:underline">
-            {t("registerForm.openDashboard")}
-          </Link>
         </div>
       ) : (
         <button

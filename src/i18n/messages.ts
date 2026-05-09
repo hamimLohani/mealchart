@@ -421,6 +421,7 @@ export const en = {
   "errors.loadChartFailed": "Failed to load chart.",
   "errors.loadDataFailed": "Failed to load data.",
   "errors.loadSelectedMonth": "Failed to load selected month.",
+  "errors.emailInUse": "Please provide another email, it's already taken",
   "errors.registerFailed": "Failed to register the group.",
   "errors.copyTokenFailed":
     "Could not copy the token automatically. Select the token and copy it manually.",
@@ -863,6 +864,7 @@ export const bn: Record<MessageKey, string> = {
   "errors.loadChartFailed": "চার্ট লোড ব্যর্থ।",
   "errors.loadDataFailed": "ডেটা লোড ব্যর্থ।",
   "errors.loadSelectedMonth": "বাছাই করা মাস লোড ব্যর্থ।",
+  "errors.emailInUse": "এই ইমেইলটি আগে থেকেই ব্যবহৃত হচ্ছে।",
   "errors.registerFailed": "গ্রুপ রেজিস্টার ব্যর্থ।",
   "errors.copyTokenFailed":
     "স্বয়ংক্রিয় কপি ব্যর্থ। টোকেন বেছে নিয়ে ম্যানুয়ালি কপি করুন।",

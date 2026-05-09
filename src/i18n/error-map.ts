@@ -23,6 +23,7 @@ export const errorMessageToKey: Partial<Record<string, MessageKey>> = {
   "Failed to load chart.": "errors.loadChartFailed",
   "Failed to load data.": "errors.loadDataFailed",
   "Failed to load selected month.": "errors.loadSelectedMonth",
+  "Firebase: Error (auth/email-already-in-use).": "errors.emailInUse",
   "Failed to register the group.": "errors.registerFailed",
   "Could not copy the token automatically. Select the token and copy it manually.":
     "errors.copyTokenFailed",
