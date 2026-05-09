@@ -43,6 +43,7 @@ export default function MemberPage({
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -180,6 +181,7 @@ export default function MemberPage({
     const clamped = Math.max(0, value);
     setMealCount(clamped);
     setSaved(false);
+    setSaveError(null);
     setIsSaving(true);
     try {
       await saveMealEntry({ groupId: group.id, memberId, date: selectedDate, quantity: clamped });
@@ -188,8 +190,11 @@ export default function MemberPage({
         const others = prev.filter((entry) => !(entry.memberId === memberId && entry.date === selectedDate));
         return [...others, { id: `${memberId}_${selectedDate}`, memberId, date: selectedDate, quantity: clamped }];
       });
-    } catch {
-      setError("Failed to save meal entry.");
+    } catch (err) {
+      const isPermissionDenied =
+        err instanceof Error &&
+        (err.message.includes("PERMISSION_DENIED") || err.message.includes("Missing or insufficient permissions"));
+      setSaveError(isPermissionDenied ? t("memberPage.monthLockedShort") : "Failed to save meal.");
     } finally {
       setIsSaving(false);
     }
@@ -197,11 +202,13 @@ export default function MemberPage({
 
   const statusLine = chart.locked
     ? t("memberPage.monthLockedShort")
-    : isSaving
-      ? t("memberPage.saving")
-      : saved
-        ? t("memberPage.saved")
-        : t("memberPage.tapUpdate");
+    : saveError
+      ? <span className="text-[color:var(--danger)]">{saveError}</span>
+      : isSaving
+        ? t("memberPage.saving")
+        : saved
+          ? t("memberPage.saved")
+          : t("memberPage.tapUpdate");
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 pb-16 sm:px-8">
@@ -242,6 +249,9 @@ export default function MemberPage({
 
             <div className="rounded-[var(--radius)] border-2 border-[color:var(--accent)] bg-[color:var(--panel)] p-5 shadow-[0_0_0_4px_var(--accent-dim)]">
               <p className="group-kicker text-[color:var(--accent)]">{t("memberPage.addMeal")} ({chart.label})</p>
+              {chart.locked && (
+                <p className="mt-1 text-xs font-semibold text-[color:var(--danger)]">{t("memberPage.monthLocked")}</p>
+              )}
               <div className="mt-3 grid gap-3 sm:grid-cols-[220px_1fr] sm:items-center">
                 <input
                   type="date"
@@ -262,7 +272,7 @@ export default function MemberPage({
                       <span className="w-16 text-center text-4xl font-bold tabular-nums">{formatMeal(mealCount)}</span>
                       <button className="meal-stepper-button" disabled={chart.locked} onClick={() => handleMealChange(mealCount + 0.25)} type="button">+</button>
                     </div>
-                    <p className="text-sm font-medium text-[color:var(--muted)]">
+                    <p className={`text-sm font-semibold ${chart.locked ? "text-[color:var(--danger)]" : "text-[color:var(--muted)]"}`}>
                       {statusLine}
                     </p>
                   </div>

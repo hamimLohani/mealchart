@@ -136,6 +136,11 @@ export function GroupChartView({ token }: { token: string }) {
           <p className="group-kicker">{group.name}</p>
           <p className="group-title">{t("groupChart.title")}</p>
           <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">{chart.label}</p>
+          {chart.locked && (
+            <p className="mt-1 inline-flex rounded-full border border-[color:var(--danger-border)] bg-[color:var(--danger-bg)] px-2 py-0.5 text-xs font-semibold text-[color:var(--danger)]">
+              {t("memberPage.monthLocked")}
+            </p>
+          )}
         </div>
       </div>
 
