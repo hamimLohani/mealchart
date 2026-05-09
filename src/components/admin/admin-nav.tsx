@@ -69,6 +69,14 @@ export function AdminNav() {
         </div>
       </div>
 
+      <Link
+        href="/admin"
+        className="mt-3 flex items-center gap-2 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-3 py-2 text-sm font-medium text-[color:var(--soft-foreground)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]"
+      >
+        {pathname !== "/admin" && <span>←</span>}
+        <span>{t("adminNav.panel")}</span>
+      </Link>
+
       {isLoggedIn ? (
         <>
           <div className="admin-sidebar-groups">
