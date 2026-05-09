@@ -22,8 +22,12 @@ export function memberIdsForChartRows(members: Member[], meals: MealEntry[], mon
   return ordered;
 }
 
-export function memberDisplayName(memberId: string, members: Member[]): string {
-  return members.find((m) => m.id === memberId)?.fullName ?? "Former member";
+export function memberDisplayName(
+  memberId: string,
+  members: Member[],
+  formerMemberLabel = "Former member",
+): string {
+  return members.find((m) => m.id === memberId)?.fullName ?? formerMemberLabel;
 }
 
 /** Money rows: chart meal participants plus anyone with a deposit this month. */

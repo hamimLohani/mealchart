@@ -6,23 +6,45 @@ import { useEffect, useState } from "react";
 import { signOut } from "firebase/auth";
 import { auth, db } from "@/lib/firebase/client";
 import { doc, getDoc } from "firebase/firestore";
+import { useT } from "@/i18n/use-t";
 import { groupsCollection } from "@/lib/firebase/paths";
 import { getAdminProfile } from "@/lib/firebase/repositories";
 import { useAuthStore } from "@/store/auth-store";
 import type { Group } from "@/types/domain";
 
-const navItems = [
-  { href: "/admin/members", label: "Members", hint: "Add, edit, remove members", metric: "01" },
-  { href: "/admin/add-money", label: "Add Money", hint: "Record member deposits", metric: "02" },
-  { href: "/admin/edit-meals", label: "Edit Meals", hint: "Update daily meal counts", metric: "03" },
-  { href: "/admin/costs", label: "Costs", hint: "Log bazar and expenses", metric: "04" },
-  { href: "/admin/create-chart", label: "Create Chart", hint: "Start a new monthly sheet", metric: "05" },
-  { href: "/admin/notices", label: "Notices", hint: "View group updates", metric: "06" },
+const navItemKeys = [
+  { href: "/admin/members", labelKey: "adminNav.members" as const, hintKey: "adminNav.membersHint" as const, metric: "01" },
+  {
+    href: "/admin/add-money",
+    labelKey: "adminNav.addMoney" as const,
+    hintKey: "adminNav.addMoneyHint" as const,
+    metric: "02",
+  },
+  {
+    href: "/admin/edit-meals",
+    labelKey: "adminNav.editMeals" as const,
+    hintKey: "adminNav.editMealsHint" as const,
+    metric: "03",
+  },
+  { href: "/admin/costs", labelKey: "adminNav.costs" as const, hintKey: "adminNav.costsHint" as const, metric: "04" },
+  {
+    href: "/admin/create-chart",
+    labelKey: "adminNav.createChart" as const,
+    hintKey: "adminNav.createChartHint" as const,
+    metric: "05",
+  },
+  {
+    href: "/admin/notices",
+    labelKey: "adminNav.notices" as const,
+    hintKey: "adminNav.noticesHint" as const,
+    metric: "06",
+  },
 ];
 
 export default function AdminPage() {
   const { admin, isLoaded } = useAuthStore();
   const router = useRouter();
+  const { t, tx } = useT();
   const [group, setGroup] = useState<Group | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [hasCopiedToken, setHasCopiedToken] = useState(false);
@@ -31,7 +53,10 @@ export default function AdminPage() {
     let active = true;
 
     async function loadGroup() {
-      if (!admin) { setGroup(null); return; }
+      if (!admin) {
+        setGroup(null);
+        return;
+      }
       try {
         setLoadError(null);
         const profile = await getAdminProfile(admin.uid);
@@ -44,16 +69,23 @@ export default function AdminPage() {
         setGroup(currentGroup);
       } catch (error) {
         if (!active) return;
-        setLoadError(error instanceof Error ? error.message : "Failed to load group details.");
+        setLoadError(tx(error instanceof Error ? error.message : t("errors.loadGroupDetails")));
       }
     }
 
     void loadGroup();
-    return () => { active = false; };
-  }, [admin]);
+    return () => {
+      active = false;
+    };
+  }, [admin, t, tx]);
 
   const groupInitials = group?.name
-    ? group.name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("")
+    ? group.name
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((p) => p[0]?.toUpperCase())
+        .join("")
     : "MC";
 
   async function handleLogout() {
@@ -67,14 +99,14 @@ export default function AdminPage() {
       await navigator.clipboard.writeText(group.token);
       setHasCopiedToken(true);
     } catch {
-      setLoadError("Could not copy the token automatically. Select it and copy manually.");
+      setLoadError(t("adminDash.copyFailed"));
     }
   }
 
   if (!isLoaded) {
     return (
       <div className="flex items-center justify-center py-16">
-        <p className="text-sm text-[color:var(--soft-foreground)]">Loading…</p>
+        <p className="text-sm text-[color:var(--soft-foreground)]">{t("adminDash.loading")}</p>
       </div>
     );
   }
@@ -82,13 +114,11 @@ export default function AdminPage() {
   if (!admin) {
     return (
       <div className="rounded-[var(--radius-lg)] border border-[color:var(--border)] bg-[color:var(--panel)] p-6 shadow-[var(--shadow)] sm:p-8">
-        <p className="admin-section-label">Not signed in</p>
-        <h1 className="mt-2 text-2xl font-semibold">Admin access required</h1>
-        <p className="mt-2 text-sm text-[color:var(--soft-foreground)]">
-          Sign in to manage your group.
-        </p>
+        <p className="admin-section-label">{t("adminDash.notSignedIn")}</p>
+        <h1 className="mt-2 text-2xl font-semibold">{t("adminDash.accessRequired")}</h1>
+        <p className="mt-2 text-sm text-[color:var(--soft-foreground)]">{t("adminDash.signInToManage")}</p>
         <Link className="button-primary mt-5 inline-flex" href="/admin/login">
-          Go to Login
+          {t("adminDash.goLogin")}
         </Link>
       </div>
     );
@@ -100,16 +130,16 @@ export default function AdminPage() {
 
       <section className="admin-dashboard-hero">
         <div className="min-w-0">
-          <p className="admin-section-label">Admin Workspace</p>
+          <p className="admin-section-label">{t("adminDash.workspace")}</p>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
-            {group?.name ?? "Manage your group"}
+            {group?.name ?? t("adminDash.manageFallback")}
           </h1>
           <p className="mt-1.5 max-w-2xl text-sm leading-6 text-[color:var(--soft-foreground)]">
-            Manage members, meals, costs, deposits, notices, and monthly reports from one place.
+            {t("adminDash.subtitle")}
           </p>
         </div>
         <button onClick={handleLogout} type="button" className="button-secondary shrink-0">
-          Sign out
+          {t("adminDash.signOut")}
         </button>
       </section>
 
@@ -117,13 +147,11 @@ export default function AdminPage() {
         <div className="flex min-w-0 items-center gap-3">
           <div className="admin-token-mark">{groupInitials}</div>
           <div className="min-w-0">
-            <p className="admin-section-label">Group Token</p>
+            <p className="admin-section-label">{t("adminDash.tokenLabel")}</p>
             <p className="mt-1 truncate font-mono text-lg font-semibold text-[color:var(--foreground)]">
-              {group?.token ?? "Loading…"}
+              {group?.token ?? t("common.loading")}
             </p>
-            <p className="mt-0.5 text-xs text-[color:var(--soft-foreground)]">
-              Share this token with members so they can enter the group.
-            </p>
+            <p className="mt-0.5 text-xs text-[color:var(--soft-foreground)]">{t("adminDash.tokenHelp")}</p>
           </div>
         </div>
         <button
@@ -132,16 +160,16 @@ export default function AdminPage() {
           onClick={() => void handleCopyToken()}
           type="button"
         >
-          {hasCopiedToken ? "✓ Token copied" : "Copy token"}
+          {hasCopiedToken ? t("adminDash.tokenCopied") : t("adminDash.copyToken")}
         </button>
       </section>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {navItems.map((item) => (
+        {navItemKeys.map((item) => (
           <Link key={item.href} href={item.href} className="admin-panel-card">
             <span className="admin-panel-card-index">{item.metric}</span>
-            <p className="admin-panel-card-title">{item.label}</p>
-            <p className="admin-panel-card-hint">{item.hint}</p>
+            <p className="admin-panel-card-title">{t(item.labelKey)}</p>
+            <p className="admin-panel-card-hint">{t(item.hintKey)}</p>
             <span className="admin-panel-card-arrow">→</span>
           </Link>
         ))}

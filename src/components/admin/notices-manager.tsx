@@ -4,10 +4,13 @@ import { FormEvent, useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
+import { useT } from "@/i18n/use-t";
 import { createNotice, deleteNotice, getAdminProfile, listNotices, updateNotice } from "@/lib/firebase/repositories";
 import type { AdminProfile, Notice } from "@/types/domain";
 
 export function NoticesManager() {
+  const { t, tx, language } = useT();
+  const locale = language === "bn" ? "bn-BD" : undefined;
   const configError = !isFirebaseConfigured || !auth ? "Firebase is not configured yet." : null;
 
   const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null);
@@ -77,38 +80,38 @@ export function NoticesManager() {
     }
   }
 
-  if (isLoading) return <p className="mt-8 text-sm text-[color:var(--soft-foreground)]">Loading…</p>;
+  if (isLoading) return <p className="mt-8 text-sm text-[color:var(--soft-foreground)]">{t("common.loading")}</p>;
 
   return (
     <div className="mt-6 grid gap-5">
-      {error && <p className="alert-error">{error}</p>}
+      {error && <p className="alert-error">{tx(error)}</p>}
 
       <form
         onSubmit={handleSubmit}
         className="grid gap-4 rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]"
       >
-        <p className="admin-section-label">{editingId ? "Edit Notice" : "Add Notice"}</p>
+        <p className="admin-section-label">{editingId ? t("noticeMgr.editFormTitle") : t("noticeMgr.addFormTitle")}</p>
         <label className="grid gap-1.5 text-sm font-medium">
-          Title
-          <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Notice title" required />
+          {t("admin.noticeTitle")}
+          <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("noticeMgr.placeholderTitle")} required />
         </label>
         <label className="grid gap-1.5 text-sm font-medium">
-          Body
-          <textarea className="input min-h-[80px] resize-y" value={body} onChange={(e) => setBody(e.target.value)} placeholder="Notice details…" required />
+          {t("admin.noticeBody")}
+          <textarea className="input min-h-[80px] resize-y" value={body} onChange={(e) => setBody(e.target.value)} placeholder={t("noticeMgr.placeholderBody")} required />
         </label>
         <div className="flex gap-3">
           <button className="button-primary" disabled={!adminProfile || isSubmitting} type="submit">
-            {isSubmitting ? "Saving…" : editingId ? "Update" : "Add notice"}
+            {isSubmitting ? t("admin.saving") : editingId ? t("common.update") : t("noticeMgr.submitAdd")}
           </button>
           {editingId && (
-            <button className="button-secondary" type="button" onClick={cancelEdit}>Cancel</button>
+            <button className="button-secondary" type="button" onClick={cancelEdit}>{t("common.cancel")}</button>
           )}
         </div>
       </form>
 
       <div className="grid gap-3">
         {notices.length === 0 && (
-          <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">No notices yet.</p>
+          <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">{t("noticeMgr.empty")}</p>
         )}
         {notices.map((notice) => (
           <div
@@ -120,12 +123,12 @@ export function NoticesManager() {
                 <div className="flex items-center gap-2">
                   <p className="font-semibold">{notice.title}</p>
                   {notice.systemGenerated && (
-                    <span className="badge-accent">auto</span>
+                    <span className="badge-accent">{t("common.auto")}</span>
                   )}
                 </div>
                 <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">{notice.body}</p>
                 <p className="mt-1.5 text-xs text-[color:var(--muted)]">
-                  {new Date(notice.createdAt).toLocaleString()}
+                  {new Date(notice.createdAt).toLocaleString(locale)}
                 </p>
               </div>
               {!notice.systemGenerated && (
@@ -135,14 +138,14 @@ export function NoticesManager() {
                     type="button"
                     className="rounded-full border border-[color:var(--border)] px-3 py-1 text-xs font-semibold text-[color:var(--soft-foreground)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]"
                   >
-                    Edit
+                    {t("memberMgr.edit")}
                   </button>
                   <button
                     onClick={() => void handleDelete(notice.id)}
                     type="button"
                     className="rounded-full border border-[color:var(--danger-border)] px-3 py-1 text-xs font-semibold text-[color:var(--danger)] transition hover:bg-[color:var(--danger)] hover:text-white"
                   >
-                    Delete
+                    {t("admin.delete")}
                   </button>
                 </div>
               )}

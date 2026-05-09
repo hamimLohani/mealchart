@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
+import { useT } from "@/i18n/use-t";
 import {
   createDeposit,
   getAdminProfile,
@@ -17,6 +18,7 @@ import type { AdminProfile, Chart, DepositEntry, Member } from "@/types/domain";
 type DepositFormState = { memberId: string; amount: string; date: string };
 
 export function AddMoneyManager() {
+  const { t, tx } = useT();
   const configurationError =
     !isFirebaseConfigured || !auth
       ? "Firebase is not configured yet. Add your keys in .env.local first."
@@ -28,14 +30,12 @@ export function AddMoneyManager() {
   const [error, setError] = useState<string | null>(configurationError);
   const [isLoading, setIsLoading] = useState(!configurationError);
 
-  // Chart selection
   const [selectedChart, setSelectedChart] = useState<Chart | null>(null);
   const [deposits, setDeposits] = useState<DepositEntry[]>([]);
   const [depositsLoading, setDepositsLoading] = useState(false);
   const [form, setForm] = useState<DepositFormState>({ memberId: "", amount: "", date: toDateInputValue(new Date()) });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Load admin profile, members, charts
   useEffect(() => {
     if (configurationError || !auth) return;
 
@@ -68,7 +68,6 @@ export function AddMoneyManager() {
     return unsubscribe;
   }, [configurationError]);
 
-  // Load deposits when chart is selected
   useEffect(() => {
     if (!adminProfile || !selectedChart) return;
     let active = true;
@@ -129,24 +128,25 @@ export function AddMoneyManager() {
     }
   }
 
+  const tk = t("common.tk");
+
   if (isLoading) {
-    return <p className="mt-8 text-sm text-[color:var(--soft-foreground)]">Loading…</p>;
+    return <p className="mt-8 text-sm text-[color:var(--soft-foreground)]">{t("common.loading")}</p>;
   }
 
-  // ── Chart selection ───────────────────────────────────────────────
   if (!selectedChart) {
     return (
       <div className="mt-6 grid gap-5">
-        {error && <p className="alert-error">{error}</p>}
+        {error && <p className="alert-error">{tx(error)}</p>}
 
         <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]">
-          <p className="admin-section-label">Select Month</p>
+          <p className="admin-section-label">{t("admin.selectMonth")}</p>
           <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">
-            Choose the monthly chart to add deposits to.
+            {t("addMoney.selectHelp")}
           </p>
           {charts.length === 0 ? (
             <p className="mt-4 py-6 text-center text-sm text-[color:var(--soft-foreground)]">
-              No charts created yet. Create a chart first.
+              {t("admin.noChartsMeals")}
             </p>
           ) : (
             <div className="mt-4 grid gap-2">
@@ -160,7 +160,7 @@ export function AddMoneyManager() {
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="font-semibold">{chart.label}</p>
-                      {i === 0 && <span className="badge-accent">active</span>}
+                      {i === 0 && <span className="badge-accent">{t("common.active")}</span>}
                     </div>
                     <p className="mt-0.5 text-xs text-[color:var(--muted)]">{chart.monthKey}</p>
                   </div>
@@ -174,20 +174,18 @@ export function AddMoneyManager() {
     );
   }
 
-  // ── Deposit management for selected chart ─────────────────────────
   const depositDateBounds = chartMonthDateBounds(selectedChart);
 
   return (
     <div className="mt-6 grid gap-5">
-      {error && <p className="alert-error">{error}</p>}
+      {error && <p className="alert-error">{tx(error)}</p>}
 
-      {/* Header with back */}
       <div className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--panel)] px-4 py-3">
         <div>
-          <p className="admin-section-label">Add Money</p>
+          <p className="admin-section-label">{t("addMoney.header")}</p>
           <p className="mt-0.5 font-semibold">{selectedChart.label}</p>
           {selectedChart.locked && (
-            <p className="mt-1 text-xs font-semibold text-[color:var(--danger)]">Month locked: deposits disabled</p>
+            <p className="mt-1 text-xs font-semibold text-[color:var(--danger)]">{t("addMoney.monthLocked")}</p>
           )}
         </div>
         <button
@@ -195,16 +193,15 @@ export function AddMoneyManager() {
           onClick={() => { setSelectedChart(null); setDeposits([]); }}
           className="button-secondary shrink-0"
         >
-          ← Months
+          {t("costs.backMonths")}
         </button>
       </div>
 
-      {/* Stats */}
       <div className="grid gap-3 sm:grid-cols-3">
         {[
-          { label: "Month", value: selectedChart.label },
-          { label: "Total deposited", value: `${totalDeposited.toFixed(2)} tk` },
-          { label: "Members", value: String(members.length) },
+          { label: t("addMoney.statMonth"), value: selectedChart.label },
+          { label: t("addMoney.statTotalDeposited"), value: `${totalDeposited.toFixed(2)} ${tk}` },
+          { label: t("addMoney.statMembers"), value: String(members.length) },
         ].map((s) => (
           <div key={s.label} className="group-stat-card">
             <p className="group-stat-label">{s.label}</p>
@@ -213,28 +210,27 @@ export function AddMoneyManager() {
         ))}
       </div>
 
-      {/* Add deposit form */}
       <form
         className="grid gap-4 rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]"
         onSubmit={handleSubmit}
       >
-        <p className="admin-section-label">Add Deposit</p>
+        <p className="admin-section-label">{t("addMoney.formTitle")}</p>
         <div className="grid gap-4 md:grid-cols-3">
           <label className="grid gap-1.5 text-sm font-medium">
-            Member
+            {t("admin.member")}
             <select
               className="input"
               onChange={(e) => setForm((c) => ({ ...c, memberId: e.target.value }))}
               value={form.memberId}
             >
-              <option value="">Select member</option>
+              <option value="">{t("addMoney.selectMember")}</option>
               {members.map((m) => (
                 <option key={m.id} value={m.id}>{m.fullName}</option>
               ))}
             </select>
           </label>
           <label className="grid gap-1.5 text-sm font-medium">
-            Amount (tk)
+            {t("admin.amountTk")}
             <input
               className="input"
               min="0"
@@ -246,7 +242,7 @@ export function AddMoneyManager() {
             />
           </label>
           <label className="grid gap-1.5 text-sm font-medium">
-            Date
+            {t("admin.date")}
             <input
               className="input"
               min={depositDateBounds.min}
@@ -263,13 +259,12 @@ export function AddMoneyManager() {
           disabled={!adminProfile || !members.length || isSubmitting || selectedChart.locked}
           type="submit"
         >
-          {isSubmitting ? "Adding…" : "Add money"}
+          {isSubmitting ? t("addMoney.adding") : t("addMoney.submit")}
         </button>
       </form>
 
-      {/* Member totals */}
       <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]">
-        <p className="admin-section-label">Member Totals — {selectedChart.label}</p>
+        <p className="admin-section-label">{t("addMoney.memberTotals")} — {selectedChart.label}</p>
         <div className="mt-3 grid gap-2.5 md:grid-cols-2">
           {members.map((member) => (
             <div
@@ -278,23 +273,22 @@ export function AddMoneyManager() {
             >
               <p className="font-semibold">{member.fullName}</p>
               <p className="font-bold text-[color:var(--accent)]">
-                {(memberTotals.get(member.id) ?? 0).toFixed(2)} tk
+                {(memberTotals.get(member.id) ?? 0).toFixed(2)} {tk}
               </p>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Deposit history */}
       <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]">
-        <p className="admin-section-label">Deposit History — {selectedChart.label}</p>
+        <p className="admin-section-label">{t("addMoney.depositHistory")} — {selectedChart.label}</p>
         <div className="mt-3 grid gap-2.5">
           {depositsLoading && (
-            <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">Loading…</p>
+            <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">{t("common.loading")}</p>
           )}
           {!depositsLoading && deposits.length === 0 && (
             <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">
-              No deposits for this month yet.
+              {t("addMoney.emptyDeposits")}
             </p>
           )}
           {deposits.map((deposit) => {
@@ -305,10 +299,10 @@ export function AddMoneyManager() {
                 className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3"
               >
                 <div>
-                  <p className="font-semibold">{member?.fullName ?? "Unknown member"}</p>
+                  <p className="font-semibold">{member?.fullName ?? t("addMoney.unknownMember")}</p>
                   <p className="mt-0.5 text-xs text-[color:var(--muted)]">{deposit.date}</p>
                 </div>
-                <p className="text-base font-bold text-[color:var(--accent)]">{deposit.amount.toFixed(2)} tk</p>
+                <p className="text-base font-bold text-[color:var(--accent)]">{deposit.amount.toFixed(2)} {tk}</p>
               </article>
             );
           })}

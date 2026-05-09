@@ -1,12 +1,17 @@
+"use client";
+
 import { CreateChartManager } from "@/components/admin/create-chart-manager";
 import { PageCard } from "@/components/layout/page-card";
+import { useT } from "@/i18n/use-t";
 
 export default function CreateChartPage() {
+  const { t } = useT();
+
   return (
     <PageCard
-      eyebrow="Create New Chart"
-      title="Monthly chart creation"
-      description="Create a new 31-day chart sheet for a selected month. The new chart becomes the active accounting base for Chart View and Money Management."
+      eyebrow={t("adminCreateChart.eyebrow")}
+      title={t("adminCreateChart.title")}
+      description={t("adminCreateChart.description")}
     >
       <CreateChartManager />
     </PageCard>

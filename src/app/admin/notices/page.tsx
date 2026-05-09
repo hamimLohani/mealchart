@@ -1,12 +1,17 @@
+"use client";
+
 import { PageCard } from "@/components/layout/page-card";
 import { NoticesManager } from "@/components/admin/notices-manager";
+import { useT } from "@/i18n/use-t";
 
 export default function AdminNoticesPage() {
+  const { t } = useT();
+
   return (
     <PageCard
-      eyebrow="Notices"
-      title="Group notices"
-      description="Add, edit, and delete manual notices. System actions create automatic notices automatically."
+      eyebrow={t("adminNoticesPage.eyebrow")}
+      title={t("adminNoticesPage.title")}
+      description={t("adminNoticesPage.description")}
     >
       <NoticesManager />
     </PageCard>

@@ -1,12 +1,17 @@
+"use client";
+
 import { PageCard } from "@/components/layout/page-card";
 import { MemberManager } from "@/components/admin/member-manager";
+import { useT } from "@/i18n/use-t";
 
 export default function MembersPage() {
+  const { t } = useT();
+
   return (
     <PageCard
-      eyebrow="Members"
-      title="Member management workspace"
-      description="This section will handle search, add, edit, remove, join dates, phone numbers, and auto-generated notice entries."
+      eyebrow={t("adminMembers.eyebrow")}
+      title={t("adminMembers.title")}
+      description={t("adminMembers.description")}
     >
       <MemberManager />
     </PageCard>

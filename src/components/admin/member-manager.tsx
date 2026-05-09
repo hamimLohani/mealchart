@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
+import { useT } from "@/i18n/use-t";
 import { createMember, deleteMember, getAdminProfile, listMembers, updateMember } from "@/lib/firebase/repositories";
 import { toDateInputValue } from "@/lib/utils/date";
 import type { AdminProfile, Member } from "@/types/domain";
@@ -16,6 +17,7 @@ const initialForm: MemberFormState = {
 };
 
 export function MemberManager() {
+  const { t, tx } = useT();
   const configurationError =
     !isFirebaseConfigured || !auth
       ? "Firebase is not configured yet. Add your keys in .env.local first."
@@ -129,21 +131,21 @@ export function MemberManager() {
   }
 
   if (isLoading) {
-    return <p className="mt-8 text-sm text-[color:var(--soft-foreground)]">Loading members…</p>;
+    return <p className="mt-8 text-sm text-[color:var(--soft-foreground)]">{t("memberMgr.loadingList")}</p>;
   }
 
   return (
     <div className="mt-6 grid gap-5">
-      {error && <p className="alert-error">{error}</p>}
+      {error && <p className="alert-error">{tx(error)}</p>}
 
       <form
         className="grid gap-4 rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]"
         onSubmit={handleSubmit}
       >
-        <p className="admin-section-label">{editingMemberId ? "Edit Member" : "Add Member"}</p>
+        <p className="admin-section-label">{editingMemberId ? t("memberMgr.editTitle") : t("memberMgr.addTitle")}</p>
         <div className="grid gap-4 md:grid-cols-3">
           <label className="grid gap-1.5 text-sm font-medium">
-            Full name
+            {t("memberMgr.fullName")}
             <input
               className="input"
               onChange={(e) => setForm((c) => ({ ...c, fullName: e.target.value }))}
@@ -152,7 +154,7 @@ export function MemberManager() {
             />
           </label>
           <label className="grid gap-1.5 text-sm font-medium">
-            Join date
+            {t("memberMgr.joinDate")}
             <input
               className="input"
               onChange={(e) => setForm((c) => ({ ...c, joinDate: e.target.value }))}
@@ -162,7 +164,7 @@ export function MemberManager() {
             />
           </label>
           <label className="grid gap-1.5 text-sm font-medium">
-            Phone number
+            {t("memberMgr.phone")}
             <input
               className="input"
               onChange={(e) => setForm((c) => ({ ...c, phoneNumber: e.target.value }))}
@@ -174,12 +176,12 @@ export function MemberManager() {
         <div className="flex flex-wrap gap-3">
           <button className="button-primary" disabled={!adminProfile || isSubmitting} type="submit">
             {isSubmitting
-              ? editingMemberId ? "Updating…" : "Adding…"
-              : editingMemberId ? "Update member" : "Add member"}
+              ? editingMemberId ? t("memberMgr.submittingUpdate") : t("memberMgr.submittingAdd")
+              : editingMemberId ? t("memberMgr.submitUpdate") : t("memberMgr.submitAdd")}
           </button>
           {editingMemberId && (
             <button className="button-secondary" onClick={resetForm} type="button">
-              Cancel
+              {t("common.cancel")}
             </button>
           )}
         </div>
@@ -188,22 +190,28 @@ export function MemberManager() {
       <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="admin-section-label">Members</p>
+            <p className="admin-section-label">{t("memberMgr.listTitle")}</p>
             <p className="mt-1.5 text-lg font-semibold">
-              {filteredMembers.length} shown
-              <span className="ml-1 text-sm font-normal text-[color:var(--muted)]">/ {members.length} total</span>
+              {t("memberMgr.listSummary", {
+                shown: String(filteredMembers.length),
+                total: String(members.length),
+              })}
             </p>
           </div>
           <input
             className="input w-full sm:w-64"
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search member or phone…"
+            placeholder={t("memberMgr.searchPlaceholder")}
             value={search}
           />
         </div>
 
         <div className="mt-4 grid gap-2.5">
-          {filteredMembers.length ? (
+          {members.length === 0 ? (
+            <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">
+              {t("admin.noMembersYet")}
+            </p>
+          ) : filteredMembers.length ? (
             filteredMembers.map((member) => (
               <article
                 key={member.id}
@@ -212,22 +220,22 @@ export function MemberManager() {
                 <div className="min-w-0">
                   <p className="font-semibold">{member.fullName}</p>
                   <p className="mt-0.5 text-xs text-[color:var(--muted)]">
-                    Joined {member.joinDate} · {member.phoneNumber}
+                    {t("memberMgr.joinedLine")} {member.joinDate} · {member.phoneNumber}
                   </p>
                 </div>
                 <div className="flex gap-2">
                   <button className="button-secondary" onClick={() => startEdit(member)} type="button">
-                    Edit
+                    {t("memberMgr.edit")}
                   </button>
                   <button className="button-danger" onClick={() => void handleDelete(member.id)} type="button">
-                    Remove
+                    {t("memberMgr.remove")}
                   </button>
                 </div>
               </article>
             ))
           ) : (
             <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">
-              No members matched your search.
+              {t("memberMgr.noSearchMatch")}
             </p>
           )}
         </div>

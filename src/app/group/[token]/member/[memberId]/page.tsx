@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
+import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import {
   findGroupByToken,
@@ -26,6 +27,9 @@ export default function MemberPage({
   const { token, memberId } = use(params);
   const router = useRouter();
   const { chart } = useGroupSession();
+  const { t, tx, language } = useT();
+  const locale = language === "bn" ? "bn-BD" : undefined;
+
   const [group, setGroup] = useState<Group | null>(null);
   const [member, setMember] = useState<Member | null>(null);
   const [meals, setMeals] = useState<MealEntry[]>([]);
@@ -59,14 +63,14 @@ export default function MemberPage({
         setMember(currentMember);
       } catch (err) {
         if (!active) return;
-        setError(err instanceof Error ? err.message : "Failed to load member.");
+        setError(tx(err instanceof Error ? err.message : "Failed to load member."));
       } finally {
         if (active) setIsLoading(false);
       }
     }
     void load();
     return () => { active = false; };
-  }, [token, memberId]);
+  }, [token, memberId, tx]);
 
   useEffect(() => {
     if (!chart) return;
@@ -97,14 +101,14 @@ export default function MemberPage({
       })
       .catch((err) => {
         if (!active) return;
-        setError(err instanceof Error ? err.message : "Failed to load month data.");
+        setError(tx(err instanceof Error ? err.message : "Failed to load month data."));
       })
       .finally(() => {
         if (active) setIsMonthLoading(false);
       });
 
     return () => { active = false; };
-  }, [group, chart]);
+  }, [group, chart, tx]);
 
   useEffect(() => {
     if (!group || !chart || !selectedDate) return;
@@ -128,11 +132,15 @@ export default function MemberPage({
     return () => { active = false; };
   }, [group, chart, selectedDate, memberId]);
 
-  if (isLoading) return <p className="py-16 text-center text-sm text-[color:var(--soft-foreground)]">Loading member…</p>;
+  const tk = t("common.tk");
+
+  if (isLoading) {
+    return <p className="py-16 text-center text-sm text-[color:var(--soft-foreground)]">{t("memberPage.loading")}</p>;
+  }
   if (error) {
     return (
       <div className="mt-8">
-        <div className="alert-error">{error}</div>
+        <div className="alert-error">{tx(error)}</div>
         <GroupTokenMismatchHint message={error} />
       </div>
     );
@@ -141,9 +149,9 @@ export default function MemberPage({
   if (!chart) {
     return (
       <div className="py-6 grid gap-4">
-        <div className="alert-warn">Select a month from Home first.</div>
+        <div className="alert-warn">{t("memberPage.selectMonthWarn")}</div>
         <button type="button" onClick={() => router.push(`/group/${token}`)} className="button-secondary w-full">
-          ← Back to Home
+          {t("memberPage.backToHome")}
         </button>
       </div>
     );
@@ -187,6 +195,14 @@ export default function MemberPage({
     }
   }
 
+  const statusLine = chart.locked
+    ? t("memberPage.monthLockedShort")
+    : isSaving
+      ? t("memberPage.saving")
+      : saved
+        ? t("memberPage.saved")
+        : t("memberPage.tapUpdate");
+
   return (
     <main className="mx-auto w-full max-w-7xl px-4 pb-16 sm:px-8">
       <div className="py-6 grid gap-4">
@@ -194,28 +210,28 @@ export default function MemberPage({
           <div className="min-w-0">
             <p className="group-kicker">{group.name} · {chart.label}</p>
             <p className="group-title">{member.fullName}</p>
-            <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">All information for selected month</p>
+            <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">{t("memberPage.monthInfoSubtitle")}</p>
             {chart.locked && (
               <p className="mt-1 inline-flex rounded-full border border-[color:var(--danger-border)] bg-[color:var(--danger-bg)] px-2 py-0.5 text-xs font-semibold text-[color:var(--danger)]">
-                Month locked: meal editing disabled
+                {t("memberPage.monthLocked")}
               </p>
             )}
           </div>
           <button type="button" onClick={() => router.push(`/group/${token}`)} className="button-secondary shrink-0">
-            ← Back
+            {t("common.back")}
           </button>
         </div>
 
         {isMonthLoading ? (
-          <p className="py-10 text-center text-sm text-[color:var(--soft-foreground)]">Loading month data…</p>
+          <p className="py-10 text-center text-sm text-[color:var(--soft-foreground)]">{t("memberPage.loadingMonth")}</p>
         ) : (
           <>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {[
-                { label: "Total Meals", value: formatMeal(myTotalMeals) },
-                { label: "Total Cost", value: `${myCost.toFixed(2)} tk` },
-                { label: "Total Paid", value: `${myTotalPaid.toFixed(2)} tk` },
-                { label: "Balance", value: `${myBalance.toFixed(2)} tk` },
+                { label: t("memberPage.statTotalMeals"), value: formatMeal(myTotalMeals) },
+                { label: t("memberPage.statTotalCost"), value: `${myCost.toFixed(2)} ${tk}` },
+                { label: t("memberPage.statTotalPaid"), value: `${myTotalPaid.toFixed(2)} ${tk}` },
+                { label: t("memberPage.statBalance"), value: `${myBalance.toFixed(2)} ${tk}` },
               ].map((s) => (
                 <div key={s.label} className="group-stat-card">
                   <p className="group-stat-label">{s.label}</p>
@@ -225,7 +241,7 @@ export default function MemberPage({
             </div>
 
             <div className="rounded-[var(--radius)] border-2 border-[color:var(--accent)] bg-[color:var(--panel)] p-5 shadow-[0_0_0_4px_var(--accent-dim)]">
-              <p className="group-kicker text-[color:var(--accent)]">Add Meal ({chart.label})</p>
+              <p className="group-kicker text-[color:var(--accent)]">{t("memberPage.addMeal")} ({chart.label})</p>
               <div className="mt-3 grid gap-3 sm:grid-cols-[220px_1fr] sm:items-center">
                 <input
                   type="date"
@@ -238,7 +254,7 @@ export default function MemberPage({
                   disabled={chart.locked}
                 />
                 {isMealLoading ? (
-                  <p className="text-sm text-[color:var(--soft-foreground)]">Loading meal…</p>
+                  <p className="text-sm text-[color:var(--soft-foreground)]">{t("memberPage.loadingMeal")}</p>
                 ) : (
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
@@ -247,7 +263,7 @@ export default function MemberPage({
                       <button className="meal-stepper-button" disabled={chart.locked} onClick={() => handleMealChange(mealCount + 0.25)} type="button">+</button>
                     </div>
                     <p className="text-sm font-medium text-[color:var(--muted)]">
-                      {chart.locked ? "Month is locked" : isSaving ? "Saving…" : saved ? "✓ Saved" : "Tap to update"}
+                      {statusLine}
                     </p>
                   </div>
                 )}
@@ -255,7 +271,7 @@ export default function MemberPage({
             </div>
 
             <div className="group-card">
-              <p className="group-kicker">Daily Meals — {chart.label}</p>
+              <p className="group-kicker">{t("memberPage.dailyMeals")} — {chart.label}</p>
               <div className="mt-4 grid gap-1.5">
                 {days.map(({ day, date, qty }) => (
                   <div key={date} className="flex items-center gap-3">
@@ -278,18 +294,20 @@ export default function MemberPage({
             </div>
 
             <div className="group-card">
-              <p className="group-kicker">Meal Entries</p>
+              <p className="group-kicker">{t("memberPage.mealEntries")}</p>
               <div className="mt-3 divide-y divide-[color:var(--border)]">
                 {myMeals.length === 0 ? (
-                  <p className="py-6 text-center text-sm text-[color:var(--soft-foreground)]">No meals recorded.</p>
+                  <p className="py-6 text-center text-sm text-[color:var(--soft-foreground)]">{t("memberPage.noMeals")}</p>
                 ) : (
                   myMeals.map((meal) => (
                     <div key={`${meal.memberId}-${meal.date}`} className="flex items-center justify-between py-2.5">
                       <div>
                         <p className="text-sm font-semibold">{meal.date}</p>
-                        <p className="text-xs text-[color:var(--muted)]">{formatMeal(meal.quantity)} meal{meal.quantity !== 1 ? "s" : ""}</p>
+                        <p className="text-xs text-[color:var(--muted)]">
+                          {formatMeal(meal.quantity)} {meal.quantity !== 1 ? t("memberPage.mealsWord") : t("memberPage.mealWord")}
+                        </p>
                       </div>
-                      <p className="font-bold text-[color:var(--accent)]">{(meal.quantity * mealRate).toFixed(2)} tk</p>
+                      <p className="font-bold text-[color:var(--accent)]">{(meal.quantity * mealRate).toFixed(2)} {tk}</p>
                     </div>
                   ))
                 )}
@@ -297,15 +315,17 @@ export default function MemberPage({
             </div>
 
             <div className="group-card">
-              <p className="group-kicker">Paid History</p>
+              <p className="group-kicker">{t("memberPage.paidHistory")}</p>
               <div className="mt-3 divide-y divide-[color:var(--border)]">
                 {myDeposits.length === 0 ? (
-                  <p className="py-6 text-center text-sm text-[color:var(--soft-foreground)]">No paid entries recorded.</p>
+                  <p className="py-6 text-center text-sm text-[color:var(--soft-foreground)]">{t("memberPage.noPaid")}</p>
                 ) : (
                   myDeposits.map((deposit) => (
                     <div key={deposit.id} className="flex items-center justify-between py-2.5">
-                      <p className="text-sm font-semibold">{deposit.date}</p>
-                      <p className="font-bold text-[color:var(--accent)]">{deposit.amount.toFixed(2)} tk</p>
+                      <p className="text-sm font-semibold">
+                        {new Date(deposit.date + "T12:00:00").toLocaleDateString(locale, { year: "numeric", month: "short", day: "numeric" })}
+                      </p>
+                      <p className="font-bold text-[color:var(--accent)]">{deposit.amount.toFixed(2)} {tk}</p>
                     </div>
                   ))
                 )}

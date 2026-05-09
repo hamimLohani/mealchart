@@ -3,14 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
+import { useT } from "@/i18n/use-t";
 
 type NavKey = "home" | "chart" | "notices";
-
-const navItems: Array<{ key: NavKey; label: string }> = [
-  { key: "home", label: "Home" },
-  { key: "chart", label: "Chart" },
-  { key: "notices", label: "Notices" },
-];
 
 export function GroupNavbar({
   token,
@@ -18,6 +13,17 @@ export function GroupNavbar({
   token: string;
 }) {
   const pathname = usePathname();
+  const { t } = useT();
+
+  const navItems = useMemo(
+    () =>
+      [
+        { key: "home" as const, label: t("groupNav.home") },
+        { key: "chart" as const, label: t("groupNav.chart") },
+        { key: "notices" as const, label: t("groupNav.notices") },
+      ] as const,
+    [t],
+  );
 
   const activeKey = useMemo<NavKey>(() => {
     const parts = pathname.split("/").filter(Boolean);

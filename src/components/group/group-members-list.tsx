@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { GroupTokenMismatchHint } from "@/components/forms/group-token-mismatch-hint";
 import { findGroupByToken, listMembers } from "@/lib/firebase/repositories";
@@ -16,6 +17,7 @@ export function GroupMembersList({
   memberSearch?: string;
 }) {
   const router = useRouter();
+  const { t, tx, language } = useT();
   const { chart } = useGroupSession();
   const [group, setGroup] = useState<Group | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
@@ -25,7 +27,11 @@ export function GroupMembersList({
   useEffect(() => {
     let active = true;
     async function load() {
-      if (!isFirebaseConfigured) { setError("Firebase is not configured yet."); setIsLoading(false); return; }
+      if (!isFirebaseConfigured) {
+        setError(t("errors.firebaseNotConfigured"));
+        setIsLoading(false);
+        return;
+      }
       try {
         const currentGroup = await findGroupByToken(token);
         if (!currentGroup) throw new Error("No group found for this token.");
@@ -35,16 +41,20 @@ export function GroupMembersList({
         setMembers(currentMembers);
       } catch (err) {
         if (!active) return;
-        setError(err instanceof Error ? err.message : "Failed to load group.");
+        setError(tx(err instanceof Error ? err.message : t("errors.loadGroupFailed")));
       } finally {
         if (active) setIsLoading(false);
       }
     }
     void load();
-    return () => { active = false; };
-  }, [token]);
+    return () => {
+      active = false;
+    };
+  }, [t, tx, token]);
 
-  if (isLoading) return <p className="py-16 text-center text-sm text-[color:var(--soft-foreground)]">Loading members…</p>;
+  if (isLoading) {
+    return <p className="py-16 text-center text-sm text-[color:var(--soft-foreground)]">{t("groupMembers.loading")}</p>;
+  }
   if (error) {
     return (
       <div className="mt-8">
@@ -60,20 +70,29 @@ export function GroupMembersList({
     return !q || m.fullName.toLowerCase().includes(q);
   });
 
+  const n = String(members.length);
+  const subtitle =
+    language === "bn"
+      ? t("groupMembers.subtitleBn", { n })
+      : members.length === 1
+        ? t("groupMembers.subtitleOne", { n })
+        : t("groupMembers.subtitleMany", { n });
+
   return (
     <div className="py-6 grid gap-4">
       <div className="group-hero">
         <div className="min-w-0">
-          <p className="group-kicker">{group.name}{chart ? ` · ${chart.label}` : ""}</p>
-          <p className="group-title">Members</p>
-          <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">
-            {members.length} member{members.length !== 1 ? "s" : ""} in this group
+          <p className="group-kicker">
+            {group.name}
+            {chart ? ` · ${chart.label}` : ""}
           </p>
+          <p className="group-title">{t("groupMembers.title")}</p>
+          <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">{subtitle}</p>
         </div>
       </div>
 
       <div className="group-card">
-        <p className="group-kicker">All Members</p>
+        <p className="group-kicker">{t("groupMembers.allMembers")}</p>
         <div className="mt-3 grid gap-2">
           {filtered.map((member) => (
             <div
@@ -84,16 +103,14 @@ export function GroupMembersList({
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold">{member.fullName}</p>
                 <p className="text-xs text-[color:var(--muted)]">
-                  Joined {new Date(member.joinDate).toLocaleDateString()}
+                  {t("groupDash.joined")} {new Date(member.joinDate).toLocaleDateString(language === "bn" ? "bn-BD" : undefined)}
                 </p>
               </div>
               <span className="text-[color:var(--accent)]">→</span>
             </div>
           ))}
           {filtered.length === 0 && (
-            <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">
-              No members matched your search.
-            </p>
+            <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">{t("groupMembers.searchNoMatch")}</p>
           )}
         </div>
       </div>

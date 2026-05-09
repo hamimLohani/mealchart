@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
+import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import {
   getAdminProfile,
@@ -19,25 +20,32 @@ function daysInMonth(year: number, month: number) {
 }
 
 export function EditMealsManager() {
-  const configError = !isFirebaseConfigured || !auth ? "Firebase is not configured yet." : null;
+  const { t, tx } = useT();
+  const blocked = !isFirebaseConfigured || !auth;
 
   const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null);
   const [charts, setCharts] = useState<Chart[]>([]);
-  const [error, setError] = useState<string | null>(configError);
-  const [isLoading, setIsLoading] = useState(!configError);
+  const [error, setError] = useState<string | null>(blocked ? t("errors.firebaseNotConfigured") : null);
+  const [isLoading, setIsLoading] = useState(!blocked);
 
-  // Chart selection
   const [selectedChart, setSelectedChart] = useState<Chart | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [meals, setMeals] = useState<Record<string, Record<string, number>>>({});
   const [tableLoading, setTableLoading] = useState(false);
   const savingRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
-  // Load admin profile + charts
   useEffect(() => {
-    if (configError || !auth) return;
+    if (blocked) setError(t("errors.firebaseNotConfigured"));
+  }, [blocked, t]);
+
+  useEffect(() => {
+    if (blocked || !auth) return;
     const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) { setError("Log in as admin to edit meals."); setIsLoading(false); return; }
+      if (!user) {
+        setError(t("errors.logInMeals"));
+        setIsLoading(false);
+        return;
+      }
       try {
         const profile = await getAdminProfile(user.uid);
         if (!profile) throw new Error("No admin profile found.");
@@ -48,14 +56,16 @@ export function EditMealsManager() {
         setAdminProfile(profile);
         setCharts(currentCharts);
         setMembers(memberList);
+        setError(null);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load data.");
-      } finally { setIsLoading(false); }
+        setError(tx(e instanceof Error ? e.message : t("errors.loadDataFailed")));
+      } finally {
+        setIsLoading(false);
+      }
     });
     return unsub;
-  }, [configError]);
+  }, [blocked, t, tx]);
 
-  // Load meals when chart selected
   useEffect(() => {
     if (!adminProfile || !selectedChart) return;
     let active = true;
@@ -72,11 +82,17 @@ export function EditMealsManager() {
         });
         setMeals(map);
       })
-      .catch((e) => { if (active) setError(e instanceof Error ? e.message : "Failed to load meals."); })
-      .finally(() => { if (active) setTableLoading(false); });
+      .catch((e) => {
+        if (active) setError(tx(e instanceof Error ? e.message : t("errors.loadMealsFailed")));
+      })
+      .finally(() => {
+        if (active) setTableLoading(false);
+      });
 
-    return () => { active = false; };
-  }, [adminProfile, selectedChart]);
+    return () => {
+      active = false;
+    };
+  }, [adminProfile, selectedChart, t, tx]);
 
   const mealsAsEntries: MealEntry[] = useMemo(
     () =>
@@ -121,7 +137,7 @@ export function EditMealsManager() {
         try {
           await saveMealEntry({ groupId: adminProfile.groupId, memberId, date, quantity: val });
         } catch (e) {
-          setError(e instanceof Error ? e.message : "Failed to save meal.");
+          setError(tx(e instanceof Error ? e.message : t("errors.saveMealFailed")));
         }
       })();
     }, 600);
@@ -135,22 +151,23 @@ export function EditMealsManager() {
     return rowMemberIds.reduce((s, id) => s + (meals[id]?.[date] ?? 0), 0);
   }
 
-  if (isLoading) return <p className="mt-8 text-sm text-[color:var(--soft-foreground)]">Loading…</p>;
+  const former = t("common.formerMember");
 
-  // ── Chart selection ───────────────────────────────────────────────
+  if (isLoading) {
+    return <p className="mt-8 text-sm text-[color:var(--soft-foreground)]">{t("common.loading")}</p>;
+  }
+
   if (!selectedChart) {
     return (
       <div className="mt-6 grid gap-5">
         {error && <p className="alert-error">{error}</p>}
 
         <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]">
-          <p className="admin-section-label">Select Month</p>
-          <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">
-            Choose the monthly chart to edit meals for.
-          </p>
+          <p className="admin-section-label">{t("admin.selectMonth")}</p>
+          <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">{t("admin.chooseMonthMeals")}</p>
           {charts.length === 0 ? (
             <p className="mt-4 py-6 text-center text-sm text-[color:var(--soft-foreground)]">
-              No charts created yet. Create a chart first.
+              {t("admin.noChartsMeals")}
             </p>
           ) : (
             <div className="mt-4 grid gap-2">
@@ -164,7 +181,7 @@ export function EditMealsManager() {
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="font-semibold">{chart.label}</p>
-                      {i === 0 && <span className="badge-accent">active</span>}
+                      {i === 0 && <span className="badge-accent">{t("common.active")}</span>}
                     </div>
                     <p className="mt-0.5 text-xs text-[color:var(--muted)]">{chart.monthKey}</p>
                   </div>
@@ -178,7 +195,6 @@ export function EditMealsManager() {
     );
   }
 
-  // ── Meal table for selected chart ─────────────────────────────────
   const totalDays = daysInMonth(selectedChart.year, selectedChart.month);
   const days = Array.from({ length: totalDays }, (_, i) => {
     const d = String(i + 1).padStart(2, "0");
@@ -190,39 +206,42 @@ export function EditMealsManager() {
     <div className="mt-6 grid gap-5">
       {error && <p className="alert-error">{error}</p>}
 
-      {/* Header with back */}
       <div className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--panel)] px-4 py-3">
         <div>
-          <p className="admin-section-label">Edit Meals</p>
+          <p className="admin-section-label">{t("admin.editMeals")}</p>
           <p className="mt-0.5 font-semibold">{selectedChart.label}</p>
           {selectedChart.locked && (
-            <p className="mt-1 text-xs font-semibold text-[color:var(--danger)]">Month locked: meal editing disabled</p>
+            <p className="mt-1 text-xs font-semibold text-[color:var(--danger)]">{t("admin.monthLockedMeals")}</p>
           )}
         </div>
         <button
           type="button"
-          onClick={() => { setSelectedChart(null); setMeals({}); }}
+          onClick={() => {
+            setSelectedChart(null);
+            setMeals({});
+          }}
           className="button-secondary shrink-0"
         >
-          ← Months
+          {t("admin.backMonths")}
         </button>
       </div>
 
       <div className="flex items-center justify-between">
         <p className="text-lg font-semibold">
-          {grandTotal} <span className="text-sm font-normal text-[color:var(--muted)]">total meals</span>
+          {grandTotal}{" "}
+          <span className="text-sm font-normal text-[color:var(--muted)]">{t("admin.totalMeals")}</span>
         </p>
       </div>
 
       {tableLoading ? (
-        <p className="py-8 text-center text-sm text-[color:var(--soft-foreground)]">Loading meals…</p>
+        <p className="py-8 text-center text-sm text-[color:var(--soft-foreground)]">{t("admin.loadingMeals")}</p>
       ) : (
         <div className="overflow-x-auto rounded-[var(--radius)] border border-[color:var(--border)] shadow-[var(--shadow-sm)]">
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="bg-[color:var(--panel)]">
                 <th className="sticky left-0 z-10 min-w-[120px] bg-[color:var(--panel)] px-3 py-2.5 text-left text-xs font-bold uppercase tracking-[0.15em] text-[color:var(--muted)]">
-                  Member
+                  {t("groupChart.colMember")}
                 </th>
                 {days.map((date) => (
                   <th key={date} className="min-w-[44px] px-1 py-2.5 text-center text-xs font-semibold text-[color:var(--muted)]">
@@ -230,15 +249,17 @@ export function EditMealsManager() {
                   </th>
                 ))}
                 <th className="min-w-[56px] px-3 py-2.5 text-center text-xs font-bold uppercase tracking-[0.15em] text-[color:var(--accent)]">
-                  Total
+                  {t("groupChart.colTotal")}
                 </th>
               </tr>
             </thead>
             <tbody>
               {rowMemberIds.map((memberId, ri) => (
                 <tr key={memberId} className={ri % 2 === 0 ? "bg-[color:var(--background)]" : "bg-[color:var(--panel)]"}>
-                  <td className={`sticky left-0 z-10 px-3 py-2 text-sm font-medium ${ri % 2 === 0 ? "bg-[color:var(--background)]" : "bg-[color:var(--panel)]"}`}>
-                    {memberDisplayName(memberId, members)}
+                  <td
+                    className={`sticky left-0 z-10 px-3 py-2 text-sm font-medium ${ri % 2 === 0 ? "bg-[color:var(--background)]" : "bg-[color:var(--panel)]"}`}
+                  >
+                    {memberDisplayName(memberId, members, former)}
                   </td>
                   {days.map((date) => {
                     const val = meals[memberId]?.[date] ?? 0;
@@ -264,7 +285,7 @@ export function EditMealsManager() {
               ))}
               <tr className="border-t border-[color:var(--border)] bg-[color:var(--panel)]">
                 <td className="sticky left-0 z-10 bg-[color:var(--panel)] px-3 py-2 text-xs font-bold uppercase tracking-[0.15em] text-[color:var(--muted)]">
-                  Day total
+                  {t("admin.dayTotal")}
                 </td>
                 {days.map((date) => (
                   <td key={date} className="px-1 py-2 text-center text-xs font-semibold text-[color:var(--soft-foreground)]">
@@ -279,7 +300,7 @@ export function EditMealsManager() {
       )}
 
       {members.length === 0 && (
-        <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">No members in this group yet.</p>
+        <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">{t("admin.noMembersYet")}</p>
       )}
     </div>
   );

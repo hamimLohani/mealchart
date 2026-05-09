@@ -12,6 +12,7 @@ import {
   listDepositsForChart,
 } from "@/lib/firebase/repositories";
 import type { Chart, CostEntry, DepositEntry, Group, MealEntry, Member } from "@/types/domain";
+import { useT } from "@/i18n/use-t";
 import { GroupTokenMismatchHint } from "@/components/forms/group-token-mismatch-hint";
 import { readStoredChartFromSession } from "@/lib/utils/group-chart-session";
 import { formatMeal, getMonthTotals } from "@/lib/utils/meal-money";
@@ -22,6 +23,7 @@ export function GroupDashboard({
   token: string;
 }) {
   const router = useRouter();
+  const { t, tx } = useT();
   const [group, setGroup] = useState<Group | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [charts, setCharts] = useState<Chart[]>([]);
@@ -42,7 +44,11 @@ export function GroupDashboard({
     let active = true;
 
     async function load() {
-      if (!isFirebaseConfigured) { setError("Firebase is not configured yet."); setIsLoading(false); return; }
+      if (!isFirebaseConfigured) {
+        setError(t("errors.firebaseNotConfigured"));
+        setIsLoading(false);
+        return;
+      }
       try {
         const currentGroup = await findGroupByToken(token);
         if (!currentGroup) throw new Error("No group found for this token.");
@@ -56,7 +62,7 @@ export function GroupDashboard({
         setCharts(currentCharts);
       } catch (err) {
         if (!active) return;
-        setError(err instanceof Error ? err.message : "Failed to load group.");
+        setError(tx(err instanceof Error ? err.message : t("errors.loadGroupFailed")));
       } finally {
         if (active) setIsLoading(false);
       }
@@ -88,7 +94,7 @@ export function GroupDashboard({
       })
       .catch((err) => {
         if (!active) return;
-        setError(err instanceof Error ? err.message : "Failed to load selected month.");
+        setError(tx(err instanceof Error ? err.message : t("errors.loadSelectedMonth")));
       })
       .finally(() => {
         if (active) setIsMonthLoading(false);
@@ -121,7 +127,13 @@ export function GroupDashboard({
     setActiveChart(null);
   }
 
-  if (isLoading) return <p className="py-16 text-center text-sm text-[color:var(--soft-foreground)]">Loading group…</p>;
+  if (isLoading) {
+    return (
+      <p className="py-16 text-center text-sm text-[color:var(--soft-foreground)]">
+        {t("groupDash.loading")}
+      </p>
+    );
+  }
   if (error) {
     return (
       <div className="mt-8">
@@ -142,17 +154,17 @@ export function GroupDashboard({
         <div className="group-hero">
           <div className="min-w-0">
             <p className="group-kicker">{group.name}</p>
-            <p className="group-title">Select Month</p>
+            <p className="group-title">{t("groupDash.selectMonth")}</p>
             <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">
-              Choose a chart created by the admin to continue.
+              {t("groupDash.selectMonthHelp")}
             </p>
           </div>
         </div>
         <div className="group-card">
-          <p className="group-kicker">Available Months</p>
+          <p className="group-kicker">{t("groupDash.availableMonths")}</p>
           {charts.length === 0 ? (
             <p className="mt-4 py-6 text-center text-sm text-[color:var(--soft-foreground)]">
-              No charts created yet. Ask your admin to create a chart.
+              {t("groupDash.noCharts")}
             </p>
           ) : (
             <div className="mt-3 grid gap-2">
@@ -166,7 +178,7 @@ export function GroupDashboard({
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="font-semibold">{chart.label}</p>
-                      {i === 0 && <span className="badge-accent">active</span>}
+                      {i === 0 && <span className="badge-accent">{t("common.active")}</span>}
                     </div>
                     <p className="mt-0.5 text-xs text-[color:var(--muted)]">{chart.monthKey}</p>
                   </div>
@@ -186,31 +198,31 @@ export function GroupDashboard({
         <div className="min-w-0">
           <p className="group-kicker">{group.name}</p>
           <p className="group-title">{activeChart.label}</p>
-          <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">
-            Review month totals, then select a member.
-          </p>
+          <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">{t("groupDash.reviewTotals")}</p>
           {activeChart.locked && (
             <p className="mt-1 inline-flex rounded-full border border-[color:var(--danger-border)] bg-[color:var(--danger-bg)] px-2 py-0.5 text-xs font-semibold text-[color:var(--danger)]">
-              Month locked: meal editing disabled
+              {t("groupDash.monthLocked")}
             </p>
           )}
         </div>
         <button type="button" onClick={handleChangeChart} className="button-secondary shrink-0">
-          ← Back
+          {t("common.back")}
         </button>
       </div>
 
       {isMonthLoading ? (
-        <p className="py-10 text-center text-sm text-[color:var(--soft-foreground)]">Loading chart totals…</p>
+        <p className="py-10 text-center text-sm text-[color:var(--soft-foreground)]">
+          {t("groupDash.loadingTotals")}
+        </p>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            { label: "Total Meal", value: formatMeal(monthTotalMeals) },
-            { label: "Total Cost", value: `${monthTotalCost.toFixed(2)} tk` },
-            { label: "Total Taka Paid", value: `${monthTotalPaid.toFixed(2)} tk` },
-            { label: "Meal Rate", value: `${mealRate.toFixed(2)} tk` },
-            { label: "Remaining Taka", value: `${remainingTaka.toFixed(2)} tk` },
-            { label: "Members", value: String(members.length) },
+            { label: t("groupDash.statTotalMeal"), value: formatMeal(monthTotalMeals) },
+            { label: t("groupDash.statTotalCost"), value: `${monthTotalCost.toFixed(2)} ${t("common.tk")}` },
+            { label: t("groupDash.statTotalPaid"), value: `${monthTotalPaid.toFixed(2)} ${t("common.tk")}` },
+            { label: t("groupDash.statMealRate"), value: `${mealRate.toFixed(2)} ${t("common.tk")}` },
+            { label: t("groupDash.statRemaining"), value: `${remainingTaka.toFixed(2)} ${t("common.tk")}` },
+            { label: t("groupDash.statMembers"), value: String(members.length) },
           ].map((s) => (
             <div key={s.label} className="group-stat-card">
               <p className="group-stat-label">{s.label}</p>
@@ -221,10 +233,10 @@ export function GroupDashboard({
       )}
 
       <div className="group-card">
-        <p className="group-kicker">Select Member</p>
+        <p className="group-kicker">{t("groupDash.selectMember")}</p>
         <input
           className="group-search-input mt-3"
-          placeholder="Search members..."
+          placeholder={t("groupDash.searchMembers")}
           value={memberSearch}
           onChange={(event) => setMemberSearch(event.target.value)}
           type="search"
@@ -245,7 +257,7 @@ export function GroupDashboard({
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold">{member.fullName}</p>
                   <p className="text-xs text-[color:var(--muted)]">
-                    Joined {new Date(member.joinDate).toLocaleDateString()}
+                    {t("groupDash.joined")} {new Date(member.joinDate).toLocaleDateString()}
                   </p>
                 </div>
                 <span className="text-[color:var(--accent)]">→</span>

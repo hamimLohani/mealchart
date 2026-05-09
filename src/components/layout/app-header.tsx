@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useT } from "@/i18n/use-t";
 import { useUiStore } from "@/store/ui-store";
 
 export function AppHeader() {
   const { language, setLanguage, theme, setTheme } = useUiStore();
+  const { t } = useT();
 
   return (
     <header className="sticky top-0 z-30 border-b border-[color:var(--border)] bg-[color:var(--panel)] backdrop-blur-md">
@@ -15,10 +17,10 @@ export function AppHeader() {
           </span>
           <div className="leading-tight">
             <p className="text-[0.7rem] font-bold uppercase tracking-[0.22em] text-[color:var(--muted)]">
-              Meat Chart
+              {t("header.brand")}
             </p>
             <p className="hidden text-xs font-medium text-[color:var(--soft-foreground)] sm:block">
-              Hostel & mess accounting
+              {t("header.tagline")}
             </p>
           </div>
         </Link>
@@ -36,7 +38,7 @@ export function AppHeader() {
             onClick={() => setTheme(theme === "light" ? "dark" : "light")}
             type="button"
           >
-            {theme === "light" ? "🌙 Dark" : "☀️ Light"}
+            {theme === "light" ? t("header.themeDark") : t("header.themeLight")}
           </button>
         </div>
       </div>

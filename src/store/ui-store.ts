@@ -3,8 +3,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-type Theme = "light" | "dark";
-type Language = "en" | "bn";
+export type Theme = "light" | "dark";
+export type Language = "en" | "bn";
 
 type UiState = {
   language: Language;

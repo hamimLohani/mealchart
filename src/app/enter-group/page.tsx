@@ -1,12 +1,17 @@
+"use client";
+
 import { PageCard } from "@/components/layout/page-card";
 import { EnterGroupForm } from "@/components/forms/enter-group-form";
+import { useT } from "@/i18n/use-t";
 
 export default function EnterGroupPage() {
+  const { t } = useT();
+
   return (
     <PageCard
-      eyebrow="Enter Group"
-      title="Enter your group token"
-      description="Type the token your admin shared with you. You'll then pick your name from the member list to start entering meals."
+      eyebrow={t("enterPage.eyebrow")}
+      title={t("enterPage.title")}
+      description={t("enterPage.description")}
     >
       <EnterGroupForm />
     </PageCard>

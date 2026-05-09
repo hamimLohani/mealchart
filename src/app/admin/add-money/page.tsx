@@ -1,12 +1,17 @@
+"use client";
+
 import { PageCard } from "@/components/layout/page-card";
 import { AddMoneyManager } from "@/components/admin/add-money-manager";
+import { useT } from "@/i18n/use-t";
 
 export default function AddMoneyPage() {
+  const { t } = useT();
+
   return (
     <PageCard
-      eyebrow="Add Money"
-      title="Member deposit collection"
-      description="This page will show each member’s previous deposit total, record new money given to the admin, and recalculate the current month’s mess balance in realtime."
+      eyebrow={t("adminAddMoney.eyebrow")}
+      title={t("adminAddMoney.title")}
+      description={t("adminAddMoney.description")}
     >
       <AddMoneyManager />
     </PageCard>

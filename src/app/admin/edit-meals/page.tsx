@@ -1,12 +1,17 @@
+"use client";
+
 import { PageCard } from "@/components/layout/page-card";
 import { EditMealsManager } from "@/components/admin/edit-meals-manager";
+import { useT } from "@/i18n/use-t";
 
 export default function EditMealsPage() {
+  const { t } = useT();
+
   return (
     <PageCard
-      eyebrow="Edit Meals"
-      title="Current month meal table"
-      description="Edit any member's meal count for any day. Changes save automatically and update all calculations."
+      eyebrow={t("adminEditMeals.eyebrow")}
+      title={t("adminEditMeals.title")}
+      description={t("adminEditMeals.description")}
     >
       <EditMealsManager />
     </PageCard>

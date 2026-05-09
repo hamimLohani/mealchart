@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
+import { useT } from "@/i18n/use-t";
 import {
   createCost,
   deleteCost,
@@ -15,6 +16,7 @@ import { chartMonthDateBounds, toDateInputValue } from "@/lib/utils/date";
 import type { AdminProfile, Chart, CostEntry } from "@/types/domain";
 
 export function CostsManager() {
+  const { t, tx } = useT();
   const configError = !isFirebaseConfigured || !auth ? "Firebase is not configured yet." : null;
 
   const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null);
@@ -22,7 +24,6 @@ export function CostsManager() {
   const [error, setError] = useState<string | null>(configError);
   const [isLoading, setIsLoading] = useState(!configError);
 
-  // Chart selection
   const [selectedChart, setSelectedChart] = useState<Chart | null>(null);
   const [costs, setCosts] = useState<CostEntry[]>([]);
   const [costsLoading, setCostsLoading] = useState(false);
@@ -31,7 +32,6 @@ export function CostsManager() {
   const [date, setDate] = useState(toDateInputValue(new Date()));
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Load admin profile + charts
   useEffect(() => {
     if (configError || !auth) return;
     const unsub = onAuthStateChanged(auth, async (user) => {
@@ -49,7 +49,6 @@ export function CostsManager() {
     return unsub;
   }, [configError]);
 
-  // Load costs when chart is selected
   useEffect(() => {
     if (!adminProfile || !selectedChart) return;
     let active = true;
@@ -71,6 +70,7 @@ export function CostsManager() {
   }, [selectedChart]);
 
   const total = costs.reduce((s, c) => s + c.amount, 0);
+  const tk = t("common.tk");
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -108,22 +108,21 @@ export function CostsManager() {
     }
   }
 
-  if (isLoading) return <p className="mt-8 text-sm text-[color:var(--soft-foreground)]">Loading…</p>;
+  if (isLoading) return <p className="mt-8 text-sm text-[color:var(--soft-foreground)]">{t("common.loading")}</p>;
 
-  // ── Chart selection ───────────────────────────────────────────────
   if (!selectedChart) {
     return (
       <div className="mt-6 grid gap-5">
-        {error && <p className="alert-error">{error}</p>}
+        {error && <p className="alert-error">{tx(error)}</p>}
 
         <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]">
-          <p className="admin-section-label">Select Month</p>
+          <p className="admin-section-label">{t("admin.selectMonth")}</p>
           <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">
-            Choose the monthly chart to add costs to.
+            {t("costs.selectHelp")}
           </p>
           {charts.length === 0 ? (
             <p className="mt-4 py-6 text-center text-sm text-[color:var(--soft-foreground)]">
-              No charts created yet. Create a chart first.
+              {t("admin.noChartsMeals")}
             </p>
           ) : (
             <div className="mt-4 grid gap-2">
@@ -137,7 +136,7 @@ export function CostsManager() {
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="font-semibold">{chart.label}</p>
-                      {i === 0 && <span className="badge-accent">active</span>}
+                      {i === 0 && <span className="badge-accent">{t("common.active")}</span>}
                     </div>
                     <p className="mt-0.5 text-xs text-[color:var(--muted)]">{chart.monthKey}</p>
                   </div>
@@ -151,20 +150,18 @@ export function CostsManager() {
     );
   }
 
-  // ── Cost management for selected chart ────────────────────────────
   const dateBounds = chartMonthDateBounds(selectedChart);
 
   return (
     <div className="mt-6 grid gap-5">
-      {error && <p className="alert-error">{error}</p>}
+      {error && <p className="alert-error">{tx(error)}</p>}
 
-      {/* Header with back */}
       <div className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--panel)] px-4 py-3">
         <div>
-          <p className="admin-section-label">Costs</p>
+          <p className="admin-section-label">{t("costs.header")}</p>
           <p className="mt-0.5 font-semibold">{selectedChart.label}</p>
           {selectedChart.locked && (
-            <p className="mt-1 text-xs font-semibold text-[color:var(--danger)]">Month locked: add/delete disabled</p>
+            <p className="mt-1 text-xs font-semibold text-[color:var(--danger)]">{t("costs.monthLockedNoEdit")}</p>
           )}
         </div>
         <button
@@ -172,39 +169,37 @@ export function CostsManager() {
           onClick={() => { setSelectedChart(null); setCosts([]); }}
           className="button-secondary shrink-0"
         >
-          ← Months
+          {t("costs.backMonths")}
         </button>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div className="group-stat-card">
-          <p className="group-stat-label">Total Cost</p>
-          <p className="group-stat-value">{total.toFixed(2)} tk</p>
+          <p className="group-stat-label">{t("costs.totalCost")}</p>
+          <p className="group-stat-value">{total.toFixed(2)} {tk}</p>
         </div>
         <div className="group-stat-card">
-          <p className="group-stat-label">Entries</p>
+          <p className="group-stat-label">{t("costs.entries")}</p>
           <p className="group-stat-value">{costs.length}</p>
         </div>
       </div>
 
-      {/* Add form */}
       <form
         onSubmit={handleSubmit}
         className="grid gap-4 rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]"
       >
-        <p className="admin-section-label">Add Cost Entry</p>
+        <p className="admin-section-label">{t("costs.addEntryTitle")}</p>
         <div className="grid gap-3 sm:grid-cols-3">
           <label className="grid gap-1.5 text-sm font-medium">
-            Item name
-            <input className="input" value={itemName} onChange={(e) => setItemName(e.target.value)} placeholder="Rice, vegetables…" required />
+            {t("admin.itemName")}
+            <input className="input" value={itemName} onChange={(e) => setItemName(e.target.value)} placeholder={t("costs.placeholderItem")} required />
           </label>
           <label className="grid gap-1.5 text-sm font-medium">
-            Amount (tk)
+            {t("admin.amountTk")}
             <input className="input" type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="250" required />
           </label>
           <label className="grid gap-1.5 text-sm font-medium">
-            Date
+            {t("admin.date")}
             <input
               className="input"
               type="date"
@@ -218,17 +213,16 @@ export function CostsManager() {
           </label>
         </div>
         <button className="button-primary w-full sm:w-fit" disabled={!adminProfile || isSubmitting || selectedChart.locked} type="submit">
-          {isSubmitting ? "Adding…" : "Add cost"}
+          {isSubmitting ? t("costs.adding") : t("costs.addCostBtn")}
         </button>
       </form>
 
-      {/* Cost list */}
       <div className="grid gap-2.5">
         {costsLoading && (
-          <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">Loading…</p>
+          <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">{t("common.loading")}</p>
         )}
         {!costsLoading && costs.length === 0 && (
-          <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">No costs added yet.</p>
+          <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">{t("costs.empty")}</p>
         )}
         {costs.map((cost) => (
           <div
@@ -240,14 +234,14 @@ export function CostsManager() {
               <p className="mt-0.5 text-xs text-[color:var(--muted)]">{cost.date}</p>
             </div>
             <div className="flex items-center gap-3">
-              <p className="font-bold text-[color:var(--accent)]">{cost.amount.toFixed(2)} tk</p>
+              <p className="font-bold text-[color:var(--accent)]">{cost.amount.toFixed(2)} {tk}</p>
               <button
                 onClick={() => void handleDelete(cost.id)}
                 type="button"
                 disabled={selectedChart.locked}
                 className="rounded-full border border-[color:var(--danger-border)] px-3 py-1 text-xs font-semibold text-[color:var(--danger)] transition hover:bg-[color:var(--danger)] hover:text-white"
               >
-                Delete
+                {t("admin.delete")}
               </button>
             </div>
           </div>
