@@ -167,7 +167,7 @@ export default function MemberPage({
   const myTotalPaid = memberTotals.totalPaid;
   const myCost = memberTotals.totalCost;
   const myBalance = memberTotals.balance;
-  const maxQty = Math.max(...myMeals.map((meal) => meal.quantity), 1);
+  const maxQty = Math.max(...myMeals.map((meal) => meal.quantity), 3);
   const days = Array.from({ length: daysInMonth(chart.year, chart.month) }, (_, i) => {
     const day = i + 1;
     const date = `${chart.monthKey}-${String(day).padStart(2, "0")}`;

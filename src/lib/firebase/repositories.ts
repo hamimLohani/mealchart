@@ -409,8 +409,10 @@ export async function createDeposit(input: {
 
   await addDoc(collection(database, noticesCollection(input.groupId)), {
     ...buildNoticeRecord({
-      title: "Money added",
-      body: `A deposit of ${input.amount.toFixed(2)} tk was added.`,
+      title: input.amount < 0 ? "Money deducted" : "Money added",
+      body: input.amount < 0 
+        ? `An amount of ${Math.abs(input.amount).toFixed(2)} tk was deducted/returned.` 
+        : `A deposit of ${input.amount.toFixed(2)} tk was added.`,
       systemGenerated: true,
     }),
     createdAt: serverTimestamp(),

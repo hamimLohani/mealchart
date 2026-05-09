@@ -105,7 +105,7 @@ export function AddMoneyManager() {
     if (!adminProfile || !selectedChart) return;
     if (selectedChart.locked) { setError("This month is locked."); return; }
     const amount = Number(form.amount);
-    if (!form.memberId || Number.isNaN(amount) || amount <= 0) {
+    if (!form.memberId || Number.isNaN(amount) || amount === 0) {
       setError("Select a member and enter a valid deposit amount.");
       return;
     }
@@ -233,7 +233,6 @@ export function AddMoneyManager() {
             {t("admin.amountTk")}
             <input
               className="input"
-              min="0"
               onChange={(e) => setForm((c) => ({ ...c, amount: e.target.value }))}
               placeholder="500"
               step="0.01"
