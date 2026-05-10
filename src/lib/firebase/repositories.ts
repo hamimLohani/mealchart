@@ -14,6 +14,8 @@ import {
   updateDoc,
   where,
   writeBatch,
+  collectionGroup,
+  Firestore,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import {
@@ -101,6 +103,31 @@ export async function findGroupByToken(token: string) {
   };
 }
 
+export async function getGroupById(groupId: string) {
+  const database = ensureDb();
+  const snapshot = await getDoc(doc(database, groupsCollection, groupId));
+  if (!snapshot.exists()) return null;
+
+  const data = snapshot.data();
+  return {
+    ...normalizeDoc<Group>(snapshot.id, data),
+    createdAt: serializeDate(data.createdAt),
+  };
+}
+
+
+export async function listGroups() {
+  const database = ensureDb();
+  const snapshot = await getDocs(
+    query(collection(database, groupsCollection), where("active", "==", true), orderBy("name"))
+  );
+  return snapshot.docs.map((d) => ({
+    ...normalizeDoc<Group>(d.id, d.data()),
+    createdAt: serializeDate(d.data().createdAt),
+  }));
+}
+
+
 // ── Admins ────────────────────────────────────────────────────────────
 
 export async function getAdminProfile(adminId: string) {
@@ -113,6 +140,35 @@ export async function getAdminProfile(adminId: string) {
     ...normalizeDoc<AdminProfile>(snapshot.id, data),
     createdAt: serializeDate(data.createdAt),
   };
+}
+
+export async function findAdminProfileByEmail(email: string) {
+  const database = ensureDb();
+  const q = query(collection(database, adminsCollection), where("email", "==", email.trim().toLowerCase()), limit(1));
+  const snap = await getDocs(q);
+  if (snap.empty) return null;
+  const d = snap.docs[0];
+  const data = d.data();
+  return {
+    ...normalizeDoc<AdminProfile>(d.id, data),
+    createdAt: serializeDate(data.createdAt),
+  };
+}
+
+export async function migrateAdminProfile(oldUid: string, newUid: string) {
+  const database = ensureDb();
+  const oldRef = doc(database, adminsCollection, oldUid);
+  const newRef = doc(database, adminsCollection, newUid);
+  
+  const snap = await getDoc(oldRef);
+  if (!snap.exists()) return;
+  
+  const data = snap.data();
+  // Ensure the internal id matches the new UID for rule compliance
+  const migratedData = { ...data, id: newUid };
+  await setDoc(newRef, migratedData);
+  // We keep the old one too just in case, or we could delete it.
+  // Let's keep it for safety.
 }
 
 // ── Members ───────────────────────────────────────────────────────────
@@ -176,7 +232,11 @@ export async function updateMember(input: {
 
   await updateDoc(memberRef, payload);
 
-  await addSystemNoticeToCurrentChart(database, input.groupId, "Member updated", `${input.fullName} was updated.`);
+  try {
+    await addSystemNoticeToCurrentChart(database, input.groupId, "Member updated", `${input.fullName} was updated.`);
+  } catch (e) {
+    console.warn("Failed to add system notice:", e);
+  }
 
   return { id: input.memberId, ...payload } as Member;
 }
@@ -191,8 +251,62 @@ export async function deleteMember(groupId: string, memberId: string) {
   const data = snapshot.data();
   await deleteDoc(memberRef);
 
-  await addSystemNoticeToCurrentChart(database, groupId, "Member removed", `${String(data.fullName ?? "A member")} was removed from the group.`);
+  try {
+    await addSystemNoticeToCurrentChart(database, groupId, "Member removed", `${String(data.fullName ?? "A member")} was removed from the group.`);
+  } catch (e) {
+    console.warn("Failed to add system notice:", e);
+  }
 }
+
+export async function findMemberGroupByEmail(email: string): Promise<string | null> {
+  const database = ensureDb();
+  const q = query(collectionGroup(database, "members"), where("email", "==", email.trim().toLowerCase()), limit(1));
+  const snap = await getDocs(q);
+  if (snap.empty) return null;
+  const docSnap = snap.docs[0];
+  // path is groups/{groupId}/members/{memberId}
+  const groupId = docSnap.ref.parent.parent?.id;
+  return groupId ?? null;
+}
+
+// ── Join Requests ────────────────────────────────────────────────────────
+
+export async function submitJoinRequest(groupId: string, fullName: string, email: string) {
+  const database = ensureDb();
+  const reqId = crypto.randomUUID();
+  const reqRef = doc(database, `groups/${groupId}/joinRequests`, reqId);
+  const data = {
+    id: reqId,
+    fullName: fullName.trim(),
+    email: email.trim().toLowerCase(),
+    createdAt: new Date().toISOString(),
+  };
+  await setDoc(reqRef, data);
+}
+
+export async function listJoinRequests(groupId: string) {
+  const database = ensureDb();
+  const snap = await getDocs(query(collection(database, `groups/${groupId}/joinRequests`), orderBy("createdAt")));
+  return snap.docs.map(doc => doc.data() as import("@/types/domain").JoinRequest);
+}
+
+export async function rejectJoinRequest(groupId: string, requestId: string) {
+  const database = ensureDb();
+  await deleteDoc(doc(database, `groups/${groupId}/joinRequests`, requestId));
+}
+
+export async function approveJoinRequest(groupId: string, requestId: string, fullName: string, email: string) {
+  const database = ensureDb();
+  // We can just call createMember for simplicity, then delete the request
+  await createMember({
+    groupId,
+    fullName,
+    joinDate: new Date().toISOString().split("T")[0],
+    email,
+  });
+  await deleteDoc(doc(database, `groups/${groupId}/joinRequests`, requestId));
+}
+
 
 // ── Charts ────────────────────────────────────────────────────────────
 
@@ -651,7 +765,7 @@ export async function deleteChart(groupId: string, chartId: string) {
   }
 }
 
-async function addSystemNoticeToCurrentChart(database: any, groupId: string, title: string, body: string) {
+async function addSystemNoticeToCurrentChart(database: Firestore, groupId: string, title: string, body: string) {
   const groupSnap = await getDoc(doc(database, groupsCollection, groupId));
   if (!groupSnap.exists()) return;
   const currentChartId = groupSnap.data().currentChartId;

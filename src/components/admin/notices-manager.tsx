@@ -53,13 +53,21 @@ export function NoticesManager() {
   useEffect(() => {
     if (!adminProfile || !selectedChart) return;
     let active = true;
-    setNoticesLoading(true);
-    setNotices([]);
 
-    listNoticesForChart(adminProfile.groupId, selectedChart.id)
-      .then((list) => { if (active) setNotices(list); })
-      .catch((e) => { if (active) setError(e instanceof Error ? e.message : "Failed to load notices."); })
-      .finally(() => { if (active) setNoticesLoading(false); });
+    const fetchNotices = async () => {
+      setNoticesLoading(true);
+      setNotices([]);
+      try {
+        const list = await listNoticesForChart(adminProfile.groupId, selectedChart.id);
+        if (active) setNotices(list);
+      } catch (e) {
+        if (active) setError(e instanceof Error ? e.message : "Failed to load notices.");
+      } finally {
+        if (active) setNoticesLoading(false);
+      }
+    };
+
+    void fetchNotices();
 
     return () => { active = false; };
   }, [adminProfile, selectedChart]);

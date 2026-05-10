@@ -13,9 +13,15 @@ import {
   listCharts,
   syncLockedMonthDocsFromCharts,
   updateChartLock,
+  getMealsForMonth,
+  listCostsForChart,
+  listDepositsForChart,
+  listMembers,
+  getGroupById,
 } from "@/lib/firebase/repositories";
 import { formatChartLabel } from "@/lib/utils/date";
 import { daysInMonth } from "@/lib/utils/date";
+import { getMonthTotals, getMemberTotals } from "@/lib/utils/meal-money";
 import type { AdminProfile, Chart } from "@/types/domain";
 
 type ChartFormState = { year: string; month: string };
@@ -39,6 +45,7 @@ export function CreateChartManager() {
   const [error, setError] = useState<string | null>(configurationError);
   const [isLoading, setIsLoading] = useState(!configurationError);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [exportingChartId, setExportingChartId] = useState<string | null>(null);
 
   useEffect(() => {
     if (configurationError || !auth) return;
@@ -131,6 +138,45 @@ export function CreateChartManager() {
     }
   }
 
+  async function handleDownloadCSV(chart: Chart) {
+    if (!adminProfile) return;
+    try {
+      setExportingChartId(chart.id);
+      const groupId = adminProfile.groupId;
+      const group = await getGroupById(groupId);
+      if (!group) throw new Error("Group not found");
+
+      const [members, meals, costs, deposits] = await Promise.all([
+        listMembers(groupId),
+        getMealsForMonth(groupId, chart.monthKey),
+        listCostsForChart(groupId, chart.id),
+        listDepositsForChart(groupId, chart.id)
+      ]);
+
+      const { mealRate } = getMonthTotals(meals, costs, deposits);
+      
+      let csvContent = "Member Name,Total Meals,Meal Cost,Amount Paid,Balance\n";
+
+      members.forEach(member => {
+        const totals = getMemberTotals(member.id, meals, deposits, mealRate);
+        csvContent += `"${member.fullName}",${totals.totalMeals},${totals.totalCost.toFixed(2)},${totals.totalPaid.toFixed(2)},${totals.balance.toFixed(2)}\n`;
+      });
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `${group.name}_${chart.label}_Report.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to export CSV");
+    } finally {
+      setExportingChartId(null);
+    }
+  }
+
   if (isLoading) {
     return <p className="mt-8 text-sm text-[color:var(--soft-foreground)]">{t("createChart.loadingCharts")}</p>;
   }
@@ -215,6 +261,14 @@ export function CreateChartManager() {
                     </span>
                   ) : null}
                   {index === 0 && <span className="badge-accent">{t("common.active")}</span>}
+                  <button
+                    type="button"
+                    onClick={() => void handleDownloadCSV(chart)}
+                    disabled={exportingChartId === chart.id}
+                    className="button-secondary"
+                  >
+                    {exportingChartId === chart.id ? "..." : t("groupDash.exportCSV", { defaultValue: "Export CSV" })}
+                  </button>
                   <button
                     type="button"
                     onClick={() => void handleToggleLock(chart)}

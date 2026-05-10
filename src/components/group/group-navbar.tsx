@@ -8,9 +8,9 @@ import { useT } from "@/i18n/use-t";
 type NavKey = "home" | "chart" | "notices";
 
 export function GroupNavbar({
-  token,
+  groupId,
 }: {
-  token: string;
+  groupId: string;
 }) {
   const pathname = usePathname();
   const { t } = useT();
@@ -41,7 +41,7 @@ export function GroupNavbar({
             {navItems.map((item) => (
               <Link
                 key={item.key}
-                href={item.key === "home" ? `/group/${token}` : `/group/${token}/${item.key}`}
+                href={item.key === "home" ? `/group/${groupId}` : `/group/${groupId}/${item.key}`}
                 className={item.key === activeKey ? "group-nav-link active" : "group-nav-link"}
               >
                 {item.label}

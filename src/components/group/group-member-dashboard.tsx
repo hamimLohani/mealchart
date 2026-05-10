@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { GroupTokenMismatchHint } from "@/components/forms/group-token-mismatch-hint";
-import { findGroupByToken, listMembers } from "@/lib/firebase/repositories";
+import { getGroupById, listMembers } from "@/lib/firebase/repositories";
 import type { Group, Member } from "@/types/domain";
 
-export function GroupMemberDashboard({ token }: { token: string }) {
+export function GroupMemberDashboard({ groupId }: { groupId: string }) {
   const router = useRouter();
   const { t, tx, language } = useT();
   const [group, setGroup] = useState<Group | null>(null);
@@ -26,8 +26,8 @@ export function GroupMemberDashboard({ token }: { token: string }) {
         return;
       }
       try {
-        const currentGroup = await findGroupByToken(token);
-        if (!currentGroup) throw new Error("No group found for this token.");
+        const currentGroup = await getGroupById(groupId);
+        if (!currentGroup) throw new Error("No group found for this groupId.");
         const currentMembers = await listMembers(currentGroup.id);
         if (!active) return;
         setGroup(currentGroup);
@@ -44,7 +44,7 @@ export function GroupMemberDashboard({ token }: { token: string }) {
     return () => {
       active = false;
     };
-  }, [t, tx, token]);
+  }, [t, tx, groupId]);
 
   if (isLoading) {
     return (
@@ -79,7 +79,7 @@ export function GroupMemberDashboard({ token }: { token: string }) {
           {members.map((member) => (
             <div
               key={member.id}
-              onClick={() => router.push(`/group/${token}/member/${member.id}`)}
+              onClick={() => router.push(`/group/${groupId}/member/${member.id}`)}
               className="member-row"
             >
               <div className="min-w-0">

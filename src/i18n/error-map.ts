@@ -71,6 +71,8 @@ export const errorMessageToKey: Partial<Record<string, MessageKey>> = {
   "A chart for that month already exists.": "errors.chartExists",
   "Member was not found.": "errors.memberNotFound",
   "Invalid date format.": "errors.invalidDateFormat",
+  "Missing or insufficient permissions.": "errors.permissionDenied",
+  "Firebase: Error (auth/permission-denied).": "errors.permissionDenied",
 };
 
 export function translateErrorMessage(raw: string, t: (k: MessageKey) => string): string {

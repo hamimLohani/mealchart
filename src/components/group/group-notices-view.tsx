@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { GroupTokenMismatchHint } from "@/components/forms/group-token-mismatch-hint";
-import { findGroupByToken, listNoticesForChart } from "@/lib/firebase/repositories";
+import { getGroupById, listNoticesForChart } from "@/lib/firebase/repositories";
 import { useGroupSession } from "@/lib/hooks/use-group-session";
 import type { Group, Notice } from "@/types/domain";
 
@@ -29,7 +29,7 @@ function formatNoticeCreatedAt(raw: unknown, locale: string): string {
   return "";
 }
 
-export function GroupNoticesView({ token }: { token: string }) {
+export function GroupNoticesView({ groupId }: { groupId: string }) {
   const router = useRouter();
   const { t, tx, language } = useT();
   const locale = language === "bn" ? "bn" : "en";
@@ -50,7 +50,7 @@ export function GroupNoticesView({ token }: { token: string }) {
         return;
       }
       try {
-        const g = await findGroupByToken(token);
+        const g = await getGroupById(groupId);
         if (!g) throw new Error("Group not found.");
         if (!active) return;
         setGroup(g);
@@ -65,24 +65,26 @@ export function GroupNoticesView({ token }: { token: string }) {
     return () => {
       active = false;
     };
-  }, [t, tx, token]);
+  }, [t, tx, groupId]);
 
   useEffect(() => {
     if (!group || !chart) return;
     let active = true;
-    setDataLoading(true);
 
-    listNoticesForChart(group.id, chart.id)
-      .then((list) => {
+    const loadData = async () => {
+      setDataLoading(true);
+      try {
+        const list = await listNoticesForChart(group.id, chart.id);
         if (!active) return;
         setNotices(list);
-      })
-      .catch((e) => {
+      } catch (e) {
         if (active) setError(tx(e instanceof Error ? e.message : t("errors.genericLoad")));
-      })
-      .finally(() => {
+      } finally {
         if (active) setDataLoading(false);
-      });
+      }
+    };
+
+    void loadData();
 
     return () => {
       active = false;
@@ -111,7 +113,7 @@ export function GroupNoticesView({ token }: { token: string }) {
             <p className="group-title">{t("groupNotices.pageTitle")}</p>
             <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">{t("groupChart.noMonthBody")}</p>
           </div>
-          <button type="button" onClick={() => router.push(`/group/${token}`)} className="button-secondary shrink-0">
+          <button type="button" onClick={() => router.push(`/group/${groupId}`)} className="button-secondary shrink-0">
             ← {t("groupNav.home")}
           </button>
         </div>

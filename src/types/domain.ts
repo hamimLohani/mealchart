@@ -67,3 +67,10 @@ export type Notice = {
   systemGenerated: boolean;
   createdAt: string;
 };
+
+export type JoinRequest = {
+  id: string;
+  fullName: string;
+  email: string;
+  createdAt: string;
+};

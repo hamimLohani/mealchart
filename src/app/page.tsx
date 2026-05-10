@@ -50,13 +50,6 @@ export default function Home() {
             <Link className="button-ghost" href="/enter-group">
               {t("home.ctaEnter")}
             </Link>
-            <Link
-              className="button-ghost"
-              href="/admin/login"
-              style={{ borderStyle: "dashed" }}
-            >
-              {t("home.ctaAdmin")}
-            </Link>
             <a
               className="button-ghost"
               href="#about"

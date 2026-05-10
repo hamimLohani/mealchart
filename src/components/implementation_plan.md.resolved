@@ -1,0 +1,51 @@
+# SWR Migration for Speed & Performance
+
+To answer your question: **No, we do not need to change the database files!** 
+
+Your existing database files (`src/lib/firebase/repositories.ts`) are perfectly fine. They provide raw functions to fetch data from Firebase. We will keep them exactly as they are. 
+
+Instead, we will install `swr` (a highly optimized data-fetching library created by the Next.js team) and use it inside your **UI components**. SWR will act as a smart layer between your UI components and your database functions. It will automatically cache the data, deduplicate requests, and update the UI in the background, making the app feel incredibly fast.
+
+## Open Questions
+- Do you want to implement SWR on all pages at once, or should we start with the heaviest pages first (like the `group-dashboard`, `member-details`, and `admin-costs`)? I recommend doing it everywhere for consistency.
+
+## Proposed Changes
+
+### 1. Dependencies
+- Install `swr` via `npm install swr`.
+
+### 2. SWR Custom Hooks
+
+#### [NEW] `src/lib/hooks/use-data.ts`
+We will create a centralized file for our SWR hooks. This file will import your existing functions from `repositories.ts` and wrap them in `useSWR`. 
+
+Example hook:
+```typescript
+import useSWR from "swr";
+import { listMembers } from "@/lib/firebase/repositories";
+
+export function useMembers(groupId: string | undefined) {
+  return useSWR(
+    groupId ? ["members", groupId] : null,
+    ([, id]) => listMembers(id)
+  );
+}
+```
+
+### 3. Component Refactoring
+We will dramatically simplify the code in your components by replacing hundreds of lines of `useState` and `useEffect` with simple SWR hooks.
+
+#### [MODIFY] `src/components/group/group-dashboard.tsx`
+- Remove manual `useEffect` fetching.
+- Replace with `const { data: members, isLoading } = useMembers(groupId);`
+
+#### [MODIFY] `src/app/group/[groupId]/member/[memberId]/page.tsx`
+- Replace the multiple `Promise.all` effects with SWR hooks for meals, costs, and deposits.
+
+#### [MODIFY] `src/components/admin/costs-manager.tsx` and other Admin Managers
+- Refactor the admin dashboard sections to leverage the SWR cache. When an admin adds a new cost or meal, we can instantly update the local SWR cache (`mutate()`) so the UI updates without waiting for a database refresh.
+
+## Verification Plan
+1. Install the dependency and start the development server.
+2. Refactor the components one by one.
+3. Manually test navigating between pages to ensure the data loads instantly from the cache (no more flickering or "Loading..." screens on subsequent visits).

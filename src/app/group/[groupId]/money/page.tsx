@@ -7,14 +7,14 @@ import { GroupMoneyView } from "@/components/group/group-money-view";
 export default function GroupMoneyPage({
   params,
 }: {
-  params: Promise<{ token: string }>;
+  params: Promise<{ groupId: string }>;
 }) {
-  const { token } = use(params);
+  const { groupId } = use(params);
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 pb-16 sm:px-8">
-      <GroupNavbar token={token} />
-      <GroupMoneyView token={token} />
+      <GroupNavbar groupId={groupId} />
+      <GroupMoneyView groupId={groupId} />
     </main>
   );
 }

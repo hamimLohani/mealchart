@@ -7,14 +7,14 @@ import { use } from "react";
 export default function GroupDashboardPage({
   params,
 }: {
-  params: Promise<{ token: string }>;
+  params: Promise<{ groupId: string }>;
 }) {
-  const { token } = use(params);
+  const { groupId } = use(params);
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 pb-16 sm:px-8">
-      <GroupNavbar token={token} />
-      <GroupDashboard token={token} />
+      <GroupNavbar groupId={groupId} />
+      <GroupDashboard groupId={groupId} />
     </main>
   );
 }

@@ -36,7 +36,7 @@ export function EditMealsManager() {
   const savingRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   useEffect(() => {
-    if (blocked) setError(t("errors.firebaseNotConfigured"));
+    if (blocked) setTimeout(() => setError(t("errors.firebaseNotConfigured")), 0);
   }, [blocked, t]);
 
   useEffect(() => {
@@ -70,11 +70,11 @@ export function EditMealsManager() {
   useEffect(() => {
     if (!adminProfile || !selectedChart) return;
     let active = true;
-    setTableLoading(true);
-    setMeals({});
-
-    getMealsForMonth(adminProfile.groupId, selectedChart.monthKey)
-      .then((mealList) => {
+    const fetchMeals = async () => {
+      setTableLoading(true);
+      setMeals({});
+      try {
+        const mealList = await getMealsForMonth(adminProfile.groupId, selectedChart.monthKey);
         if (!active) return;
         const map: Record<string, Record<string, number>> = {};
         mealList.forEach((m: MealEntry) => {
@@ -82,13 +82,14 @@ export function EditMealsManager() {
           map[m.memberId][m.date] = m.quantity;
         });
         setMeals(map);
-      })
-      .catch((e) => {
+      } catch (e) {
         if (active) setError(tx(e instanceof Error ? e.message : t("errors.loadMealsFailed")));
-      })
-      .finally(() => {
+      } finally {
         if (active) setTableLoading(false);
-      });
+      }
+    };
+
+    void fetchMeals();
 
     return () => {
       active = false;

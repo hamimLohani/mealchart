@@ -14,7 +14,7 @@ export const en = {
   "home.description":
     "Admins register their group, get a token instantly, and manage members, meals, costs, deposits, notices, and monthly charts. Members add their meals with that token and the app will calculate the monthly costs and deposits — all from one place.",
   "home.ctaRegister": "Register Group",
-  "home.ctaEnter": "Enter With Token",
+  "home.ctaEnter": "Login / Enter Group",
   "home.ctaAdmin": "Admin Login",
   "home.statBackend": "Backend",
   "home.statMode": "Mode",
@@ -29,7 +29,7 @@ export const en = {
   "about.sectionSubtitle": "Everything you need to manage your hostel or mess meals, money, and members — explained step by step.",
 
   "about.step1Title": "1. Register Your Group",
-  "about.step1Body": "The admin creates a group by entering a group name, email, and password. After registration, a unique Group Token is generated. Share this token with all hostel/mess members so they can join.",
+  "about.step1Body": "The admin creates a group by entering a group name and signing in with Google. After registration, a unique Group Token is generated. Share this token with all hostel/mess members so they can join.",
 
   "about.step2Title": "2. Add Members",
   "about.step2Body": "Go to Admin Panel → Members. Add each member's name, phone number, and join date. Members will appear in the meal chart and money tracking.",
@@ -38,13 +38,13 @@ export const en = {
   "about.step3Body": "Go to Admin Panel → Create Chart. Select the month and year. This creates a fresh monthly sheet that tracks meals, costs, deposits, and notices for that month.",
 
   "about.step4Title": "4. Track Daily Meals",
-  "about.step4Body": "Admin: Go to Edit Meals → select the month → enter meal counts in the grid (rows = members, columns = days). Members: Enter the group with your token → select a month → tap your name → add your own meals for today.",
+  "about.step4Body": "Admin: Go to Edit Meals → select the month → enter meal counts in the grid (rows = members, columns = days). Members: Access group with Google account → select a month → tap your name → add your own meals for today.",
 
   "about.step5Title": "5. Record Money & Costs",
   "about.step5Body": "Admin collects money from members? Go to Add Money → select month → pick member → enter amount. Bought groceries? Go to Costs → select month → add item name, amount, and date. The app automatically calculates meal rate, balance, and who owes what.",
 
   "about.step6Title": "6. View Reports",
-  "about.step6Body": "Members can see all details by entering the group with the token: Chart (meal grid), Money (deposits, costs, balances), Notices (announcements), and their individual meal history.",
+  "about.step6Body": "Members can see all details by signing in with Google: Chart (meal grid), Money (deposits, costs, balances), Notices (announcements), and their individual meal history.",
 
   "about.step7Title": "7. Lock the Month",
   "about.step7Body": "When a month is complete, the admin can Lock it from Create Chart. This prevents any further changes to meals, money, or costs for that month — keeping the records permanent.",
@@ -55,7 +55,7 @@ export const en = {
   "about.adminTitle": "For Admins",
   "about.adminBody": "Register → Add Members → Create Monthly Chart → Edit Meals → Collect Money → Add Costs → Post Notices → Lock Month when done.",
   "about.memberTitle": "For Members",
-  "about.memberBody": "Get token from admin → Enter Group → Select Month → Add your meals → View chart, money balance, and notices.",
+  "about.memberBody": "Sign in with Google → Select your group from the list → View chart, money balance, and notices.",
 
   // Common
   "common.loading": "Loading…",
@@ -67,27 +67,49 @@ export const en = {
   "common.unknown": "Unknown",
   "common.formerMember": "Former member",
   "common.cancel": "Cancel",
+  "common.or": "or",
 
   // Enter group page
   "enterPage.eyebrow": "Enter Group",
-  "enterPage.title": "Enter your group token",
+  "enterPage.title": "Access your meal dashboard",
   "enterPage.description":
-    "Type the token your admin shared with you. You'll then pick your name from the member list to start entering meals.",
+    "Sign in with your Google account. We'll automatically find your group dashboard (for both admins and members), or you can request to join a new one by selecting your group from the list.",
 
   // Enter group form
   "enterForm.labelToken": "Group token",
   "enterForm.placeholderToken": "STAR-HOST-7XK29Q",
   "enterForm.warnEnv": "Firebase keys are missing. Add them in .env.local first.",
   "enterForm.submit": "Continue",
-  "enterForm.submitting": "Looking up…",
+  "enterForm.submitting": "Signing in…",
+  "enterForm.signInWithGoogle": "Sign in with Google",
+  "enterForm.requestToJoin": "Request to join a group",
+  "enterForm.existingMember": "Already a member?",
+  "enterForm.newToGroup": "New to a group?",
+  "enterForm.requestingToJoin": "Requesting to join",
+  "enterForm.joinHelp": "Enter the group token shared by your admin to send a join request. You must sign in with Google first.",
+  "enterForm.fullName": "Full Name",
+  "enterForm.emailLabel": "Email (verified)",
+  "enterForm.groupToken": "Group Token",
+  "enterForm.submitJoinRequest": "Send Join Request",
+  "enterForm.submittingRequest": "Sending…",
+  "enterForm.joinRequestSuccess": "Your join request has been sent! Please wait for admin approval.",
+  "enterForm.joinRequestError": "Failed to send request. Please check the token and try again.",
+  "enterForm.signInHint": "Already a member? Sign in with Google and we'll take you straight to your group dashboard.",
+  "enterForm.joinHint": "New here? Request to join by signing in with Google, then selecting your group from the list.",
+  "enterForm.tokenHint": "Ask your group admin for this token.",
+  "enterForm.selectGroup": "Select Group",
+  "enterForm.loadingGroups": "Loading groups...",
+  "enterForm.noGroups": "No groups available.",
+  "enterForm.groupSelectionHelp": "Select your group from the list below to send a join request.",
+  "enterForm.footerHint": "Your Google account is only used for secure sign-in. We never access your personal data.",
 
   // Register page
   "registerPage.eyebrow": "Register Group",
   "registerPage.title": "Admin registration flow",
   "registerPage.description":
-    "This page creates the admin account, the group document, and your group token right after signup.",
+    "Register your group and start managing your hostel or mess meals today. You will sign in with Google to create your account.",
   "registerPage.hasAccount": "Already registered your group?",
-  "registerPage.adminLogin": "Admin login",
+  "registerPage.adminLogin": "Login to dashboard",
 
   // Register form
   "registerForm.groupName": "Group name",
@@ -116,7 +138,7 @@ export const en = {
   // Admin login page
   "adminLoginPage.eyebrow": "Admin Login",
   "adminLoginPage.title": "Sign in to your panel",
-  "adminLoginPage.subtitle": "Enter your admin email and password to continue.",
+  "adminLoginPage.subtitle": "Sign in with Google to access your admin dashboard.",
   "adminLoginPage.needGroup": "Need a group and token?",
   "adminLoginPage.registerGroup": "Register a group",
 
@@ -163,6 +185,8 @@ export const en = {
   "groupDash.selectMember": "Select Member",
   "groupDash.searchMembers": "Search members…",
   "groupDash.joined": "Joined",
+  "groupDash.exportCSV": "Export CSV",
+  "groupDash.financialOverview": "Financial Overview",
 
   // Group chart
   "groupChart.loading": "Loading…",
@@ -468,6 +492,7 @@ export const en = {
   "errors.adminProfileNotFound": "No admin profile was found for the current user.",
   "errors.adminProfileNotFoundShort": "No admin profile found.",
   "errors.adminProfileAccount": "No admin profile was found for this account.",
+  "errors.adminExists": "An admin profile already exists for this account.",
   "errors.firebaseNotConfiguredShort": "Firebase not configured.",
   "errors.noGroupAdmin": "No group was found for this admin profile.",
   "errors.loadGroupDetails": "Failed to load group details.",
@@ -508,6 +533,8 @@ export const en = {
   "errors.memberNotFound": "Member was not found.",
   "errors.invalidDateFormat": "Invalid date format.",
   "errors.genericLoad": "Failed to load.",
+  "errors.adminInMemberLogin": "You are an admin. Please sign in via the Admin Login page.",
+  "errors.permissionDenied": "Missing or insufficient permissions.",
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -524,7 +551,7 @@ export const bn: Record<MessageKey, string> = {
   "home.description":
     "অ্যাডমিন গ্রুপ রেজিস্টার করবে, সাথে সাথে টোকেন পাবে, তারপর সদস্য, মিল, খরচ, জমা, নোটিশ ও মাসিক চার্ট এক জায়গা থেকে পরিচালনা করবে। সদস্য টোকেন দিয়ে মিল যোগ করবে এবং অ্যাপটি মাসিক খরচ ও জমা হিসাব করবে — সবকিছু এক জায়গা থেকে।",
   "home.ctaRegister": "গ্রুপ রেজিস্টার",
-  "home.ctaEnter": "টোকেন দিয়ে প্রবেশ",
+  "home.ctaEnter": "লগইন / গ্রুপে প্রবেশ",
   "home.ctaAdmin": "অ্যাডমিন লগইন",
   "home.statBackend": "ব্যাকএন্ড",
   "home.statMode": "মোড",
@@ -538,7 +565,7 @@ export const bn: Record<MessageKey, string> = {
   "about.sectionSubtitle": "আপনার হোস্টেল বা মেসের মিল, টাকা ও সদস্য ব্যবস্থাপনার সবকিছু — ধাপে ধাপে বোঝানো হলো।",
 
   "about.step1Title": "১. গ্রুপ রেজিস্টার করুন",
-  "about.step1Body": "অ্যাডমিন গ্রুপের নাম, ইমেইল ও পাসওয়ার্ড দিয়ে রেজিস্টার করবে। রেজিস্ট্রেশনের পর একটি ইউনিক গ্রুপ টোকেন তৈরি হবে। এই টোকেন হোস্টেল/মেসের সব সদস্যের সাথে শেয়ার করুন।",
+  "about.step1Body": "অ্যাডমিন গ্রুপের নাম দিয়ে গুগল দিয়ে সাইন ইন করে গ্রুপ তৈরি করবে। রেজিস্ট্রেশনের পর একটি ইউনিক গ্রুপ টোকেন তৈরি হবে। এই টোকেন হোস্টেল/মেসের সব সদস্যের সাথে শেয়ার করুন।",
 
   "about.step2Title": "২. সদস্য যোগ করুন",
   "about.step2Body": "অ্যাডমিন প্যানেল → সদস্য-তে যান। প্রতিটি সদস্যের নাম, ফোন নম্বর ও যোগদানের তারিখ দিন। সদস্যরা মিল চার্ট ও টাকার হিসাবে দেখা যাবে।",
@@ -547,13 +574,13 @@ export const bn: Record<MessageKey, string> = {
   "about.step3Body": "অ্যাডমিন প্যানেল → চার্ট তৈরি-তে যান। মাস ও বছর নির্বাচন করুন। এটি একটি নতুন মাসিক শীট তৈরি করবে যেখানে ওই মাসের মিল, খরচ, জমা ও নোটিশ ট্র্যাক হবে।",
 
   "about.step4Title": "৪. দৈনিক মিল হিসাব রাখুন",
-  "about.step4Body": "অ্যাডমিন: মিল সম্পাদনা → মাস বাছুন → গ্রিডে মিল সংখ্যা লিখুন (সারি = সদস্য, কলাম = দিন)। সদস্য: টোকেন দিয়ে গ্রুপে ঢুকুন → মাস বাছুন → নাম ট্যাপ করুন → আজকের মিল যোগ করুন।",
+  "about.step4Body": "অ্যাডমিন: মিল সম্পাদনা → মাস বাছুন → গ্রিডে মিল সংখ্যা লিখুন (সারি = সদস্য, কলাম = দিন)। সদস্য: গুগল অ্যাকাউন্ট দিয়ে গ্রুপে ঢুকুন → মাস বাছুন → নাম ট্যাপ করুন → আজকের মিল যোগ করুন।",
 
   "about.step5Title": "৫. টাকা ও খরচ রেকর্ড করুন",
   "about.step5Body": "অ্যাডমিন সদস্যদের থেকে টাকা নিয়েছে? টাকা জমা → মাস বাছুন → সদস্য বাছুন → পরিমাণ দিন। বাজার করেছে? খরচ → মাস বাছুন → আইটেমের নাম, পরিমাণ ও তারিখ দিন। অ্যাপ স্বয়ংক্রিয়ভাবে মিল রেট, ব্যালান্স ও কার কত পাওনা হিসাব করবে।",
 
   "about.step6Title": "৬. রিপোর্ট দেখুন",
-  "about.step6Body": "সদস্যরা টোকেন দিয়ে গ্রুপে ঢুকে সব বিবরণ দেখতে পারবে: চার্ট (মিল গ্রিড), টাকা (জমা, খরচ, ব্যালান্স), নোটিশ (ঘোষণা), এবং নিজের মিলের ইতিহাস।",
+  "about.step6Body": "সদস্যরা গুগল দিয়ে সাইন ইন করে সব বিবরণ দেখতে পারবে: চার্ট (মিল গ্রিড), টাকা (জমা, খরচ, ব্যালান্স), নোটিশ (ঘোষণা), এবং নিজের মিলের ইতিহাস।",
 
   "about.step7Title": "৭. মাস লক করুন",
   "about.step7Body": "মাস শেষ হলে অ্যাডমিন চার্ট তৈরি থেকে লক করতে পারবে। এতে ওই মাসের মিল, টাকা বা খরচে আর কোনো পরিবর্তন করা যাবে না — রেকর্ড স্থায়ী থাকবে।",
@@ -564,7 +591,7 @@ export const bn: Record<MessageKey, string> = {
   "about.adminTitle": "অ্যাডমিনদের জন্য",
   "about.adminBody": "রেজিস্টার → সদস্য যোগ → মাসিক চার্ট তৈরি → মিল সম্পাদনা → টাকা সংগ্রহ → খরচ যোগ → নোটিশ দিন → শেষ হলে মাস লক।",
   "about.memberTitle": "সদস্যদের জন্য",
-  "about.memberBody": "অ্যাডমিনের কাছ থেকে টোকেন নিন → গ্রুপে ঢুকুন → মাস বাছুন → মিল যোগ করুন → চার্ট, টাকার ব্যালান্স ও নোটিশ দেখুন।",
+  "about.memberBody": "গুগল দিয়ে সাইন ইন করুন → তালিকা থেকে আপনার গ্রুপটি বেছে নিন → চার্ট, টাকার ব্যালান্স ও নোটিশ দেখুন।",
 
   "common.loading": "লোড হচ্ছে…",
   "common.back": "← পিছনে",
@@ -575,24 +602,46 @@ export const bn: Record<MessageKey, string> = {
   "common.unknown": "অজানা",
   "common.formerMember": "প্রাক্তন সদস্য",
   "common.cancel": "বাতিল",
+  "common.or": "অথবা",
 
   "enterPage.eyebrow": "গ্রুপে প্রবেশ",
-  "enterPage.title": "আপনার গ্রুপ টোকেন দিন",
+  "enterPage.title": "আপনার মিল ড্যাশবোর্ডে প্রবেশ করুন",
   "enterPage.description":
-    "অ্যাডমিন যে টোকেন শেয়ার করেছে তা লিখুন। তারপর সদস্য তালিকা থেকে নাম বেছে মিল এন্ট্রি শুরু করুন।",
+    "আপনার গুগল অ্যাকাউন্ট দিয়ে সাইন ইন করুন। আমরা আপনার ড্যাশবোর্ডটি (অ্যাডমিন বা সদস্য) খুঁজে বের করব, অথবা আপনি তালিকা থেকে বেছে নিয়ে নতুন গ্রুপে যোগদানের অনুরোধ করতে পারবেন।",
 
   "enterForm.labelToken": "গ্রুপ টোকেন",
   "enterForm.placeholderToken": "STAR-HOST-7XK29Q",
   "enterForm.warnEnv": "Firebase কী মিসিং। প্রথমে .env.local ফাইলে যোগ করুন।",
   "enterForm.submit": "চালিয়ে যান",
-  "enterForm.submitting": "খোঁজা হচ্ছে…",
+  "enterForm.submitting": "সাইন ইন হচ্ছে…",
+  "enterForm.signInWithGoogle": "গুগল দিয়ে সাইন ইন করুন",
+  "enterForm.requestToJoin": "গ্রুপে যোগদানের অনুরোধ",
+  "enterForm.existingMember": "ইতিমধ্যে সদস্য?",
+  "enterForm.newToGroup": "গ্রুপে নতুন?",
+  "enterForm.requestingToJoin": "যোগদানের অনুরোধ পাঠাচ্ছেন",
+  "enterForm.joinHelp": "আপনার অ্যাডমিনের শেয়ার করা গ্রুপ টোকেনটি দিন। অনুরোধ পাঠানোর জন্য আপনাকে গুগল দিয়ে সাইন ইন করতে হবে।",
+  "enterForm.fullName": "পুরো নাম",
+  "enterForm.emailLabel": "ইমেইল (যাচাইকৃত)",
+  "enterForm.groupToken": "গ্রুপ টোকেন",
+  "enterForm.submitJoinRequest": "অনুরোধ পাঠান",
+  "enterForm.submittingRequest": "পাঠানো হচ্ছে…",
+  "enterForm.joinRequestSuccess": "আপনার অনুরোধ পাঠানো হয়েছে! অ্যাডমিনের অনুমোদনের জন্য অপেক্ষা করুন।",
+  "enterForm.joinRequestError": "অনুরোধ পাঠানো সম্ভব হয়নি। টোকেনটি যাচাই করে আবার চেষ্টা করুন।",
+  "enterForm.signInHint": "ইতিমধ্যে সদস্য? গুগল দিয়ে সাইন ইন করুন এবং আমরা আপনাকে সরাসরি আপনার গ্রুপ ড্যাশবোর্ডে নিয়ে যাব।",
+  "enterForm.joinHint": "নতুন? যোগদানের অনুরোধ করতে গুগল দিয়ে সাইন ইন করুন, তারপর তালিকা থেকে আপনার গ্রুপটি বেছে নিন।",
+  "enterForm.tokenHint": "আপনার গ্রুপ অ্যাডমিনের কাছে এই টোকেনটি চান।",
+  "enterForm.selectGroup": "গ্রুপ নির্বাচন করুন",
+  "enterForm.loadingGroups": "গ্রুপ লোড হচ্ছে...",
+  "enterForm.noGroups": "কোনো গ্রুপ পাওয়া যায়নি।",
+  "enterForm.groupSelectionHelp": "নিচের তালিকা থেকে আপনার গ্রুপটি নির্বাচন করে জয়েন রিকোয়েস্ট পাঠান।",
+  "enterForm.footerHint": "আপনার গুগল অ্যাকাউন্ট শুধুমাত্র নিরাপদ সাইন-ইনের জন্য ব্যবহৃত হয়। আমরা কখনোই আপনার ব্যক্তিগত তথ্য দেখি না।",
 
   "registerPage.eyebrow": "গ্রুপ রেজিস্টার",
   "registerPage.title": "অ্যাডমিন রেজিস্ট্রেশন",
   "registerPage.description":
-    "এই পেজে সাইনআপের পর অ্যাডমিন অ্যাকাউন্ট, গ্রুপ ডকুমেন্ট ও গ্রুপ টোকেন তৈরি হবে।",
+    "আপনার গ্রুপ রেজিস্টার করুন এবং আজই আপনার হোস্টেল বা মেস মিল পরিচালনা শুরু করুন। আপনার অ্যাকাউন্ট তৈরি করতে আপনাকে গুগল দিয়ে সাইন ইন করতে হবে।",
   "registerPage.hasAccount": "ইতিমধ্যে গ্রুপ রেজিস্টার করেছেন?",
-  "registerPage.adminLogin": "অ্যাডমিন লগইন",
+  "registerPage.adminLogin": "ড্যাশবোর্ডে লগইন করুন",
 
   "registerForm.groupName": "গ্রুপের নাম",
   "registerForm.placeholderGroup": "স্টার হোস্টেল",
@@ -618,7 +667,7 @@ export const bn: Record<MessageKey, string> = {
 
   "adminLoginPage.eyebrow": "অ্যাডমিন লগইন",
   "adminLoginPage.title": "প্যানেলে সাইন ইন করুন",
-  "adminLoginPage.subtitle": "অ্যাডমিন ইমেইল ও পাসওয়ার্ড দিন।",
+  "adminLoginPage.subtitle": "অ্যাডমিন ড্যাশবোর্ডে প্রবেশ করতে গুগল দিয়ে সাইন ইন করুন।",
   "adminLoginPage.needGroup": "গ্রুপ ও টোকেন লাগবে?",
   "adminLoginPage.registerGroup": "গ্রুপ রেজিস্টার করুন",
 
@@ -661,6 +710,8 @@ export const bn: Record<MessageKey, string> = {
   "groupDash.selectMember": "সদস্য বাছুন",
   "groupDash.searchMembers": "সদস্য খুঁজুন…",
   "groupDash.joined": "যোগদান",
+  "groupDash.exportCSV": "সিএসভি ডাউনলোড",
+  "groupDash.financialOverview": "আর্থিক ওভারভিউ",
 
   "groupChart.loading": "লোড হচ্ছে…",
   "groupChart.noMonthTitle": "কোনো মাস বাছা হয়নি",
@@ -952,6 +1003,7 @@ export const bn: Record<MessageKey, string> = {
   "errors.adminProfileNotFound": "এই ইউজারের জন্য অ্যাডমিন প্রোফাইল নেই।",
   "errors.adminProfileNotFoundShort": "অ্যাডমিন প্রোফাইল নেই।",
   "errors.adminProfileAccount": "এই অ্যাকাউন্টের জন্য অ্যাডমিন প্রোফাইল নেই।",
+  "errors.adminExists": "এই অ্যাকাউন্টের জন্য ইতিমধ্যে একটি অ্যাডমিন প্রোফাইল আছে।",
   "errors.firebaseNotConfiguredShort": "Firebase কনফিগার নেই।",
   "errors.noGroupAdmin": "এই অ্যাডমিন প্রোফাইলের জন্য গ্রুপ পাওয়া যায়নি।",
   "errors.loadGroupDetails": "গ্রুপের বিবরণ লোড ব্যর্থ।",
@@ -990,8 +1042,10 @@ export const bn: Record<MessageKey, string> = {
   "errors.chartNoMonth": "চার্টে মাসের তথ্য নেই।",
   "errors.chartExists": "ওই মাসের চার্ট আগে থেকেই আছে।",
   "errors.memberNotFound": "সদস্য পাওয়া যায়নি।",
-  "errors.invalidDateFormat": "তারিখের ফরম্যাট ভুল।",
-  "errors.genericLoad": "লোড ব্যর্থ।",
+  "errors.invalidDateFormat": "ভুল তারিখ বিন্যাস।",
+  "errors.genericLoad": "লোড করতে ব্যর্থ হয়েছে।",
+  "errors.adminInMemberLogin": "আপনি একজন অ্যাডমিন। অনুগ্রহ করে অ্যাডমিন লগইন পেজ ব্যবহার করে সাইন ইন করুন।",
+  "errors.permissionDenied": "প্রবেশাধিকার নেই বা অপর্যাপ্ত অনুমতি।",
 };
 
 export const messages: Record<Language, Record<MessageKey, string>> = {

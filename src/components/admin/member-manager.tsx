@@ -5,9 +5,9 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { useT } from "@/i18n/use-t";
-import { createMember, deleteMember, getAdminProfile, listMembers, updateMember } from "@/lib/firebase/repositories";
+import { createMember, deleteMember, getAdminProfile, listMembers, updateMember, listJoinRequests, approveJoinRequest, rejectJoinRequest } from "@/lib/firebase/repositories";
 import { toDateInputValue } from "@/lib/utils/date";
-import type { AdminProfile, Member } from "@/types/domain";
+import type { AdminProfile, Member, JoinRequest } from "@/types/domain";
 
 type MemberFormState = { fullName: string; joinDate: string; email: string };
 const initialForm: MemberFormState = {
@@ -25,6 +25,7 @@ export function MemberManager() {
 
   const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
+  const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
   const [form, setForm] = useState<MemberFormState>(initialForm);
   const [search, setSearch] = useState("");
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
@@ -48,8 +49,10 @@ export function MemberManager() {
         const profile = await getAdminProfile(user.uid);
         if (!profile) throw new Error("No admin profile was found for the current user.");
         const currentMembers = await listMembers(profile.groupId);
+        const currentRequests = await listJoinRequests(profile.groupId);
         setAdminProfile(profile);
         setMembers(currentMembers);
+        setJoinRequests(currentRequests);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load members.");
       } finally {
@@ -136,6 +139,32 @@ export function MemberManager() {
     setForm({ fullName: member.fullName, joinDate: member.joinDate, email: member.email });
   }
 
+  async function handleApproveRequest(req: JoinRequest) {
+    if (!adminProfile) return;
+    setIsSubmitting(true);
+    try {
+      await approveJoinRequest(adminProfile.groupId, req.id, req.fullName, req.email);
+      setJoinRequests(c => c.filter(r => r.id !== req.id));
+      const currentMembers = await listMembers(adminProfile.groupId);
+      setMembers(currentMembers);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to approve request.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleRejectRequest(req: JoinRequest) {
+    if (!adminProfile) return;
+    try {
+      await rejectJoinRequest(adminProfile.groupId, req.id);
+      setJoinRequests(c => c.filter(r => r.id !== req.id));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to reject request.");
+    }
+  }
+
+
   if (isLoading) {
     return <p className="mt-8 text-sm text-[color:var(--soft-foreground)]">{t("memberMgr.loadingList")}</p>;
   }
@@ -194,6 +223,33 @@ export function MemberManager() {
           )}
         </div>
       </form>
+
+      {joinRequests.length > 0 && (
+        <div className="rounded-[var(--radius)] border-2 border-[color:var(--accent)] bg-[color:var(--panel)] p-5 shadow-[0_0_0_4px_var(--accent-dim)]">
+          <p className="admin-section-label">Pending Join Requests</p>
+          <div className="mt-4 grid gap-2.5">
+            {joinRequests.map((req) => (
+              <article
+                key={req.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="font-semibold">{req.fullName}</p>
+                  <p className="mt-0.5 text-xs text-[color:var(--muted)]">{req.email}</p>
+                </div>
+                <div className="flex gap-2">
+                  <button className="button-primary" onClick={() => void handleApproveRequest(req)} type="button">
+                    Approve
+                  </button>
+                  <button className="button-danger" onClick={() => void handleRejectRequest(req)} type="button">
+                    Reject
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]">
         <div className="flex flex-wrap items-center justify-between gap-3">

@@ -7,14 +7,14 @@ import { use } from "react";
 export default function GroupMembersPage({
   params,
 }: {
-  params: Promise<{ token: string }>;
+  params: Promise<{ groupId: string }>;
 }) {
-  const { token } = use(params);
+  const { groupId } = use(params);
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 pb-16 sm:px-8">
-      <GroupNavbar token={token} />
-      <GroupMembersList token={token} memberSearch="" />
+      <GroupNavbar groupId={groupId} />
+      <GroupMembersList groupId={groupId} memberSearch="" />
     </main>
   );
 }

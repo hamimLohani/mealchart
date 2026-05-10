@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import {
-  findGroupByToken,
+  getGroupById,
   listMembers,
   listCharts,
   getMealsForMonth,
@@ -15,12 +15,15 @@ import type { Chart, CostEntry, DepositEntry, Group, MealEntry, Member } from "@
 import { useT } from "@/i18n/use-t";
 import { GroupTokenMismatchHint } from "@/components/forms/group-token-mismatch-hint";
 import { readStoredChartFromSession } from "@/lib/utils/group-chart-session";
-import { formatMeal, getMonthTotals } from "@/lib/utils/meal-money";
+import { formatMeal, getMonthTotals, getMemberTotals } from "@/lib/utils/meal-money";
+import { motion } from "framer-motion";
+import { Skeleton } from "@/components/ui/skeleton";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 export function GroupDashboard({
-  token,
+  groupId,
 }: {
-  token: string;
+  groupId: string;
 }) {
   const router = useRouter();
   const { t, tx } = useT();
@@ -40,7 +43,7 @@ export function GroupDashboard({
 
   // Load group, members, charts
   useEffect(() => {
-    if (!token) return;
+    if (!groupId) return;
     let active = true;
 
     async function load() {
@@ -50,8 +53,8 @@ export function GroupDashboard({
         return;
       }
       try {
-        const currentGroup = await findGroupByToken(token);
-        if (!currentGroup) throw new Error("No group found for this token.");
+        const currentGroup = await getGroupById(groupId);
+        if (!currentGroup) throw new Error("No group found for this groupId.");
         const [currentMembers, currentCharts] = await Promise.all([
           listMembers(currentGroup.id),
           listCharts(currentGroup.id),
@@ -70,41 +73,44 @@ export function GroupDashboard({
 
     void load();
     return () => { active = false; };
-  }, [token]);
+  }, [groupId, t, tx]);
 
   // Load chart scoped month data
   useEffect(() => {
     if (!group || !activeChart) return;
     let active = true;
-    setIsMonthLoading(true);
-    setMonthMeals([]);
-    setMonthCosts([]);
-    setMonthDeposits([]);
 
-    Promise.all([
-      getMealsForMonth(group.id, activeChart.monthKey),
-      listCostsForChart(group.id, activeChart.id),
-      listDepositsForChart(group.id, activeChart.id),
-    ])
-      .then(([meals, costs, deposits]) => {
+    const loadMonthData = async () => {
+      setIsMonthLoading(true);
+      setMonthMeals([]);
+      setMonthCosts([]);
+      setMonthDeposits([]);
+
+      try {
+        const [meals, costs, deposits] = await Promise.all([
+          getMealsForMonth(group.id, activeChart.monthKey),
+          listCostsForChart(group.id, activeChart.id),
+          listDepositsForChart(group.id, activeChart.id),
+        ]);
         if (!active) return;
         setMonthMeals(meals);
         setMonthCosts(costs);
         setMonthDeposits(deposits);
-      })
-      .catch((err) => {
+      } catch (err) {
         if (!active) return;
         setError(tx(err instanceof Error ? err.message : t("errors.loadSelectedMonth")));
-      })
-      .finally(() => {
+      } finally {
         if (active) setIsMonthLoading(false);
-      });
+      }
+    };
+
+    void loadMonthData();
 
     return () => { active = false; };
-  }, [group, activeChart]);
+  }, [group, activeChart, t, tx]);
 
   function handleMemberSelect(member: Member) {
-    router.push(`/group/${token}/member/${member.id}`);
+    router.push(`/group/${groupId}/member/${member.id}`);
   }
 
   function handleChartSelect(chart: Chart) {
@@ -127,11 +133,34 @@ export function GroupDashboard({
     setActiveChart(null);
   }
 
+  function handleDownloadCSV() {
+    if (!activeChart || !group || members.length === 0) return;
+
+    const { mealRate } = getMonthTotals(monthMeals, monthCosts, monthDeposits);
+    
+    let csvContent = "Member Name,Total Meals,Meal Cost,Amount Paid,Balance\n";
+
+    members.forEach(member => {
+      const totals = getMemberTotals(member.id, monthMeals, monthDeposits, mealRate);
+      csvContent += `"${member.fullName}",${totals.totalMeals},${totals.totalCost.toFixed(2)},${totals.totalPaid.toFixed(2)},${totals.balance.toFixed(2)}\n`;
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${group.name}_${activeChart.label}_Report.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
   if (isLoading) {
     return (
-      <p className="py-16 text-center text-sm text-[color:var(--soft-foreground)]">
-        {t("groupDash.loading")}
-      </p>
+      <div className="group-page-grid py-16">
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-48 w-full" />
+      </div>
     );
   }
   if (error) {
@@ -150,7 +179,7 @@ export function GroupDashboard({
   // Step 1: Select month/chart first
   if (!activeChart) {
     return (
-      <div className="group-page-grid">
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="group-page-grid">
         <div className="group-hero">
           <div className="min-w-0">
             <p className="group-kicker">{group.name}</p>
@@ -188,12 +217,17 @@ export function GroupDashboard({
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
     );
   }
 
+  const chartData = [
+    { name: t("groupDash.statTotalPaid"), amount: monthTotalPaid, fill: "var(--accent)" },
+    { name: t("groupDash.statTotalCost"), amount: monthTotalCost, fill: "var(--danger)" },
+  ];
+
   return (
-    <div className="group-page-grid">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="group-page-grid">
       <div className="group-hero">
         <div className="min-w-0">
           <p className="group-kicker">{group.name}</p>
@@ -205,15 +239,23 @@ export function GroupDashboard({
             </p>
           )}
         </div>
-        <button type="button" onClick={handleChangeChart} className="button-secondary shrink-0">
-          {t("common.back")}
-        </button>
+        <div className="flex gap-2 shrink-0">
+          <button type="button" onClick={handleDownloadCSV} className="button-secondary">
+            {t("groupDash.exportCSV", { defaultValue: "Export CSV" })}
+          </button>
+          <button type="button" onClick={handleChangeChart} className="button-secondary">
+            {t("common.back")}
+          </button>
+        </div>
       </div>
 
       {isMonthLoading ? (
-        <p className="py-10 text-center text-sm text-[color:var(--soft-foreground)]">
-          {t("groupDash.loadingTotals")}
-        </p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+        </div>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
@@ -229,6 +271,25 @@ export function GroupDashboard({
               <p className="group-stat-value">{s.value}</p>
             </div>
           ))}
+        </div>
+      )}
+
+      {!isMonthLoading && monthTotalPaid > 0 && (
+        <div className="group-card h-72">
+          <p className="group-kicker mb-4">{t("groupDash.financialOverview", { defaultValue: "Financial Overview" })}</p>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+              <XAxis dataKey="name" stroke="var(--muted)" fontSize={12} tickLine={false} axisLine={false} />
+              <YAxis stroke="var(--muted)" fontSize={12} tickLine={false} axisLine={false} />
+              <Tooltip cursor={{ fill: 'var(--accent-dim)' }} contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--background)' }} />
+              <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
+                {chartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       )}
 
@@ -265,6 +326,6 @@ export function GroupDashboard({
             ))}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

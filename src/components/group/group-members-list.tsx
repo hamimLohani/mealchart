@@ -5,15 +5,15 @@ import { useRouter } from "next/navigation";
 import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { GroupTokenMismatchHint } from "@/components/forms/group-token-mismatch-hint";
-import { findGroupByToken, listMembers } from "@/lib/firebase/repositories";
+import { getGroupById, listMembers } from "@/lib/firebase/repositories";
 import { useGroupSession } from "@/lib/hooks/use-group-session";
 import type { Group, Member } from "@/types/domain";
 
 export function GroupMembersList({
-  token,
+  groupId,
   memberSearch = "",
 }: {
-  token: string;
+  groupId: string;
   memberSearch?: string;
 }) {
   const router = useRouter();
@@ -33,8 +33,8 @@ export function GroupMembersList({
         return;
       }
       try {
-        const currentGroup = await findGroupByToken(token);
-        if (!currentGroup) throw new Error("No group found for this token.");
+        const currentGroup = await getGroupById(groupId);
+        if (!currentGroup) throw new Error("No group found for this groupId.");
         const currentMembers = await listMembers(currentGroup.id);
         if (!active) return;
         setGroup(currentGroup);
@@ -50,7 +50,7 @@ export function GroupMembersList({
     return () => {
       active = false;
     };
-  }, [t, tx, token]);
+  }, [t, tx, groupId]);
 
   if (isLoading) {
     return <p className="py-16 text-center text-sm text-[color:var(--soft-foreground)]">{t("groupMembers.loading")}</p>;
@@ -97,7 +97,7 @@ export function GroupMembersList({
           {filtered.map((member) => (
             <div
               key={member.id}
-              onClick={() => router.push(`/group/${token}/member/${member.id}`)}
+              onClick={() => router.push(`/group/${groupId}/member/${member.id}`)}
               className="member-row"
             >
               <div className="min-w-0">

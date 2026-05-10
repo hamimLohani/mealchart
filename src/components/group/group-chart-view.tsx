@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import {
-  findGroupByToken,
+  getGroupById,
   getMealsForMonth,
   listCostsForChart,
   listDepositsForChart,
@@ -18,7 +18,7 @@ import { memberDisplayName, memberIdsForChartRows } from "@/lib/utils/chart-memb
 import { daysInMonth } from "@/lib/utils/date";
 import { formatMeal, getMonthTotals } from "@/lib/utils/meal-money";
 
-export function GroupChartView({ token }: { token: string }) {
+export function GroupChartView({ groupId }: { groupId: string }) {
   const router = useRouter();
   const { t, tx } = useT();
   const { chart } = useGroupSession();
@@ -39,7 +39,7 @@ export function GroupChartView({ token }: { token: string }) {
         return;
       }
       try {
-        const g = await findGroupByToken(token);
+        const g = await getGroupById(groupId);
         if (!g) throw new Error("Group not found.");
         if (!active) return;
         setGroup(g);
@@ -54,7 +54,7 @@ export function GroupChartView({ token }: { token: string }) {
     return () => {
       active = false;
     };
-  }, [t, tx, token]);
+  }, [t, tx, groupId]);
 
   useEffect(() => {
     if (!group || !chart) return;
@@ -104,7 +104,7 @@ export function GroupChartView({ token }: { token: string }) {
             <p className="group-title">{t("groupChart.noMonthTitle")}</p>
             <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">{t("groupChart.noMonthBody")}</p>
           </div>
-          <button type="button" onClick={() => router.push(`/group/${token}`)} className="button-secondary shrink-0">
+          <button type="button" onClick={() => router.push(`/group/${groupId}`)} className="button-secondary shrink-0">
             ← {t("groupNav.home")}
           </button>
         </div>

@@ -4,13 +4,13 @@ import { GroupNavbar } from "@/components/group/group-navbar";
 export default async function GroupNoticesPage({
   params,
 }: {
-  params: Promise<{ token: string }>;
+  params: Promise<{ groupId: string }>;
 }) {
-  const { token } = await params;
+  const { groupId } = await params;
   return (
     <main className="mx-auto w-full max-w-7xl px-4 pb-16 sm:px-8">
-      <GroupNavbar token={token} />
-      <GroupNoticesView token={token} />
+      <GroupNavbar groupId={groupId} />
+      <GroupNoticesView groupId={groupId} />
     </main>
   );
 }

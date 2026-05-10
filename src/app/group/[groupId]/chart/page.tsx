@@ -7,13 +7,13 @@ import { GroupChartView } from "@/components/group/group-chart-view";
 export default function GroupChartPage({
   params,
 }: {
-  params: Promise<{ token: string }>;
+  params: Promise<{ groupId: string }>;
 }) {
-  const { token } = use(params);
+  const { groupId } = use(params);
   return (
     <main className="mx-auto w-full max-w-7xl px-4 pb-16 sm:px-8">
-      <GroupNavbar token={token} />
-      <GroupChartView token={token} />
+      <GroupNavbar groupId={groupId} />
+      <GroupChartView groupId={groupId} />
     </main>
   );
 }

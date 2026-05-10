@@ -52,13 +52,20 @@ export function CostsManager() {
   useEffect(() => {
     if (!adminProfile || !selectedChart) return;
     let active = true;
-    setCostsLoading(true);
-    setCosts([]);
+    const fetchCosts = async () => {
+      setCostsLoading(true);
+      setCosts([]);
+      try {
+        const list = await listCostsForChart(adminProfile.groupId, selectedChart.id);
+        if (active) setCosts(list);
+      } catch (e) {
+        if (active) setError(e instanceof Error ? e.message : "Failed to load costs.");
+      } finally {
+        if (active) setCostsLoading(false);
+      }
+    };
 
-    listCostsForChart(adminProfile.groupId, selectedChart.id)
-      .then((list) => { if (active) setCosts(list); })
-      .catch((e) => { if (active) setError(e instanceof Error ? e.message : "Failed to load costs."); })
-      .finally(() => { if (active) setCostsLoading(false); });
+    void fetchCosts();
 
     return () => { active = false; };
   }, [adminProfile, selectedChart]);
@@ -66,7 +73,9 @@ export function CostsManager() {
   useEffect(() => {
     if (!selectedChart) return;
     const { min, max } = chartMonthDateBounds(selectedChart);
-    setDate((d) => (d < min || d > max ? min : d));
+    setTimeout(() => {
+      setDate((d) => (d < min || d > max ? min : d));
+    }, 0);
   }, [selectedChart]);
 
   const total = costs.reduce((s, c) => s + c.amount, 0);

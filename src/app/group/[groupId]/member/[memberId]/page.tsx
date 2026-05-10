@@ -5,26 +5,30 @@ import { useRouter } from "next/navigation";
 import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import {
-  findGroupByToken,
+  getGroupById,
   getMealsForDate,
   getMealsForMonth,
   listCostsForChart,
   listDepositsForChart,
   listMembers,
   saveMealEntry,
+  getAdminProfile,
 } from "@/lib/firebase/repositories";
+import { auth } from "@/lib/firebase/client";
+import { onAuthStateChanged, User } from "firebase/auth";
 import { GroupTokenMismatchHint } from "@/components/forms/group-token-mismatch-hint";
 import { useGroupSession } from "@/lib/hooks/use-group-session";
 import type { CostEntry, DepositEntry, Group, MealEntry, Member } from "@/types/domain";
 import { chartMonthDateBounds, daysInMonth, toDateInputValue } from "@/lib/utils/date";
 import { formatMeal, getMemberTotals, getMonthTotals } from "@/lib/utils/meal-money";
-
+import { Skeleton } from "@/components/ui/skeleton";
+import { motion } from "framer-motion";
 export default function MemberPage({
   params,
 }: {
-  params: Promise<{ token: string; memberId: string }>;
+  params: Promise<{ groupId: string; memberId: string }>;
 }) {
-  const { token, memberId } = use(params);
+  const { groupId, memberId } = use(params);
   const router = useRouter();
   const { chart } = useGroupSession();
   const { t, tx, language } = useT();
@@ -45,6 +49,26 @@ export default function MemberPage({
   const [error, setError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!auth) return;
+    return onAuthStateChanged(auth, async (user) => {
+      setCurrentUser(user);
+      if (user) {
+        try {
+          const admin = await getAdminProfile(user.uid);
+          setIsAdmin(admin?.groupId === groupId);
+        } catch {
+          setIsAdmin(false);
+        }
+      } else {
+        setIsAdmin(false);
+      }
+    });
+  }, [groupId]);
+
   useEffect(() => {
     let active = true;
     async function load() {
@@ -54,10 +78,11 @@ export default function MemberPage({
         return;
       }
       try {
-        const currentGroup = await findGroupByToken(token);
-        if (!currentGroup) throw new Error("No group found for this token.");
+        const currentGroup = await getGroupById(groupId);
+        if (!currentGroup) throw new Error("No group found for this groupId.");
         const currentMembers = await listMembers(currentGroup.id);
-        const currentMember = currentMembers.find((m) => m.id === memberId);
+        const normalizedMemberId = decodeURIComponent(memberId).toLowerCase();
+        const currentMember = currentMembers.find((m) => m.id.toLowerCase() === normalizedMemberId);
         if (!currentMember) throw new Error("Member not found in this group.");
         if (!active) return;
         setGroup(currentGroup);
@@ -71,7 +96,7 @@ export default function MemberPage({
     }
     void load();
     return () => { active = false; };
-  }, [token, memberId, tx]);
+  }, [groupId, memberId, tx]);
 
   useEffect(() => {
     if (!chart) return;
@@ -84,29 +109,30 @@ export default function MemberPage({
   useEffect(() => {
     if (!group || !chart) return;
     let active = true;
-    setIsMonthLoading(true);
-    setMeals([]);
-    setCosts([]);
-    setDeposits([]);
-
-    Promise.all([
-      getMealsForMonth(group.id, chart.monthKey),
-      listCostsForChart(group.id, chart.id),
-      listDepositsForChart(group.id, chart.id),
-    ])
-      .then(([monthMeals, monthCosts, monthDeposits]) => {
+    const fetchMonthData = async () => {
+      setIsMonthLoading(true);
+      setMeals([]);
+      setCosts([]);
+      setDeposits([]);
+      try {
+        const [monthMeals, monthCosts, monthDeposits] = await Promise.all([
+          getMealsForMonth(group.id, chart.monthKey),
+          listCostsForChart(group.id, chart.id),
+          listDepositsForChart(group.id, chart.id),
+        ]);
         if (!active) return;
         setMeals(monthMeals);
         setCosts(monthCosts);
         setDeposits(monthDeposits);
-      })
-      .catch((err) => {
+      } catch (err) {
         if (!active) return;
         setError(tx(err instanceof Error ? err.message : "Failed to load month data."));
-      })
-      .finally(() => {
+      } finally {
         if (active) setIsMonthLoading(false);
-      });
+      }
+    };
+
+    void fetchMonthData();
 
     return () => { active = false; };
   }, [group, chart, tx]);
@@ -114,21 +140,23 @@ export default function MemberPage({
   useEffect(() => {
     if (!group || !chart || !selectedDate) return;
     let active = true;
-    setIsMealLoading(true);
-    setSaved(false);
-    getMealsForDate(group.id, selectedDate)
-      .then((entries) => {
+    const fetchDailyMeals = async () => {
+      setIsMealLoading(true);
+      setSaved(false);
+      try {
+        const entries = await getMealsForDate(group.id, selectedDate);
         if (!active) return;
         const current = entries.find((entry) => entry.memberId === memberId);
         setMealCount(current?.quantity ?? 0);
-      })
-      .catch(() => {
+      } catch {
         if (!active) return;
         setMealCount(0);
-      })
-      .finally(() => {
+      } finally {
         if (active) setIsMealLoading(false);
-      });
+      }
+    };
+
+    void fetchDailyMeals();
 
     return () => { active = false; };
   }, [group, chart, selectedDate, memberId]);
@@ -136,7 +164,12 @@ export default function MemberPage({
   const tk = t("common.tk");
 
   if (isLoading) {
-    return <p className="py-16 text-center text-sm text-[color:var(--soft-foreground)]">{t("memberPage.loading")}</p>;
+    return (
+      <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-8">
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="mt-4 h-48 w-full" />
+      </div>
+    );
   }
   if (error) {
     return (
@@ -151,7 +184,7 @@ export default function MemberPage({
     return (
       <div className="py-6 grid gap-4">
         <div className="alert-warn">{t("memberPage.selectMonthWarn")}</div>
-        <button type="button" onClick={() => router.push(`/group/${token}`)} className="button-secondary w-full">
+        <button type="button" onClick={() => router.push(`/group/${groupId}`)} className="button-secondary w-full">
           {t("memberPage.backToHome")}
         </button>
       </div>
@@ -176,8 +209,12 @@ export default function MemberPage({
     return { day, date, qty: meal?.quantity ?? 0 };
   });
 
+  const isOwner = currentUser?.email?.toLowerCase() === member?.email?.toLowerCase();
+  const canEdit = isOwner || isAdmin;
+  const isLocked = chart.locked || !canEdit;
+
   async function handleMealChange(value: number) {
-    if (!group || !selectedDate || !chart || chart.locked) return;
+    if (!group || !selectedDate || !chart || isLocked) return;
     const clamped = Math.max(0, value);
     setMealCount(clamped);
     setSaved(false);
@@ -202,16 +239,18 @@ export default function MemberPage({
 
   const statusLine = chart.locked
     ? t("memberPage.monthLockedShort")
-    : saveError
-      ? <span className="text-[color:var(--danger)]">{saveError}</span>
-      : isSaving
-        ? t("memberPage.saving")
-        : saved
-          ? t("memberPage.saved")
-          : t("memberPage.tapUpdate");
+    : !canEdit
+      ? "You cannot edit this member's meals"
+      : saveError
+        ? <span className="text-[color:var(--danger)]">{saveError}</span>
+        : isSaving
+          ? t("memberPage.saving")
+          : saved
+            ? t("memberPage.saved")
+            : t("memberPage.tapUpdate");
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 pb-16 sm:px-8">
+    <motion.main initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="mx-auto w-full max-w-7xl px-4 pb-16 sm:px-8">
       <div className="py-6 grid gap-4">
         <div className="group-hero">
           <div className="min-w-0">
@@ -224,13 +263,18 @@ export default function MemberPage({
               </p>
             )}
           </div>
-          <button type="button" onClick={() => router.push(`/group/${token}`)} className="button-secondary shrink-0">
+          <button type="button" onClick={() => router.push(`/group/${groupId}`)} className="button-secondary shrink-0">
             {t("common.back")}
           </button>
         </div>
 
         {isMonthLoading ? (
-          <p className="py-10 text-center text-sm text-[color:var(--soft-foreground)]">{t("memberPage.loadingMonth")}</p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+          </div>
         ) : (
           <>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -261,16 +305,16 @@ export default function MemberPage({
                   placeholder={toDateInputValue(new Date())}
                   value={selectedDate}
                   onChange={(event) => setSelectedDate(event.target.value)}
-                  disabled={chart.locked}
+                  disabled={isLocked}
                 />
                 {isMealLoading ? (
                   <p className="text-sm text-[color:var(--soft-foreground)]">{t("memberPage.loadingMeal")}</p>
                 ) : (
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
-                      <button className="meal-stepper-button" disabled={mealCount <= 0 || chart.locked} onClick={() => handleMealChange(mealCount - 0.25)} type="button">−</button>
+                      <button className="meal-stepper-button" disabled={mealCount <= 0 || isLocked} onClick={() => handleMealChange(mealCount - 0.25)} type="button">−</button>
                       <span className="w-16 text-center text-4xl font-bold tabular-nums">{formatMeal(mealCount)}</span>
-                      <button className="meal-stepper-button" disabled={chart.locked} onClick={() => handleMealChange(mealCount + 0.25)} type="button">+</button>
+                      <button className="meal-stepper-button" disabled={isLocked} onClick={() => handleMealChange(mealCount + 0.25)} type="button">+</button>
                     </div>
                     <p className={`text-sm font-semibold ${chart.locked ? "text-[color:var(--danger)]" : "text-[color:var(--muted)]"}`}>
                       {statusLine}
@@ -344,6 +388,6 @@ export default function MemberPage({
           </>
         )}
       </div>
-    </main>
+    </motion.main>
   );
 }

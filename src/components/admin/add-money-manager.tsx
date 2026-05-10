@@ -71,13 +71,21 @@ export function AddMoneyManager() {
   useEffect(() => {
     if (!adminProfile || !selectedChart) return;
     let active = true;
-    setDepositsLoading(true);
-    setDeposits([]);
 
-    listDepositsForChart(adminProfile.groupId, selectedChart.id)
-      .then((list) => { if (active) setDeposits(list); })
-      .catch((e) => { if (active) setError(e instanceof Error ? e.message : "Failed to load deposits."); })
-      .finally(() => { if (active) setDepositsLoading(false); });
+    const loadDeposits = async () => {
+      setDepositsLoading(true);
+      setDeposits([]);
+      try {
+        const list = await listDepositsForChart(adminProfile.groupId, selectedChart.id);
+        if (active) setDeposits(list);
+      } catch (e) {
+        if (active) setError(e instanceof Error ? e.message : "Failed to load deposits.");
+      } finally {
+        if (active) setDepositsLoading(false);
+      }
+    };
+
+    void loadDeposits();
 
     return () => { active = false; };
   }, [adminProfile, selectedChart]);
@@ -85,10 +93,12 @@ export function AddMoneyManager() {
   useEffect(() => {
     if (!selectedChart) return;
     const { min, max } = chartMonthDateBounds(selectedChart);
-    setForm((c) => ({
-      ...c,
-      date: c.date < min || c.date > max ? min : c.date,
-    }));
+    setTimeout(() => {
+      setForm((c) => ({
+        ...c,
+        date: c.date < min || c.date > max ? min : c.date,
+      }));
+    }, 0);
   }, [selectedChart]);
 
   const memberTotals = useMemo(() => {

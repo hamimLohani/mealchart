@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import {
-  findGroupByToken,
+  getGroupById,
   getMealsForMonth,
   listCostsForChart,
   listDepositsForChart,
@@ -17,7 +17,7 @@ import { GroupTokenMismatchHint } from "@/components/forms/group-token-mismatch-
 import { memberDisplayName, memberIdsForMoneyRows } from "@/lib/utils/chart-members";
 import { formatMeal, getMonthTotals } from "@/lib/utils/meal-money";
 
-export function GroupMoneyView({ token }: { token: string }) {
+export function GroupMoneyView({ groupId }: { groupId: string }) {
   const router = useRouter();
   const { t, tx } = useT();
   const { chart } = useGroupSession();
@@ -39,7 +39,7 @@ export function GroupMoneyView({ token }: { token: string }) {
         return;
       }
       try {
-        const g = await findGroupByToken(token);
+        const g = await getGroupById(groupId);
         if (!g) throw new Error("Group not found.");
         if (!active) return;
         setGroup(g);
@@ -54,32 +54,34 @@ export function GroupMoneyView({ token }: { token: string }) {
     return () => {
       active = false;
     };
-  }, [t, tx, token]);
+  }, [t, tx, groupId]);
 
   useEffect(() => {
     if (!group || !chart) return;
     let active = true;
-    setDataLoading(true);
 
-    Promise.all([
-      listMembers(group.id),
-      getMealsForMonth(group.id, chart.monthKey),
-      listCostsForChart(group.id, chart.id),
-      listDepositsForChart(group.id, chart.id),
-    ])
-      .then(([memberList, mealList, costList, depositList]) => {
+    const loadData = async () => {
+      setDataLoading(true);
+      try {
+        const [memberList, mealList, costList, depositList] = await Promise.all([
+          listMembers(group.id),
+          getMealsForMonth(group.id, chart.monthKey),
+          listCostsForChart(group.id, chart.id),
+          listDepositsForChart(group.id, chart.id),
+        ]);
         if (!active) return;
         setMembers(memberList);
         setMeals(mealList);
         setCosts(costList);
         setDeposits(depositList);
-      })
-      .catch((e) => {
+      } catch (e) {
         if (active) setError(tx(e instanceof Error ? e.message : t("errors.genericLoad")));
-      })
-      .finally(() => {
+      } finally {
         if (active) setDataLoading(false);
-      });
+      }
+    };
+
+    void loadData();
 
     return () => {
       active = false;
@@ -111,7 +113,7 @@ export function GroupMoneyView({ token }: { token: string }) {
             <p className="group-title">{t("groupChart.noMonthTitle")}</p>
             <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">{t("groupChart.noMonthBody")}</p>
           </div>
-          <button type="button" onClick={() => router.push(`/group/${token}`)} className="button-secondary shrink-0">
+          <button type="button" onClick={() => router.push(`/group/${groupId}`)} className="button-secondary shrink-0">
             ← {t("groupNav.home")}
           </button>
         </div>

@@ -7,6 +7,7 @@ import type {
   MealEntry,
   Member,
   Notice,
+  JoinRequest,
 } from "@/types/domain";
 import { daysInMonth } from "@/lib/utils/date";
 
@@ -128,6 +129,19 @@ export function buildNoticeRecord(input: {
     title: input.title,
     body: input.body,
     systemGenerated: input.systemGenerated,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+export function buildJoinRequestRecord(input: {
+  id: string;
+  fullName: string;
+  email: string;
+}): JoinRequest {
+  return {
+    id: input.id,
+    fullName: input.fullName,
+    email: input.email,
     createdAt: new Date().toISOString(),
   };
 }
