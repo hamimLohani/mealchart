@@ -78,7 +78,7 @@ export function NoticesManager() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!adminProfile || !selectedChart) return;
-    if (selectedChart.locked) { setError("This month is locked."); return; }
+    if (selectedChart.locked) { setError(t("noticeMgr.monthLocked")); return; }
     if (!title.trim() || !body.trim()) { setError("Title and body are required."); return; }
     setError(null); setIsSubmitting(true);
     try {
@@ -112,7 +112,7 @@ export function NoticesManager() {
 
   async function handleDelete(noticeId: string) {
     if (!adminProfile || !selectedChart) return;
-    if (selectedChart.locked) { setError("This month is locked."); return; }
+    if (selectedChart.locked) { setError(t("noticeMgr.monthLocked")); return; }
     try {
       await deleteNotice(adminProfile.groupId, selectedChart.id, noticeId);
       setNotices((prev) => prev.filter((n) => n.id !== noticeId));
@@ -173,7 +173,7 @@ export function NoticesManager() {
           <p className="admin-section-label">Notices</p>
           <p className="mt-0.5 font-semibold">{selectedChart.label}</p>
           {selectedChart.locked && (
-            <p className="mt-1 text-xs font-semibold text-[color:var(--danger)]">This month is locked. You cannot edit notices.</p>
+            <p className="mt-1 text-xs font-semibold text-[color:var(--danger)]">{t("noticeMgr.monthLocked")}</p>
           )}
         </div>
         <button

@@ -344,6 +344,7 @@ export const en = {
   "noticeMgr.placeholderBody": "Notice details…",
   "noticeMgr.submitAdd": "Add notice",
   "noticeMgr.empty": "No notices yet.",
+  "noticeMgr.monthLocked": "This month is locked. You cannot edit notices.",
 
   // Costs / add money / charts / meals / notices — shared admin strings
   "admin.selectMonth": "Select Month",
@@ -826,6 +827,7 @@ export const bn: Record<MessageKey, string> = {
   "noticeMgr.placeholderBody": "নোটিশের বিবরণ…",
   "noticeMgr.submitAdd": "নোটিশ যোগ",
   "noticeMgr.empty": "এখনো নোটিশ নেই।",
+  "noticeMgr.monthLocked": "এই মাসটি লক করা আছে। আপনি নোটিশ পরিবর্তন করতে পারবেন না।",
 
   "admin.selectMonth": "মাস বাছুন",
   "admin.chooseMonthMeals": "মিল এডিটের জন্য মাসিক চার্ট বাছুন।",
