@@ -8,6 +8,7 @@ import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { submitJoinRequest } from "@/lib/firebase/repositories";
 import { resolveSignInDestination } from "@/lib/auth/sign-in-routing";
+import { getAuthErrorMessage } from "@/lib/auth/errors";
 import type { Group } from "@/types/domain";
 
 export function EnterGroupForm() {
@@ -105,7 +106,7 @@ export function EnterGroupForm() {
       } else if (code === "permission-denied") {
         setError(`${t("errors.permissionDenied")} [${step}] (${code}: ${err instanceof Error ? err.message : "unknown"})`);
       } else {
-        setError(tx(err instanceof Error ? err.message : t("adminLogin.errFailed")));
+        setError(tx(getAuthErrorMessage(err, t("adminLogin.errFailed"))));
       }
     } finally {
       setIsSubmitting(false);
@@ -123,7 +124,7 @@ export function EnterGroupForm() {
       const provider = new GoogleAuthProvider();
       await signInWithRedirect(auth, provider);
     } catch (err) {
-      setError(tx(err instanceof Error ? err.message : t("adminLogin.errFailed")));
+      setError(tx(getAuthErrorMessage(err, t("adminLogin.errFailed"))));
       setIsSubmitting(false);
     }
   }
@@ -165,7 +166,7 @@ export function EnterGroupForm() {
       if (code === "auth/popup-closed-by-user") {
         setError(null);
       } else {
-        setError(tx(err instanceof Error ? err.message : t("enterForm.joinRequestError")));
+        setError(tx(getAuthErrorMessage(err, t("enterForm.joinRequestError"))));
       }
     } finally {
       setIsSubmitting(false);

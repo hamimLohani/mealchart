@@ -10,6 +10,7 @@ import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { groupsCollection, adminsCollection } from "@/lib/firebase/paths";
 import { getAdminProfileForUser, normalizeEmail } from "@/lib/auth/sign-in-routing";
+import { getAuthErrorMessage } from "@/lib/auth/errors";
 
 type FormState = { groupName: string };
 const initialState: FormState = { groupName: "" };
@@ -73,7 +74,7 @@ export function RegisterGroupForm() {
         setForm(initialState);
       } catch (err) {
         if (!active) return;
-        setError(tx(err instanceof Error ? err.message : t("errors.registerFailed")));
+        setError(tx(getAuthErrorMessage(err, t("errors.registerFailed"))));
       } finally {
         if (!active) return;
         setIsSubmitting(false);
@@ -112,7 +113,7 @@ export function RegisterGroupForm() {
       } else if (code === "auth/popup-blocked") {
         await handleGoogleSignInRedirect();
       } else {
-        setError(tx(err instanceof Error ? err.message : t("errors.registerFailed")));
+        setError(tx(getAuthErrorMessage(err, t("errors.registerFailed"))));
       }
     } finally {
       setIsSubmitting(false);
@@ -137,7 +138,7 @@ export function RegisterGroupForm() {
       const provider = new GoogleAuthProvider();
       await signInWithRedirect(auth, provider);
     } catch (err) {
-      setError(tx(err instanceof Error ? err.message : t("errors.registerFailed")));
+      setError(tx(getAuthErrorMessage(err, t("errors.registerFailed"))));
       setIsSubmitting(false);
     }
   }

@@ -8,6 +8,7 @@ import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { submitJoinRequest } from "@/lib/firebase/repositories";
 import { resolveSignInDestination } from "@/lib/auth/sign-in-routing";
+import { getAuthErrorMessage } from "@/lib/auth/errors";
 import type { Group } from "@/types/domain";
 
 export function AdminLoginForm() {
@@ -96,7 +97,7 @@ export function AdminLoginForm() {
       } else if (code === "permission-denied") {
         setError(`${t("errors.permissionDenied")} (${code}: ${err instanceof Error ? err.message : "unknown"})`);
       } else {
-        setError(tx(err instanceof Error ? err.message : t("adminLogin.errFailed")));
+        setError(tx(getAuthErrorMessage(err, t("adminLogin.errFailed"))));
       }
     } finally {
       setIsSubmitting(false);
@@ -114,7 +115,7 @@ export function AdminLoginForm() {
       const provider = new GoogleAuthProvider();
       await signInWithRedirect(auth, provider);
     } catch (err) {
-      setError(tx(err instanceof Error ? err.message : t("adminLogin.errFailed")));
+      setError(tx(getAuthErrorMessage(err, t("adminLogin.errFailed"))));
       setIsSubmitting(false);
     }
   }
