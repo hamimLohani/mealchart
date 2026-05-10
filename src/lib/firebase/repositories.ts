@@ -124,8 +124,21 @@ export async function getAdminProfile(adminId: string) {
 
 export async function findAdminProfileByEmail(email: string) {
   const database = ensureDb();
-  const q = query(collection(database, adminsCollection), where("email", "==", email.trim().toLowerCase()), limit(1));
+  const normalizedEmail = email.trim().toLowerCase();
+  const q = query(collection(database, adminsCollection), where("email", "==", normalizedEmail), limit(1));
   const snap = await getDocs(q);
+  if (snap.empty && normalizedEmail !== email.trim()) {
+    const fallback = await getDocs(
+      query(collection(database, adminsCollection), where("email", "==", email.trim()), limit(1)),
+    );
+    if (fallback.empty) return null;
+    const d = fallback.docs[0];
+    const data = d.data();
+    return {
+      ...normalizeDoc<AdminProfile>(d.id, data),
+      createdAt: serializeDate(data.createdAt),
+    };
+  }
   if (snap.empty) return null;
   const d = snap.docs[0];
   const data = d.data();
@@ -144,11 +157,17 @@ export async function migrateAdminProfile(oldUid: string, newUid: string) {
   if (!snap.exists()) return;
   
   const data = snap.data();
-  // Ensure the internal id matches the new UID for rule compliance
-  const migratedData = { ...data, id: newUid };
-  await setDoc(newRef, migratedData);
-  // We keep the old one too just in case, or we could delete it.
-  // Let's keep it for safety.
+  const groupId = typeof data.groupId === "string" ? data.groupId : "";
+  if (!groupId) throw new Error("Admin profile is missing a group.");
+
+  const batch = writeBatch(database);
+  batch.set(newRef, {
+    ...data,
+    id: newUid,
+    email: typeof data.email === "string" ? data.email.trim().toLowerCase() : data.email,
+  });
+  batch.update(doc(database, groupsCollection, groupId), { adminId: newUid });
+  await batch.commit();
 }
 
 // ── Members ───────────────────────────────────────────────────────────
@@ -253,12 +272,13 @@ export async function findMemberGroupByEmail(email: string): Promise<string | nu
 
 export async function submitJoinRequest(groupId: string, fullName: string, email: string) {
   const database = ensureDb();
-  const reqId = crypto.randomUUID();
+  const normalizedEmail = email.trim().toLowerCase();
+  const reqId = encodeURIComponent(normalizedEmail);
   const reqRef = doc(database, `groups/${groupId}/joinRequests`, reqId);
   const data = {
     id: reqId,
     fullName: fullName.trim(),
-    email: email.trim().toLowerCase(),
+    email: normalizedEmail,
     createdAt: new Date().toISOString(),
   };
   await setDoc(reqRef, data);

@@ -4,9 +4,10 @@ import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
-import { getAdminProfile, saveMealEntry } from "@/lib/firebase/repositories";
+import { saveMealEntry } from "@/lib/firebase/repositories";
 import { auth } from "@/lib/firebase/client";
 import { onAuthStateChanged, User } from "firebase/auth";
+import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
 import { useGroupSession } from "@/lib/hooks/use-group-session";
 import { chartMonthDateBounds, daysInMonth, toDateInputValue } from "@/lib/utils/date";
 import { formatMeal, getMemberTotals, getMonthTotals } from "@/lib/utils/meal-money";
@@ -47,18 +48,31 @@ export default function MemberPage({
 
   // Sync mealCount from SWR date data
   useEffect(() => {
+    let active = true;
     const current = dateMeals.find((e) => e.memberId.toLowerCase() === normalizedMemberId);
-    setMealCount(current?.quantity ?? 0);
-    setSaved(false);
+    setTimeout(() => {
+      if (!active) return;
+      setMealCount(current?.quantity ?? 0);
+      setSaved(false);
+    }, 0);
+    return () => {
+      active = false;
+    };
   }, [dateMeals, normalizedMemberId]);
 
   // Clamp selected date to chart bounds when chart changes
   useEffect(() => {
     if (!chart) return;
+    let active = true;
     const bounds = chartMonthDateBounds(chart);
     const today = toDateInputValue(new Date());
     const clamped = today < bounds.min ? bounds.min : today > bounds.max ? bounds.max : today;
-    setSelectedDate(clamped);
+    setTimeout(() => {
+      if (active) setSelectedDate(clamped);
+    }, 0);
+    return () => {
+      active = false;
+    };
   }, [chart]);
 
   // Auth state — needed for permission checks
@@ -68,7 +82,7 @@ export default function MemberPage({
       setCurrentUser(user);
       if (user) {
         try {
-          const admin = await getAdminProfile(user.uid);
+          const admin = await getAdminProfileForUser(user);
           setIsAdmin(admin?.groupId === groupId);
         } catch {
           setIsAdmin(false);

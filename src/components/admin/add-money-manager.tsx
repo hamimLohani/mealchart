@@ -7,11 +7,11 @@ import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { useT } from "@/i18n/use-t";
 import {
   createDeposit,
-  getAdminProfile,
   listCharts,
   listDepositsForChart,
   listMembers,
 } from "@/lib/firebase/repositories";
+import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
 import { chartMonthDateBounds, toDateInputValue } from "@/lib/utils/date";
 import type { AdminProfile, Chart, DepositEntry, Member } from "@/types/domain";
 
@@ -48,7 +48,7 @@ export function AddMoneyManager() {
       }
       try {
         setError(null);
-        const profile = await getAdminProfile(user.uid);
+        const profile = await getAdminProfileForUser(user);
         if (!profile) throw new Error("No admin profile was found for the current user.");
         const [currentMembers, currentCharts] = await Promise.all([
           listMembers(profile.groupId),

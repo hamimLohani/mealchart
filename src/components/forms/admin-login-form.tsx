@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { signInWithPopup, signInWithRedirect, GoogleAuthProvider } from "firebase/auth";
+import { signInWithPopup, signInWithRedirect, GoogleAuthProvider, getRedirectResult } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
-import { findMemberGroupByEmail, listGroups, getAdminProfile, findAdminProfileByEmail, migrateAdminProfile, submitJoinRequest } from "@/lib/firebase/repositories";
+import { submitJoinRequest } from "@/lib/firebase/repositories";
+import { resolveSignInDestination } from "@/lib/auth/sign-in-routing";
 import type { Group } from "@/types/domain";
 
 export function AdminLoginForm() {
@@ -24,6 +25,56 @@ export function AdminLoginForm() {
   const [selectedGroupId, setSelectedGroupId] = useState("");
   const [isLoadingGroups, setIsLoadingGroups] = useState(false);
 
+  const finishSignIn = useCallback(
+    async (user: NonNullable<typeof auth>["currentUser"]) => {
+      if (!user) return;
+      const destination = await resolveSignInDestination(user);
+
+      if (destination.kind === "member") {
+        router.push(`/group/${destination.groupId}`);
+        return;
+      }
+
+      if (destination.kind === "admin") {
+        router.push("/admin");
+        return;
+      }
+
+      setFullName(destination.fullName);
+      setEmail(destination.email);
+      setGroups(destination.groups);
+      setShowJoinForm(true);
+    },
+    [router],
+  );
+
+  useEffect(() => {
+    if (!isFirebaseConfigured || !auth) return;
+
+    const firebaseAuth = auth;
+    let active = true;
+    async function completeRedirectSignIn() {
+      setIsLoadingGroups(true);
+      try {
+        const result = await getRedirectResult(firebaseAuth);
+        if (!active || !result?.user) return;
+        await finishSignIn(result.user);
+      } catch (err) {
+        if (!active) return;
+        setError(tx(err instanceof Error ? err.message : t("adminLogin.errFailed")));
+      } finally {
+        if (!active) return;
+        setIsLoadingGroups(false);
+        setIsSubmitting(false);
+      }
+    }
+
+    void completeRedirectSignIn();
+    return () => {
+      active = false;
+    };
+  }, [finishSignIn, t, tx]);
+
   async function handleGoogleSignIn() {
     setError(null);
     if (!isFirebaseConfigured || !auth) {
@@ -35,45 +86,7 @@ export function AdminLoginForm() {
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-
-      if (!user.email) throw new Error("No email found from Google.");
-      const userEmail = user.email.toLowerCase();
-
-      const groupId = await findMemberGroupByEmail(userEmail);
-      
-      if (groupId) {
-        router.push(`/group/${groupId}`);
-      } else {
-        // Not a member, check if they are an Admin
-        let adminProfile = await getAdminProfile(user.uid);
-        
-        // If not found by UID, try finding by email (auto-repair link)
-        if (!adminProfile && userEmail) {
-          const profileByEmail = await findAdminProfileByEmail(userEmail);
-          if (profileByEmail) {
-            await migrateAdminProfile(profileByEmail.id, user.uid);
-            adminProfile = profileByEmail;
-          }
-        }
-
-        if (adminProfile) {
-          router.push("/admin");
-        } else {
-          // Not a member or admin yet: show the join request form
-          setFullName(user.displayName || "");
-          setEmail(userEmail);
-          setIsLoadingGroups(true);
-          setShowJoinForm(true);
-          listGroups()
-            .then(setGroups)
-            .catch(err => {
-              console.error("Failed to load groups:", err);
-              setError(`Failed to load groups list: ${err instanceof Error ? err.message : "Unknown error"}`);
-            })
-            .finally(() => setIsLoadingGroups(false));
-        }
-      }
+      await finishSignIn(result.user);
     } catch (err) {
       const code = typeof err === "object" && err !== null && "code" in err ? String((err as { code?: string }).code) : "";
       if (code === "auth/popup-closed-by-user") {

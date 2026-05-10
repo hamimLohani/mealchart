@@ -5,7 +5,8 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { useT } from "@/i18n/use-t";
-import { createMember, deleteMember, getAdminProfile, listMembers, updateMember, listJoinRequests, approveJoinRequest, rejectJoinRequest } from "@/lib/firebase/repositories";
+import { createMember, deleteMember, listMembers, updateMember, listJoinRequests, approveJoinRequest, rejectJoinRequest } from "@/lib/firebase/repositories";
+import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
 import { toDateInputValue } from "@/lib/utils/date";
 import type { AdminProfile, Member, JoinRequest } from "@/types/domain";
 
@@ -46,7 +47,7 @@ export function MemberManager() {
       }
       try {
         setError(null);
-        const profile = await getAdminProfile(user.uid);
+        const profile = await getAdminProfileForUser(user);
         if (!profile) throw new Error("No admin profile was found for the current user.");
         const currentMembers = await listMembers(profile.groupId);
         const currentRequests = await listJoinRequests(profile.groupId);

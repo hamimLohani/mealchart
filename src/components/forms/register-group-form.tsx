@@ -1,18 +1,19 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { signInWithPopup, signInWithRedirect, GoogleAuthProvider } from "firebase/auth";
+import { getRedirectResult, GoogleAuthProvider, signInWithPopup, signInWithRedirect, type User } from "firebase/auth";
 import { doc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase/client";
 import { buildAdminProfile, buildGroupRecord } from "@/lib/firebase/factories";
 import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { groupsCollection, adminsCollection } from "@/lib/firebase/paths";
-import { getAdminProfile } from "@/lib/firebase/repositories";
+import { getAdminProfileForUser, normalizeEmail } from "@/lib/auth/sign-in-routing";
 
 type FormState = { groupName: string };
 const initialState: FormState = { groupName: "" };
+const pendingGroupNameKey = "mealchart.pendingGroupName";
 
 export function RegisterGroupForm() {
   const { t, tx } = useT();
@@ -21,7 +22,69 @@ export function RegisterGroupForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCreated, setIsCreated] = useState(false);
 
+  const createGroupForUser = useCallback(
+    async (user: User, groupName: string) => {
+      if (!db) throw new Error(t("errors.firebaseNotConfiguredLocal"));
+      if (!user.email) throw new Error("No email found from Google.");
 
+      const existingAdmin = await getAdminProfileForUser(user);
+      if (existingAdmin) throw new Error(t("errors.adminExists"));
+
+      const adminId = user.uid;
+      const groupId = crypto.randomUUID();
+      const token = crypto.randomUUID().slice(0, 8).toUpperCase();
+      const nameTrim = groupName.trim();
+      if (!nameTrim) throw new Error(t("registerForm.placeholderGroup"));
+
+      const batch = writeBatch(db);
+
+      batch.set(doc(db, groupsCollection, groupId), {
+        ...buildGroupRecord({ id: groupId, name: nameTrim, adminId, token }),
+        createdAt: serverTimestamp(),
+      });
+
+      batch.set(doc(db, adminsCollection, adminId), {
+        ...buildAdminProfile({ id: adminId, email: normalizeEmail(user.email), groupId }),
+        createdAt: serverTimestamp(),
+      });
+
+      await batch.commit();
+    },
+    [t],
+  );
+
+  useEffect(() => {
+    if (!isFirebaseConfigured || !auth || !db) return;
+
+    const firebaseAuth = auth;
+    let active = true;
+    async function completeRedirectRegistration() {
+      const pendingGroupName = window.sessionStorage.getItem(pendingGroupNameKey);
+      if (!pendingGroupName) return;
+
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        const result = await getRedirectResult(firebaseAuth);
+        if (!active || !result?.user) return;
+        await createGroupForUser(result.user, pendingGroupName);
+        window.sessionStorage.removeItem(pendingGroupNameKey);
+        setIsCreated(true);
+        setForm(initialState);
+      } catch (err) {
+        if (!active) return;
+        setError(tx(err instanceof Error ? err.message : t("errors.registerFailed")));
+      } finally {
+        if (!active) return;
+        setIsSubmitting(false);
+      }
+    }
+
+    void completeRedirectRegistration();
+    return () => {
+      active = false;
+    };
+  }, [createGroupForUser, t, tx]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -38,33 +101,8 @@ export function RegisterGroupForm() {
       // Step 1: Google Sign In
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      
-      if (!user.email) throw new Error("No email found from Google.");
-
-      // Step 2: Check if already an admin
-      const existingAdmin = await getAdminProfile(user.uid);
-      if (existingAdmin) {
-        throw new Error(t("errors.adminExists"));
-      }
-
-      const adminId = user.uid;
-      const groupId = crypto.randomUUID();
       const nameTrim = form.groupName.trim();
-
-      const batch = writeBatch(db);
-
-      batch.set(doc(db, groupsCollection, groupId), {
-        ...buildGroupRecord({ id: groupId, name: nameTrim, adminId }),
-        createdAt: serverTimestamp(),
-      });
-
-      batch.set(doc(db, adminsCollection, adminId), {
-        ...buildAdminProfile({ id: adminId, email: user.email, groupId }),
-        createdAt: serverTimestamp(),
-      });
-
-      await batch.commit();
+      await createGroupForUser(result.user, nameTrim);
       setIsCreated(true);
       setForm(initialState);
     } catch (err) {
@@ -89,6 +127,13 @@ export function RegisterGroupForm() {
     }
     setIsSubmitting(true);
     try {
+      const groupName = form.groupName.trim();
+      if (!groupName) {
+        setError(t("registerForm.placeholderGroup"));
+        setIsSubmitting(false);
+        return;
+      }
+      window.sessionStorage.setItem(pendingGroupNameKey, groupName);
       const provider = new GoogleAuthProvider();
       await signInWithRedirect(auth, provider);
     } catch (err) {

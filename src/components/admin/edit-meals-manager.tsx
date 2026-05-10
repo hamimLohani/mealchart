@@ -6,13 +6,13 @@ import { auth } from "@/lib/firebase/client";
 import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import {
-  getAdminProfile,
   getMealsForMonth,
   listCharts,
   listMembers,
   saveMealEntry,
   saveMealsBatch,
 } from "@/lib/firebase/repositories";
+import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
 import type { AdminProfile, Chart, MealEntry, Member } from "@/types/domain";
 import { memberDisplayName, memberIdsForChartRows } from "@/lib/utils/chart-members";
 
@@ -48,7 +48,7 @@ export function EditMealsManager() {
         return;
       }
       try {
-        const profile = await getAdminProfile(user.uid);
+        const profile = await getAdminProfileForUser(user);
         if (!profile) throw new Error("No admin profile found.");
         const [currentCharts, memberList] = await Promise.all([
           listCharts(profile.groupId),

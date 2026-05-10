@@ -8,11 +8,11 @@ import { useT } from "@/i18n/use-t";
 import {
   createNotice,
   deleteNotice,
-  getAdminProfile,
   listCharts,
   listNoticesForChart,
   updateNotice,
 } from "@/lib/firebase/repositories";
+import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
 import type { AdminProfile, Chart, Notice } from "@/types/domain";
 
 export function NoticesManager() {
@@ -38,7 +38,7 @@ export function NoticesManager() {
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) { setError("Log in as admin to manage notices."); setIsLoading(false); return; }
       try {
-        const profile = await getAdminProfile(user.uid);
+        const profile = await getAdminProfileForUser(user);
         if (!profile) throw new Error("No admin profile found.");
         const currentCharts = await listCharts(profile.groupId);
         setAdminProfile(profile);

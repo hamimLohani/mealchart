@@ -15,10 +15,12 @@ export function buildGroupRecord(input: {
   id: string;
   name: string;
   adminId: string;
+  token?: string;
 }): Group {
   return {
     id: input.id,
     name: input.name,
+    token: input.token ?? input.id.slice(0, 8).toUpperCase(),
     adminId: input.adminId,
     createdAt: new Date().toISOString(),
     active: true,
@@ -52,7 +54,7 @@ export function buildAdminProfile(input: {
 }): AdminProfile {
   return {
     id: input.id,
-    email: input.email,
+    email: input.email.trim().toLowerCase(),
     groupId: input.groupId,
     createdAt: new Date().toISOString(),
   };

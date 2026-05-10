@@ -7,6 +7,12 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function signedInEmail() {
+      return isSignedIn() && request.auth.token.email is string
+        ? request.auth.token.email.lower()
+        : "";
+    }
+
     function isGroupAdmin(groupId) {
       return isSignedIn()
         && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
@@ -29,6 +35,7 @@ service cloud.firestore {
         && hasOnlyFields(["id", "email", "groupId", "createdAt"])
         && request.resource.data.id == adminId
         && request.resource.data.email is string
+        && request.resource.data.email == signedInEmail()
         && request.resource.data.groupId is string
         && existsAfter(/databases/$(database)/documents/groups/$(request.resource.data.groupId))
         && getAfter(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.adminId == request.auth.uid;
@@ -41,7 +48,8 @@ service cloud.firestore {
         && request.resource.data.id == resource.data.id
         && request.resource.data.groupId == resource.data.groupId
         && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.email is string;
+        && request.resource.data.email is string
+        && request.resource.data.email == signedInEmail();
     }
 
     function isMonthKeyLocked(groupId, monthKey) {
@@ -62,7 +70,7 @@ service cloud.firestore {
         && mealId == request.resource.data.memberId + "_" + request.resource.data.date
         && !isMonthKeyLocked(groupId, request.resource.data.monthKey)
         && exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.resource.data.memberId))
-        && (isGroupAdmin(groupId) || (isSignedIn() && request.auth.token.email == request.resource.data.memberId));
+        && (isGroupAdmin(groupId) || signedInEmail() == request.resource.data.memberId);
     }
 
     function canDeleteMeal(groupId) {
@@ -88,6 +96,24 @@ service cloud.firestore {
       return isSignedIn()
         && exists(/databases/$(database)/documents/groups/$(groupId))
         && get(/databases/$(database)/documents/groups/$(groupId)).data.adminId == request.auth.uid;
+    }
+
+    function isAdminAccountMigration(groupId) {
+      return isSignedIn()
+        && resource.data.adminId != request.auth.uid
+        && request.resource.data.adminId == request.auth.uid
+        && request.resource.data.name == resource.data.name
+        && request.resource.data.token == resource.data.token
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.active == resource.data.active
+        && request.resource.data.currentChartId == resource.data.currentChartId
+        && request.resource.data.currentChartMonth == resource.data.currentChartMonth
+        && exists(/databases/$(database)/documents/admins/$(resource.data.adminId))
+        && get(/databases/$(database)/documents/admins/$(resource.data.adminId)).data.groupId == groupId
+        && get(/databases/$(database)/documents/admins/$(resource.data.adminId)).data.email == signedInEmail()
+        && existsAfter(/databases/$(database)/documents/admins/$(request.auth.uid))
+        && getAfter(/databases/$(database)/documents/admins/$(request.auth.uid)).data.groupId == groupId
+        && getAfter(/databases/$(database)/documents/admins/$(request.auth.uid)).data.email == signedInEmail();
     }
 
     function isChartUnlocked(groupId, chartId) {
@@ -154,7 +180,8 @@ service cloud.firestore {
         && request.resource.data.token is string
         && request.resource.data.adminId == request.auth.uid
         && request.resource.data.active == true;
-      allow update, delete: if isGroupAdmin(groupId);
+      allow update: if isGroupAdmin(groupId) || isAdminAccountMigration(groupId);
+      allow delete: if isGroupAdmin(groupId);
     }
 
     match /admins/{adminId} {
@@ -178,7 +205,7 @@ service cloud.firestore {
       allow create: if isSignedIn()
         && hasOnlyFields(["id", "fullName", "email", "createdAt"])
         && request.resource.data.id == requestId
-        && request.resource.data.email == request.auth.token.email;
+        && request.resource.data.email == signedInEmail();
     }
 
     match /groups/{groupId}/lockedMonths/{monthKey} {

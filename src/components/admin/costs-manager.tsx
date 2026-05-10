@@ -8,10 +8,10 @@ import { useT } from "@/i18n/use-t";
 import {
   createCost,
   deleteCost,
-  getAdminProfile,
   listCharts,
   listCostsForChart,
 } from "@/lib/firebase/repositories";
+import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
 import { chartMonthDateBounds, toDateInputValue } from "@/lib/utils/date";
 import type { AdminProfile, Chart, CostEntry } from "@/types/domain";
 
@@ -37,7 +37,7 @@ export function CostsManager() {
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) { setError("Log in as admin to manage costs."); setIsLoading(false); return; }
       try {
-        const profile = await getAdminProfile(user.uid);
+        const profile = await getAdminProfileForUser(user);
         if (!profile) throw new Error("No admin profile found.");
         const currentCharts = await listCharts(profile.groupId);
         setAdminProfile(profile);

@@ -8,7 +8,7 @@ import { auth, db } from "@/lib/firebase/client";
 import { doc, getDoc } from "firebase/firestore";
 import { useT } from "@/i18n/use-t";
 import { groupsCollection } from "@/lib/firebase/paths";
-import { getAdminProfile } from "@/lib/firebase/repositories";
+import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
 import { useAuthStore } from "@/store/auth-store";
 import type { Group } from "@/types/domain";
 
@@ -58,7 +58,7 @@ export default function AdminPage() {
       }
       try {
         setLoadError(null);
-        const profile = await getAdminProfile(admin.uid);
+        const profile = await getAdminProfileForUser(admin);
         if (!profile) throw new Error("No admin profile was found for this account.");
         if (!db) throw new Error("Firebase not configured.");
         const groupSnap = await getDoc(doc(db, groupsCollection, profile.groupId));

@@ -9,7 +9,6 @@ import {
   backfillMealMonthKeys,
   createChart,
   deleteChart,
-  getAdminProfile,
   listCharts,
   syncLockedMonthDocsFromCharts,
   updateChartLock,
@@ -19,6 +18,7 @@ import {
   listMembers,
   getGroupById,
 } from "@/lib/firebase/repositories";
+import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
 import { formatChartLabel } from "@/lib/utils/date";
 import { daysInMonth } from "@/lib/utils/date";
 import { getMonthTotals, getMemberTotals } from "@/lib/utils/meal-money";
@@ -59,7 +59,7 @@ export function CreateChartManager() {
       }
       try {
         setError(null);
-        const profile = await getAdminProfile(user.uid);
+        const profile = await getAdminProfileForUser(user);
         if (!profile) throw new Error("No admin profile was found for the current user.");
         const currentCharts = await listCharts(profile.groupId);
         await backfillMealMonthKeys(profile.groupId);
