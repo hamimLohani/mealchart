@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { signInWithPopup, signInWithRedirect, GoogleAuthProvider } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
@@ -78,6 +78,8 @@ export function AdminLoginForm() {
       const code = typeof err === "object" && err !== null && "code" in err ? String((err as { code?: string }).code) : "";
       if (code === "auth/popup-closed-by-user") {
         setError(null);
+      } else if (code === "auth/popup-blocked") {
+        setError("Your browser blocked the sign-in popup. Please allow popups or use the redirect method below.");
       } else if (code === "permission-denied") {
         setError(`${t("errors.permissionDenied")} (${code}: ${err instanceof Error ? err.message : "unknown"})`);
       } else {
@@ -88,7 +90,21 @@ export function AdminLoginForm() {
     }
   }
 
-
+  async function handleGoogleSignInRedirect() {
+    setError(null);
+    if (!isFirebaseConfigured || !auth) {
+      setError(t("errors.firebaseNotConfigured"));
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithRedirect(auth, provider);
+    } catch (err) {
+      setError(tx(err instanceof Error ? err.message : t("adminLogin.errFailed")));
+      setIsSubmitting(false);
+    }
+  }
 
   async function handleJoinSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -204,6 +220,16 @@ export function AdminLoginForm() {
           {isSubmitting ? t("adminLoginForm.signingIn") : t("enterForm.signInWithGoogle")}
         </span>
       </button>
+
+      {error?.includes("blocked") && (
+        <button
+          className="button-secondary w-full py-3"
+          onClick={handleGoogleSignInRedirect}
+          type="button"
+        >
+          {t("enterForm.useRedirectMethod", { defaultValue: "Sign in with Redirect" })}
+        </button>
+      )}
 
       <p className="text-center text-[0.7rem] text-[color:var(--muted)] leading-relaxed px-2">
         {t("enterForm.joinHint")}

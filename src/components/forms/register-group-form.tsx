@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
-import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { signInWithPopup, signInWithRedirect, GoogleAuthProvider } from "firebase/auth";
 import { doc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase/client";
 import { buildAdminProfile, buildGroupRecord } from "@/lib/firebase/factories";
@@ -71,6 +71,8 @@ export function RegisterGroupForm() {
       const code = typeof err === "object" && err !== null && "code" in err ? String((err as { code?: string }).code) : "";
       if (code === "auth/popup-closed-by-user") {
         setError(null);
+      } else if (code === "auth/popup-blocked") {
+        setError("Your browser blocked the sign-in popup. Please allow popups or use the redirect method below.");
       } else {
         setError(tx(err instanceof Error ? err.message : t("errors.registerFailed")));
       }
@@ -79,7 +81,21 @@ export function RegisterGroupForm() {
     }
   }
 
-
+  async function handleGoogleSignInRedirect() {
+    setError(null);
+    if (!isFirebaseConfigured || !auth) {
+      setError(t("errors.firebaseNotConfigured"));
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithRedirect(auth, provider);
+    } catch (err) {
+      setError(tx(err instanceof Error ? err.message : t("errors.registerFailed")));
+      setIsSubmitting(false);
+    }
+  }
 
   return (
     <form className="mt-7 grid gap-5" onSubmit={handleSubmit}>
@@ -155,6 +171,16 @@ export function RegisterGroupForm() {
               <span className="font-semibold">{t("registerForm.submit")}</span>
             </>
           )}
+        </button>
+      )}
+
+      {error?.includes("blocked") && (
+        <button
+          className="button-secondary w-full py-3"
+          onClick={handleGoogleSignInRedirect}
+          type="button"
+        >
+          {t("enterForm.useRedirectMethod", { defaultValue: "Sign in with Redirect" })}
         </button>
       )}
     </form>
