@@ -6,12 +6,13 @@ import type { MealEntry, Member } from "@/types/domain";
  */
 export function memberIdsForChartRows(members: Member[], meals: MealEntry[], monthKey: string): string[] {
   const inMonth = (m: MealEntry) => m.date >= `${monthKey}-01` && m.date <= `${monthKey}-31`;
-  const idsWithMeals = new Set(meals.filter(inMonth).map((m) => m.memberId));
+  const idsWithMeals = new Set(meals.filter(inMonth).map((m) => m.memberId.toLowerCase()));
   const ordered: string[] = [];
   const seen = new Set<string>();
   for (const m of members) {
-    ordered.push(m.id);
-    seen.add(m.id);
+    const mid = m.id.toLowerCase();
+    ordered.push(mid);
+    seen.add(mid);
   }
   for (const id of idsWithMeals) {
     if (!seen.has(id)) {

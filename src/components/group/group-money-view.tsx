@@ -78,12 +78,14 @@ export function GroupMoneyView({ groupId }: { groupId: string }) {
 
   const memberMeals: Record<string, number> = {};
   meals.forEach((m) => {
-    memberMeals[m.memberId] = (memberMeals[m.memberId] ?? 0) + m.quantity;
+    const mid = m.memberId.toLowerCase();
+    memberMeals[mid] = (memberMeals[mid] ?? 0) + m.quantity;
   });
 
   const memberDeposits: Record<string, number> = {};
   deposits.forEach((d) => {
-    memberDeposits[d.memberId] = (memberDeposits[d.memberId] ?? 0) + d.amount;
+    const mid = d.memberId.toLowerCase();
+    memberDeposits[mid] = (memberDeposits[mid] ?? 0) + d.amount;
   });
 
   const grandTotal = Object.values(memberMeals).reduce((s, v) => s + v, 0);
@@ -177,7 +179,7 @@ export function GroupMoneyView({ groupId }: { groupId: string }) {
             <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">{t("groupMoney.noDeposits")}</p>
           )}
           {deposits.map((d) => {
-            const member = members.find((m) => m.id === d.memberId);
+            const member = members.find((m) => m.id.toLowerCase() === d.memberId.toLowerCase());
             return (
               <div
                 key={d.id}

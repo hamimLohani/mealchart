@@ -74,8 +74,9 @@ export function GroupChartView({ groupId }: { groupId: string }) {
 
   const mealMap: Record<string, Record<string, number>> = {};
   meals.forEach((m) => {
-    if (!mealMap[m.memberId]) mealMap[m.memberId] = {};
-    mealMap[m.memberId][m.date] = m.quantity;
+    const mid = m.memberId.toLowerCase();
+    if (!mealMap[mid]) mealMap[mid] = {};
+    mealMap[mid][m.date] = m.quantity;
   });
 
   const rowMemberIds = memberIdsForChartRows(members, meals, chart.monthKey);

@@ -78,8 +78,9 @@ export function EditMealsManager() {
         if (!active) return;
         const map: Record<string, Record<string, number>> = {};
         mealList.forEach((m: MealEntry) => {
-          if (!map[m.memberId]) map[m.memberId] = {};
-          map[m.memberId][m.date] = m.quantity;
+          const mid = m.memberId.toLowerCase();
+          if (!map[mid]) map[mid] = {};
+          map[mid][m.date] = m.quantity;
         });
         setMeals(map);
       } catch (e) {

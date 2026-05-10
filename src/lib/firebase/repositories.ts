@@ -478,7 +478,7 @@ export async function createDeposit(input: {
   const depositId = crypto.randomUUID();
   const record = buildDepositRecord({
     id: depositId,
-    memberId: input.memberId,
+    memberId: input.memberId.toLowerCase(),
     amount: input.amount,
     date: input.date,
     collectedByAdminId: input.collectedByAdminId,
@@ -540,7 +540,7 @@ export async function saveMealEntry(input: {
   const docId = `${input.memberId}_${input.date}`;
   const monthKey = monthKeyFromDate(input.date);
   await setDoc(doc(database, mealsCollection(input.groupId), docId), {
-    memberId: input.memberId,
+    memberId: input.memberId.toLowerCase(),
     date: input.date,
     quantity: input.quantity,
     monthKey,
@@ -558,10 +558,11 @@ export async function saveMealsBatch(input: {
   const monthKey = monthKeyFromDate(input.date);
 
   for (const memberId of input.memberIds) {
-    const docId = `${memberId}_${input.date}`;
+    const mid = memberId.toLowerCase();
+    const docId = `${mid}_${input.date}`;
     const ref = doc(database, mealsCollection(input.groupId), docId);
     batch.set(ref, {
-      memberId,
+      memberId: mid,
       date: input.date,
       quantity: input.quantity,
       monthKey,

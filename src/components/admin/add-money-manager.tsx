@@ -103,7 +103,10 @@ export function AddMoneyManager() {
 
   const memberTotals = useMemo(() => {
     const totals = new Map<string, number>();
-    for (const d of deposits) totals.set(d.memberId, (totals.get(d.memberId) ?? 0) + d.amount);
+    for (const d of deposits) {
+      const mid = d.memberId.toLowerCase();
+      totals.set(mid, (totals.get(mid) ?? 0) + d.amount);
+    }
     return totals;
   }, [deposits]);
 
@@ -121,7 +124,8 @@ export function AddMoneyManager() {
     }
     setIsSubmitting(true);
     try {
-      const member = members.find(m => m.id === form.memberId);
+      const mid = form.memberId.toLowerCase();
+      const member = members.find(m => m.id.toLowerCase() === mid);
       const deposit = await createDeposit({
         groupId: adminProfile.groupId,
         chartId: selectedChart.id,
@@ -287,7 +291,7 @@ export function AddMoneyManager() {
             >
               <p className="font-semibold">{member.fullName}</p>
               <p className="font-bold text-[color:var(--accent)]">
-                {(memberTotals.get(member.id) ?? 0).toFixed(2)} {tk}
+                {(memberTotals.get(member.id.toLowerCase()) ?? 0).toFixed(2)} {tk}
               </p>
             </div>
           ))}
@@ -306,7 +310,7 @@ export function AddMoneyManager() {
             </p>
           )}
           {deposits.map((deposit) => {
-            const member = members.find((m) => m.id === deposit.memberId);
+            const member = members.find((m) => m.id.toLowerCase() === deposit.memberId.toLowerCase());
             return (
               <article
                 key={deposit.id}

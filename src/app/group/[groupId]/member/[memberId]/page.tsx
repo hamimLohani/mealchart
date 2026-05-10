@@ -47,10 +47,10 @@ export default function MemberPage({
 
   // Sync mealCount from SWR date data
   useEffect(() => {
-    const current = dateMeals.find((e) => e.memberId === memberId);
+    const current = dateMeals.find((e) => e.memberId.toLowerCase() === normalizedMemberId);
     setMealCount(current?.quantity ?? 0);
     setSaved(false);
-  }, [dateMeals, memberId]);
+  }, [dateMeals, normalizedMemberId]);
 
   // Clamp selected date to chart bounds when chart changes
   useEffect(() => {
@@ -108,8 +108,8 @@ export default function MemberPage({
   const monthStart = `${chart.monthKey}-01`;
   const monthEnd = `${chart.monthKey}-${String(daysInMonth(chart.year, chart.month)).padStart(2, "0")}`;
   const { mealRate } = getMonthTotals(monthMeals, costs, deposits);
-  const myDeposits = deposits.filter((deposit) => deposit.memberId === memberId);
-  const memberTotals = getMemberTotals(memberId, monthMeals, deposits, mealRate);
+  const myDeposits = deposits.filter((deposit) => deposit.memberId.toLowerCase() === normalizedMemberId);
+  const memberTotals = getMemberTotals(normalizedMemberId, monthMeals, deposits, mealRate);
   const myMeals = memberTotals.memberMeals.sort((a, b) => a.date.localeCompare(b.date));
   const myTotalMeals = memberTotals.totalMeals;
   const myTotalPaid = memberTotals.totalPaid;
@@ -135,7 +135,7 @@ export default function MemberPage({
     setSaveError(null);
     setIsSaving(true);
     try {
-      await saveMealEntry({ groupId: group.id, memberId, date: selectedDate, quantity: clamped });
+      await saveMealEntry({ groupId: group.id, memberId: normalizedMemberId, date: selectedDate, quantity: clamped });
       setSaved(true);
       // Invalidate SWR caches so all views refresh automatically
       void mutateMonthMeals();

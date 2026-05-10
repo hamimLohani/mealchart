@@ -25,10 +25,10 @@ export function getMemberTotals(
   deposits: DepositEntry[],
   mealRate: number,
 ) {
-  const memberMeals = meals.filter((meal) => meal.memberId === memberId);
+  const memberMeals = meals.filter((meal) => meal.memberId.toLowerCase() === memberId.toLowerCase());
   const totalMeals = memberMeals.reduce((sum, meal) => sum + meal.quantity, 0);
   const totalPaid = deposits
-    .filter((deposit) => deposit.memberId === memberId)
+    .filter((deposit) => deposit.memberId.toLowerCase() === memberId.toLowerCase())
     .reduce((sum, deposit) => sum + deposit.amount, 0);
   const totalCost = totalMeals * mealRate;
   const balance = totalPaid - totalCost;
