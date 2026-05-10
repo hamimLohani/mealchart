@@ -584,6 +584,31 @@ export async function deleteChart(groupId: string, chartId: string) {
   await deleteSubcollection(database, chartCostsCollection(groupId, chartId));
   await deleteSubcollection(database, chartNoticesCollection(groupId, chartId));
 
+  // Delete meals for this month (stored globally under groups/{groupId}/meals)
+  if (monthKey) {
+    const mealsSnap = await getDocs(
+      query(
+        collection(database, mealsCollection(groupId)),
+        where("date", ">=", `${monthKey}-01`),
+        where("date", "<=", `${monthKey}-31`),
+      ),
+    );
+    if (!mealsSnap.empty) {
+      let batch = writeBatch(database);
+      let ops = 0;
+      for (const d of mealsSnap.docs) {
+        batch.delete(d.ref);
+        ops++;
+        if (ops >= 400) {
+          await batch.commit();
+          batch = writeBatch(database);
+          ops = 0;
+        }
+      }
+      if (ops > 0) await batch.commit();
+    }
+  }
+
   // Delete the chart document itself
   await deleteDoc(doc(database, chartsCollection(groupId), chartId));
 
