@@ -546,6 +546,66 @@ export async function deleteCost(groupId: string, chartId: string, costId: strin
   await deleteDoc(doc(database, chartCostsCollection(groupId, chartId), costId));
 }
 
+// ── Delete Chart (and all subcollections) ─────────────────────────────
+
+async function deleteSubcollection(database: ReturnType<typeof ensureDb>, path: string) {
+  const snapshot = await getDocs(collection(database, path));
+  if (snapshot.empty) return;
+  let batch = writeBatch(database);
+  let ops = 0;
+  for (const d of snapshot.docs) {
+    batch.delete(d.ref);
+    ops++;
+    if (ops >= 400) {
+      await batch.commit();
+      batch = writeBatch(database);
+      ops = 0;
+    }
+  }
+  if (ops > 0) await batch.commit();
+}
+
+export async function deleteChart(groupId: string, chartId: string) {
+  const database = ensureDb();
+
+  // Read chart to get monthKey for lockedMonths cleanup
+  const chartSnap = await getDoc(doc(database, chartsCollection(groupId), chartId));
+  if (!chartSnap.exists()) throw new Error("Chart not found.");
+  const data = chartSnap.data();
+  const monthKey =
+    typeof data.monthKey === "string" && data.monthKey.length >= 7
+      ? data.monthKey
+      : typeof data.year === "number" && typeof data.month === "number"
+        ? toMonthKey(data.year, data.month)
+        : "";
+
+  // Delete all subcollections first
+  await deleteSubcollection(database, chartDepositsCollection(groupId, chartId));
+  await deleteSubcollection(database, chartCostsCollection(groupId, chartId));
+  await deleteSubcollection(database, chartNoticesCollection(groupId, chartId));
+
+  // Delete the chart document itself
+  await deleteDoc(doc(database, chartsCollection(groupId), chartId));
+
+  // Clean up lockedMonths mirror if it exists
+  if (monthKey) {
+    try {
+      await deleteDoc(doc(database, lockedMonthsCollection(groupId), monthKey));
+    } catch {
+      // Ignore — may not exist
+    }
+  }
+
+  // If this was the current chart, clear group's currentChartId
+  const groupSnap = await getDoc(doc(database, groupsCollection, groupId));
+  if (groupSnap.exists() && groupSnap.data().currentChartId === chartId) {
+    await updateDoc(doc(database, groupsCollection, groupId), {
+      currentChartId: "",
+      currentChartMonth: "",
+    });
+  }
+}
+
 async function addSystemNoticeToCurrentChart(database: any, groupId: string, title: string, body: string) {
   const groupSnap = await getDoc(doc(database, groupsCollection, groupId));
   if (!groupSnap.exists()) return;

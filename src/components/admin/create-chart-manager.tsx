@@ -8,6 +8,7 @@ import { useT } from "@/i18n/use-t";
 import {
   backfillMealMonthKeys,
   createChart,
+  deleteChart,
   getAdminProfile,
   listCharts,
   syncLockedMonthDocsFromCharts,
@@ -117,6 +118,19 @@ export function CreateChartManager() {
     }
   }
 
+  async function handleDeleteChart(chart: Chart) {
+    if (!adminProfile) return;
+    const confirmed = window.confirm(t("createChart.deleteConfirm"));
+    if (!confirmed) return;
+    setError(null);
+    try {
+      await deleteChart(adminProfile.groupId, chart.id);
+      setCharts((prev) => prev.filter((c) => c.id !== chart.id));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("createChart.deleteFailed"));
+    }
+  }
+
   if (isLoading) {
     return <p className="mt-8 text-sm text-[color:var(--soft-foreground)]">{t("createChart.loadingCharts")}</p>;
   }
@@ -207,6 +221,13 @@ export function CreateChartManager() {
                     className="button-secondary"
                   >
                     {chart.locked ? t("createChart.unlock") : t("createChart.lock")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleDeleteChart(chart)}
+                    className="rounded-full border border-[color:var(--danger-border)] px-3 py-1.5 text-xs font-semibold text-[color:var(--danger)] transition hover:bg-[color:var(--danger)] hover:text-white"
+                  >
+                    {t("createChart.deleteBtn")}
                   </button>
                 </div>
               </article>

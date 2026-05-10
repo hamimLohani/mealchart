@@ -406,6 +406,10 @@ export const en = {
   "createChart.lock": "Lock",
   "createChart.unlock": "Unlock",
   "createChart.noneYet": "No charts have been created yet.",
+  "createChart.deleteBtn": "Delete",
+  "createChart.deleteConfirm": "Are you sure you want to delete this chart? All deposits, costs, and notices for this month will be permanently deleted. This cannot be undone.",
+  "createChart.deleting": "Deleting…",
+  "createChart.deleteFailed": "Failed to delete chart.",
   "createChart.previewLine": "{label} · {days} {unit}",
 
   "costs.selectHelp": "Choose the monthly chart to add costs to.",
@@ -883,6 +887,10 @@ export const bn: Record<MessageKey, string> = {
   "createChart.lock": "লক",
   "createChart.unlock": "আনলক",
   "createChart.noneYet": "এখনো কোনো চার্ট নেই।",
+  "createChart.deleteBtn": "মুছুন",
+  "createChart.deleteConfirm": "আপনি কি নিশ্চিত এই চার্ট মুছতে চান? এই মাসের সব জমা, খরচ ও নোটিশ স্থায়ীভাবে মুছে যাবে। এটি পূর্ববত করা যাবে না।",
+  "createChart.deleting": "মুছা হচ্ছে…",
+  "createChart.deleteFailed": "চার্ট মুছতে ব্যর্থ।",
   "createChart.previewLine": "{label} · {days} {unit}",
 
   "costs.selectHelp": "খরচ যোগ করতে মাসিক চার্ট বাছুন।",
