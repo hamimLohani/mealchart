@@ -10,7 +10,7 @@ import { onAuthStateChanged, User } from "firebase/auth";
 import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
 import { useGroupSession } from "@/lib/hooks/use-group-session";
 import { chartMonthDateBounds, daysInMonth, toDateInputValue } from "@/lib/utils/date";
-import { formatMeal, getMemberTotals, getMonthTotals } from "@/lib/utils/meal-money";
+import { formatMeal, getMemberTotals, getMonthTotals, normalizeMealQuantity } from "@/lib/utils/meal-money";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { useGroup, useMembers, useMealsForMonth, useMealsForDate, useCosts, useDeposits } from "@/lib/hooks/use-data";
@@ -143,7 +143,7 @@ export default function MemberPage({
 
   async function handleMealChange(value: number) {
     if (!group || !selectedDate || !chart || isLocked) return;
-    const clamped = Math.max(0, value);
+    const clamped = normalizeMealQuantity(value);
     setMealCount(clamped);
     setSaved(false);
     setSaveError(null);

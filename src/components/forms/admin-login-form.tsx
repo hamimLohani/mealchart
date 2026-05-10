@@ -62,7 +62,7 @@ export function AdminLoginForm() {
         await finishSignIn(result.user);
       } catch (err) {
         if (!active) return;
-        setError(tx(err instanceof Error ? err.message : t("adminLogin.errFailed")));
+        setError(tx(getAuthErrorMessage(err, t("adminLogin.errFailed"))));
       } finally {
         if (!active) return;
         setIsLoadingGroups(false);

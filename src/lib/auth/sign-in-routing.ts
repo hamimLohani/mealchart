@@ -28,10 +28,14 @@ export async function getAdminProfileForUser(user: User) {
 
   try {
     await migrateAdminProfile(emailProfile.id, user.uid);
-    return await getAdminProfile(user.uid);
+    const migratedProfile = await getAdminProfile(user.uid);
+    if (!migratedProfile) {
+      throw new Error("Admin profile repair did not complete.");
+    }
+    return migratedProfile;
   } catch (error) {
     console.warn("Failed to migrate admin profile:", error);
-    return emailProfile;
+    throw new Error("Admin profile was found for this email, but account repair failed. Deploy the latest Firestore rules, then sign in again.");
   }
 }
 

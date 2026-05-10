@@ -13,6 +13,7 @@ import {
   saveMealsBatch,
 } from "@/lib/firebase/repositories";
 import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
+import { normalizeMealQuantity } from "@/lib/utils/meal-money";
 import type { AdminProfile, Chart, MealEntry, Member } from "@/types/domain";
 import { memberDisplayName, memberIdsForChartRows } from "@/lib/utils/chart-members";
 
@@ -122,8 +123,7 @@ export function EditMealsManager() {
   function parseMealQuantity(raw: string): number {
     if (raw === "") return 0;
     const n = Number(raw);
-    if (!Number.isFinite(n) || n < 0) return 0;
-    return Math.min(20, n);
+    return normalizeMealQuantity(n);
   }
 
   function handleChange(memberId: string, date: string, raw: string) {

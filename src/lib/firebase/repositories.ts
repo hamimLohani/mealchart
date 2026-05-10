@@ -40,6 +40,7 @@ import {
   monthKeyFromDate,
   toMonthKey,
 } from "@/lib/utils/date";
+import { normalizeMealQuantity } from "@/lib/utils/meal-money";
 import type { AdminProfile, Chart, CostEntry, DepositEntry, Group, MealEntry, Member, Notice } from "@/types/domain";
 
 function ensureDb() {
@@ -73,7 +74,11 @@ function mapMealEntryDoc(id: string, data: Record<string, unknown>): MealEntry {
       : typeof data.date === "string" && data.date.length >= 7
         ? data.date.slice(0, 7)
         : undefined;
-  return { ...normalizeDoc<MealEntry>(id, data), ...(mk ? { monthKey: mk } : {}) };
+  return {
+    ...normalizeDoc<MealEntry>(id, data),
+    quantity: normalizeMealQuantity(Number(data.quantity)),
+    ...(mk ? { monthKey: mk } : {}),
+  };
 }
 
 function serializeDate(value: unknown) {
@@ -221,11 +226,16 @@ export async function updateMember(input: {
   email: string;
 }) {
   const database = ensureDb();
+  const normalizedEmail = input.email.trim().toLowerCase();
+  if (normalizedEmail !== input.memberId.trim().toLowerCase()) {
+    throw new Error("Member email cannot be changed after creation. Remove and re-add the member with the new email.");
+  }
+
   const memberRef = doc(database, membersCollection(input.groupId), input.memberId);
   const payload = {
     fullName: input.fullName,
     joinDate: input.joinDate,
-    email: input.email.trim().toLowerCase(),
+    email: normalizedEmail,
     active: true,
   };
 
@@ -557,12 +567,14 @@ export async function saveMealEntry(input: {
   memberName?: string;
 }) {
   const database = ensureDb();
-  const docId = `${input.memberId}_${input.date}`;
+  const memberId = input.memberId.toLowerCase();
+  const quantity = normalizeMealQuantity(input.quantity);
+  const docId = `${memberId}_${input.date}`;
   const monthKey = monthKeyFromDate(input.date);
   await setDoc(doc(database, mealsCollection(input.groupId), docId), {
-    memberId: input.memberId.toLowerCase(),
+    memberId,
     date: input.date,
-    quantity: input.quantity,
+    quantity,
     monthKey,
   });
 }
@@ -576,6 +588,7 @@ export async function saveMealsBatch(input: {
   const database = ensureDb();
   const batch = writeBatch(database);
   const monthKey = monthKeyFromDate(input.date);
+  const quantity = normalizeMealQuantity(input.quantity);
 
   for (const memberId of input.memberIds) {
     const mid = memberId.toLowerCase();
@@ -584,7 +597,7 @@ export async function saveMealsBatch(input: {
     batch.set(ref, {
       memberId: mid,
       date: input.date,
-      quantity: input.quantity,
+      quantity,
       monthKey,
     });
   }
@@ -611,7 +624,7 @@ export async function getMealsForMemberInDateRange(
         orderBy("date", "asc"),
       ),
     );
-    return snapshot.docs.map((entry) => normalizeDoc<MealEntry>(entry.id, entry.data()));
+    return snapshot.docs.map((entry) => mapMealEntryDoc(entry.id, entry.data()));
   } catch (err) {
     // Fallback if composite index is still building: filter client-side
     const isIndexError =
@@ -629,7 +642,7 @@ export async function getMealsForMemberInDateRange(
       ),
     );
     return snapshot.docs
-      .map((entry) => normalizeDoc<MealEntry>(entry.id, entry.data()))
+      .map((entry) => mapMealEntryDoc(entry.id, entry.data()))
       .filter((m) => m.memberId === memberId);
   }
 }

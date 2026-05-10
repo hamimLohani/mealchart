@@ -67,6 +67,7 @@ service cloud.firestore {
         && request.resource.data.quantity is number
         && request.resource.data.quantity >= 0
         && request.resource.data.quantity <= 20
+        && int(request.resource.data.quantity * 4) == request.resource.data.quantity * 4
         && mealId == request.resource.data.memberId + "_" + request.resource.data.date
         && !isMonthKeyLocked(groupId, request.resource.data.monthKey)
         && exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.resource.data.memberId))
