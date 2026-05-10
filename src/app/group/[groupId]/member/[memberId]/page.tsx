@@ -4,25 +4,16 @@ import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
-import {
-  getGroupById,
-  getMealsForDate,
-  getMealsForMonth,
-  listCostsForChart,
-  listDepositsForChart,
-  listMembers,
-  saveMealEntry,
-  getAdminProfile,
-} from "@/lib/firebase/repositories";
+import { getAdminProfile, saveMealEntry } from "@/lib/firebase/repositories";
 import { auth } from "@/lib/firebase/client";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { GroupTokenMismatchHint } from "@/components/forms/group-token-mismatch-hint";
 import { useGroupSession } from "@/lib/hooks/use-group-session";
-import type { CostEntry, DepositEntry, Group, MealEntry, Member } from "@/types/domain";
 import { chartMonthDateBounds, daysInMonth, toDateInputValue } from "@/lib/utils/date";
 import { formatMeal, getMemberTotals, getMonthTotals } from "@/lib/utils/meal-money";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
+import { useGroup, useMembers, useMealsForMonth, useMealsForDate, useCosts, useDeposits } from "@/lib/hooks/use-data";
+import { mutate } from "swr";
 export default function MemberPage({
   params,
 }: {
@@ -31,27 +22,46 @@ export default function MemberPage({
   const { groupId, memberId } = use(params);
   const router = useRouter();
   const { chart } = useGroupSession();
-  const { t, tx, language } = useT();
+  const { t, language } = useT();
   const locale = language === "bn" ? "bn-BD" : undefined;
-
-  const [group, setGroup] = useState<Group | null>(null);
-  const [member, setMember] = useState<Member | null>(null);
-  const [meals, setMeals] = useState<MealEntry[]>([]);
-  const [costs, setCosts] = useState<CostEntry[]>([]);
-  const [deposits, setDeposits] = useState<DepositEntry[]>([]);
-  const [selectedDate, setSelectedDate] = useState<string>(() => toDateInputValue(new Date()));
-  const [mealCount, setMealCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isMonthLoading, setIsMonthLoading] = useState(false);
-  const [isMealLoading, setIsMealLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [mealCount, setMealCount] = useState(0);
+  const [selectedDate, setSelectedDate] = useState<string>(() => toDateInputValue(new Date()));
 
+  // SWR fetching — shared cache
+  const { data: group, isLoading: groupLoading } = useGroup(isFirebaseConfigured ? groupId : undefined);
+  const { data: allMembers = [] } = useMembers(group?.id);
+  const { data: monthMeals = [], isLoading: monthLoading, mutate: mutateMonthMeals } = useMealsForMonth(group?.id, chart?.monthKey);
+  const { data: costs = [] } = useCosts(group?.id, chart?.id);
+  const { data: deposits = [] } = useDeposits(group?.id, chart?.id);
+  const { data: dateMeals = [], isLoading: dateMealLoading } = useMealsForDate(group?.id, selectedDate);
+
+  // Normalize member from the list
+  const normalizedMemberId = decodeURIComponent(memberId).toLowerCase();
+  const member = allMembers.find((m) => m.id.toLowerCase() === normalizedMemberId) ?? null;
+
+  // Sync mealCount from SWR date data
+  useEffect(() => {
+    const current = dateMeals.find((e) => e.memberId === memberId);
+    setMealCount(current?.quantity ?? 0);
+    setSaved(false);
+  }, [dateMeals, memberId]);
+
+  // Clamp selected date to chart bounds when chart changes
+  useEffect(() => {
+    if (!chart) return;
+    const bounds = chartMonthDateBounds(chart);
+    const today = toDateInputValue(new Date());
+    const clamped = today < bounds.min ? bounds.min : today > bounds.max ? bounds.max : today;
+    setSelectedDate(clamped);
+  }, [chart]);
+
+  // Auth state — needed for permission checks
   useEffect(() => {
     if (!auth) return;
     return onAuthStateChanged(auth, async (user) => {
@@ -69,113 +79,17 @@ export default function MemberPage({
     });
   }, [groupId]);
 
-  useEffect(() => {
-    let active = true;
-    async function load() {
-      if (!isFirebaseConfigured) {
-        setError("Firebase is not configured yet.");
-        setIsLoading(false);
-        return;
-      }
-      try {
-        const currentGroup = await getGroupById(groupId);
-        if (!currentGroup) throw new Error("No group found for this groupId.");
-        const currentMembers = await listMembers(currentGroup.id);
-        const normalizedMemberId = decodeURIComponent(memberId).toLowerCase();
-        const currentMember = currentMembers.find((m) => m.id.toLowerCase() === normalizedMemberId);
-        if (!currentMember) throw new Error("Member not found in this group.");
-        if (!active) return;
-        setGroup(currentGroup);
-        setMember(currentMember);
-      } catch (err) {
-        if (!active) return;
-        setError(tx(err instanceof Error ? err.message : "Failed to load member."));
-      } finally {
-        if (active) setIsLoading(false);
-      }
-    }
-    void load();
-    return () => { active = false; };
-  }, [groupId, memberId, tx]);
-
-  useEffect(() => {
-    if (!chart) return;
-    const bounds = chartMonthDateBounds(chart);
-    const today = toDateInputValue(new Date());
-    const clamped = today < bounds.min ? bounds.min : today > bounds.max ? bounds.max : today;
-    queueMicrotask(() => setSelectedDate(clamped));
-  }, [chart]);
-
-  useEffect(() => {
-    if (!group || !chart) return;
-    let active = true;
-    const fetchMonthData = async () => {
-      setIsMonthLoading(true);
-      setMeals([]);
-      setCosts([]);
-      setDeposits([]);
-      try {
-        const [monthMeals, monthCosts, monthDeposits] = await Promise.all([
-          getMealsForMonth(group.id, chart.monthKey),
-          listCostsForChart(group.id, chart.id),
-          listDepositsForChart(group.id, chart.id),
-        ]);
-        if (!active) return;
-        setMeals(monthMeals);
-        setCosts(monthCosts);
-        setDeposits(monthDeposits);
-      } catch (err) {
-        if (!active) return;
-        setError(tx(err instanceof Error ? err.message : "Failed to load month data."));
-      } finally {
-        if (active) setIsMonthLoading(false);
-      }
-    };
-
-    void fetchMonthData();
-
-    return () => { active = false; };
-  }, [group, chart, tx]);
-
-  useEffect(() => {
-    if (!group || !chart || !selectedDate) return;
-    let active = true;
-    const fetchDailyMeals = async () => {
-      setIsMealLoading(true);
-      setSaved(false);
-      try {
-        const entries = await getMealsForDate(group.id, selectedDate);
-        if (!active) return;
-        const current = entries.find((entry) => entry.memberId === memberId);
-        setMealCount(current?.quantity ?? 0);
-      } catch {
-        if (!active) return;
-        setMealCount(0);
-      } finally {
-        if (active) setIsMealLoading(false);
-      }
-    };
-
-    void fetchDailyMeals();
-
-    return () => { active = false; };
-  }, [group, chart, selectedDate, memberId]);
-
   const tk = t("common.tk");
 
-  if (isLoading) {
+  if (!isFirebaseConfigured) {
+    return <p className="py-16 text-center text-sm text-[color:var(--soft-foreground)]">Firebase is not configured yet.</p>;
+  }
+
+  if (groupLoading) {
     return (
       <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-8">
         <Skeleton className="h-24 w-full" />
         <Skeleton className="mt-4 h-48 w-full" />
-      </div>
-    );
-  }
-  if (error) {
-    return (
-      <div className="mt-8">
-        <div className="alert-error">{tx(error)}</div>
-        <GroupTokenMismatchHint message={error} />
       </div>
     );
   }
@@ -193,9 +107,9 @@ export default function MemberPage({
 
   const monthStart = `${chart.monthKey}-01`;
   const monthEnd = `${chart.monthKey}-${String(daysInMonth(chart.year, chart.month)).padStart(2, "0")}`;
-  const { mealRate } = getMonthTotals(meals, costs, deposits);
+  const { mealRate } = getMonthTotals(monthMeals, costs, deposits);
   const myDeposits = deposits.filter((deposit) => deposit.memberId === memberId);
-  const memberTotals = getMemberTotals(memberId, meals, deposits, mealRate);
+  const memberTotals = getMemberTotals(memberId, monthMeals, deposits, mealRate);
   const myMeals = memberTotals.memberMeals.sort((a, b) => a.date.localeCompare(b.date));
   const myTotalMeals = memberTotals.totalMeals;
   const myTotalPaid = memberTotals.totalPaid;
@@ -223,10 +137,9 @@ export default function MemberPage({
     try {
       await saveMealEntry({ groupId: group.id, memberId, date: selectedDate, quantity: clamped });
       setSaved(true);
-      setMeals((prev) => {
-        const others = prev.filter((entry) => !(entry.memberId === memberId && entry.date === selectedDate));
-        return [...others, { id: `${memberId}_${selectedDate}`, memberId, date: selectedDate, quantity: clamped }];
-      });
+      // Invalidate SWR caches so all views refresh automatically
+      void mutateMonthMeals();
+      void mutate(["mealsDate", group.id, selectedDate]);
     } catch (err) {
       const isPermissionDenied =
         err instanceof Error &&
@@ -268,7 +181,7 @@ export default function MemberPage({
           </button>
         </div>
 
-        {isMonthLoading ? (
+        {monthLoading ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Skeleton className="h-20 w-full" />
             <Skeleton className="h-20 w-full" />
@@ -307,7 +220,7 @@ export default function MemberPage({
                   onChange={(event) => setSelectedDate(event.target.value)}
                   disabled={isLocked}
                 />
-                {isMealLoading ? (
+                {dateMealLoading ? (
                   <p className="text-sm text-[color:var(--soft-foreground)]">{t("memberPage.loadingMeal")}</p>
                 ) : (
                   <div className="flex items-center justify-between gap-4">

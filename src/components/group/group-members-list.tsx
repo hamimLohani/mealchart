@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
-import { GroupTokenMismatchHint } from "@/components/forms/group-token-mismatch-hint";
+
 import { getGroupById, listMembers } from "@/lib/firebase/repositories";
 import { useGroupSession } from "@/lib/hooks/use-group-session";
 import type { Group, Member } from "@/types/domain";
@@ -59,7 +59,6 @@ export function GroupMembersList({
     return (
       <div className="mt-8">
         <div className="alert-error">{error}</div>
-        <GroupTokenMismatchHint message={error} />
       </div>
     );
   }
@@ -67,7 +66,9 @@ export function GroupMembersList({
 
   const filtered = members.filter((m) => {
     const q = memberSearch.trim().toLowerCase();
-    return !q || m.fullName.toLowerCase().includes(q);
+    return !q || 
+      m.fullName.toLowerCase().includes(q) ||
+      m.email.toLowerCase().includes(q);
   });
 
   const n = String(members.length);

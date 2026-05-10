@@ -8,7 +8,6 @@ export type AdminProfile = {
 export type Group = {
   id: string;
   name: string;
-  token: string;
   adminId: string;
   currentChartId?: string;
   currentChartMonth?: string;

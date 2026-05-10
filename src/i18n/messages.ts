@@ -12,7 +12,7 @@ export const en = {
   "home.badge": "Hostel & mess meal management",
   "home.title": "One app for every group, with clean monthly accounting.",
   "home.description":
-    "Admins register their group, get a token instantly, and manage members, meals, costs, deposits, notices, and monthly charts. Members add their meals with that token and the app will calculate the monthly costs and deposits — all from one place.",
+    "Admins register their group and manage members, meals, costs, deposits, notices, and monthly charts. Members sign in to join groups, add their meals, and the app will calculate the monthly costs and deposits — all from one place.",
   "home.ctaRegister": "Register Group",
   "home.ctaEnter": "Login / Enter Group",
   "home.ctaAdmin": "Admin Login",
@@ -29,10 +29,10 @@ export const en = {
   "about.sectionSubtitle": "Everything you need to manage your hostel or mess meals, money, and members — explained step by step.",
 
   "about.step1Title": "1. Register Your Group",
-  "about.step1Body": "The admin creates a group by entering a group name and signing in with Google. After registration, a unique Group Token is generated. Share this token with all hostel/mess members so they can join.",
+  "about.step1Body": "The admin creates a group by entering a group name and signing in with Google. Tell your hostel/mess members to sign in and request to join the group.",
 
-  "about.step2Title": "2. Add Members",
-  "about.step2Body": "Go to Admin Panel → Members. Add each member's name, phone number, and join date. Members will appear in the meal chart and money tracking.",
+  "about.step2Title": "2. Members Join",
+  "about.step2Body": "Members sign in with Google, select the group from the list, and send a join request. The admin goes to Admin Panel → Members to approve requests. Once approved, members appear in the meal chart.",
 
   "about.step3Title": "3. Create Monthly Chart",
   "about.step3Body": "Go to Admin Panel → Create Chart. Select the month and year. This creates a fresh monthly sheet that tracks meals, costs, deposits, and notices for that month.",
@@ -55,7 +55,26 @@ export const en = {
   "about.adminTitle": "For Admins",
   "about.adminBody": "Register → Add Members → Create Monthly Chart → Edit Meals → Collect Money → Add Costs → Post Notices → Lock Month when done.",
   "about.memberTitle": "For Members",
-  "about.memberBody": "Sign in with Google → Select your group from the list → View chart, money balance, and notices.",
+  "about.memberBody": "Sign in with Google → Request to join group → Admin approves → Access your group dashboard → View chart, money balance, and notices.",
+
+  // Features
+  "features.title": "Core Features",
+  "features.authTitle": "Secure Authentication",
+  "features.authDesc": "Google Sign-in for both admins and members. Join requests are securely handled via email.",
+  "features.dashboardTitle": "Smart Dashboards",
+  "features.dashboardDesc": "Separate, tailored dashboards for admins to manage the group, and members to track their own meals.",
+  "features.mealsTitle": "Dynamic Meal Tracking",
+  "features.mealsDesc": "Log daily meals easily (0.5, 1, 1.5, 2 etc.) per member, either by the admin or the member themselves.",
+  "features.financeTitle": "Automated Finances",
+  "features.financeDesc": "Log grocery costs and member deposits. The system automatically calculates meal rates and individual balances.",
+  "features.exportTitle": "CSV Export",
+  "features.exportDesc": "Admins can download a complete monthly financial report as a CSV file.",
+  "features.noticesTitle": "Group Notices",
+  "features.noticesDesc": "Keep everyone informed with admin announcements and auto-generated system notices.",
+  "features.bilingualTitle": "Bilingual Interface",
+  "features.bilingualDesc": "Seamlessly switch between English and Bengali across the entire application.",
+  "features.fastTitle": "Lightning Fast",
+  "features.fastDesc": "Built with modern data-fetching for instant, cached loading and real-time updates.",
 
   // Common
   "common.loading": "Loading…",
@@ -76,8 +95,6 @@ export const en = {
     "Sign in with your Google account. We'll automatically find your group dashboard (for both admins and members), or you can request to join a new one by selecting your group from the list.",
 
   // Enter group form
-  "enterForm.labelToken": "Group token",
-  "enterForm.placeholderToken": "STAR-HOST-7XK29Q",
   "enterForm.warnEnv": "Firebase keys are missing. Add them in .env.local first.",
   "enterForm.submit": "Continue",
   "enterForm.submitting": "Signing in…",
@@ -86,17 +103,15 @@ export const en = {
   "enterForm.existingMember": "Already a member?",
   "enterForm.newToGroup": "New to a group?",
   "enterForm.requestingToJoin": "Requesting to join",
-  "enterForm.joinHelp": "Enter the group token shared by your admin to send a join request. You must sign in with Google first.",
+  "enterForm.joinHelp": "Select your group from the list to send a join request. You must sign in with Google first.",
   "enterForm.fullName": "Full Name",
   "enterForm.emailLabel": "Email (verified)",
-  "enterForm.groupToken": "Group Token",
   "enterForm.submitJoinRequest": "Send Join Request",
   "enterForm.submittingRequest": "Sending…",
   "enterForm.joinRequestSuccess": "Your join request has been sent! Please wait for admin approval.",
-  "enterForm.joinRequestError": "Failed to send request. Please check the token and try again.",
+  "enterForm.joinRequestError": "Failed to send request. Please try again.",
   "enterForm.signInHint": "Already a member? Sign in with Google and we'll take you straight to your group dashboard.",
   "enterForm.joinHint": "New here? Request to join by signing in with Google, then selecting your group from the list.",
-  "enterForm.tokenHint": "Ask your group admin for this token.",
   "enterForm.selectGroup": "Select Group",
   "enterForm.loadingGroups": "Loading groups...",
   "enterForm.noGroups": "No groups available.",
@@ -114,19 +129,10 @@ export const en = {
   // Register form
   "registerForm.groupName": "Group name",
   "registerForm.placeholderGroup": "Star Hostel",
-  "registerForm.email": "Email",
-  "registerForm.password": "Password",
-  "registerForm.placeholderPassword": "At least 6 characters",
-  "registerForm.tokenPreview": "Token preview",
-  "registerForm.tokenPreviewHelp":
-    "The final token is generated after successful registration and should be shared with all group members.",
   "registerForm.warnEnv":
     "Firebase keys are missing. Add them in .env.local before submitting.",
   "registerForm.successTitle": "Group created successfully!",
-  "registerForm.tokenLabel": "Token:",
-  "registerForm.copyToken": "Copy token",
-  "registerForm.copied": "✓ Token copied",
-  "registerForm.submit": "Create group and token",
+  "registerForm.submit": "Create group",
   "registerForm.submitting": "Creating group…",
   "registerForm.goAdminLogin": "Go to admin login",
   "registerForm.postSignupNote":
@@ -139,28 +145,14 @@ export const en = {
   "adminLoginPage.eyebrow": "Admin Login",
   "adminLoginPage.title": "Sign in to your panel",
   "adminLoginPage.subtitle": "Sign in with Google to access your admin dashboard.",
-  "adminLoginPage.needGroup": "Need a group and token?",
+  "adminLoginPage.needGroup": "Don't have a group yet?",
   "adminLoginPage.registerGroup": "Register a group",
 
   // Admin login form
-  "adminLoginForm.placeholderPassword": "Your admin password",
   "adminLoginForm.warnEnv": "Firebase keys are missing. Add them in .env.local before logging in.",
   "adminLoginForm.signIn": "Sign in",
   "adminLoginForm.signingIn": "Signing in…",
-  "adminLogin.errInvalidCreds":
-    "Invalid email or password. Use the admin account that created the group in this Firebase project.",
-  "adminLogin.errTooMany": "Too many failed login attempts. Wait a bit, then try again.",
-  "adminLogin.errNetwork":
-    "Network error while contacting Firebase Auth. Check your connection and try again.",
-  "adminLogin.errNotAllowed": "Email/password login is not enabled in Firebase Authentication.",
   "adminLogin.errFailed": "Failed to log in.",
-
-  // Token mismatch hint
-  "tokenHint.title": "Wrong or unknown token?",
-  "tokenHint.body":
-    "Create a new group to get your own token, or double-check the token your admin shared.",
-  "tokenHint.register": "Register a group",
-  "tokenHint.tryAgain": "Try another token",
 
   // Group nav
   "groupNav.home": "Home",
@@ -183,7 +175,7 @@ export const en = {
   "groupDash.statRemaining": "Remaining Taka",
   "groupDash.statMembers": "Members",
   "groupDash.selectMember": "Select Member",
-  "groupDash.searchMembers": "Search members…",
+  "groupDash.searchMembers": "Search name or email…",
   "groupDash.joined": "Joined",
   "groupDash.exportCSV": "Export CSV",
   "groupDash.financialOverview": "Financial Overview",
@@ -309,11 +301,6 @@ export const en = {
   "adminDash.subtitle":
     "Manage members, meals, costs, deposits, notices, and monthly reports from one place.",
   "adminDash.signOut": "Sign out",
-  "adminDash.tokenLabel": "Group Token",
-  "adminDash.tokenHelp": "Share this token with members so they can enter the group.",
-  "adminDash.copyToken": "Copy token",
-  "adminDash.tokenCopied": "✓ Token copied",
-  "adminDash.copyFailed": "Could not copy the token automatically. Select it and copy manually.",
 
   // Admin section pages (PageCard)
   "adminMembers.eyebrow": "Members",
@@ -357,7 +344,7 @@ export const en = {
   "memberMgr.remove": "Remove",
   "memberMgr.joinedLine": "Joined",
   "memberMgr.loadingList": "Loading members…",
-  "memberMgr.searchPlaceholder": "Search member or phone…",
+  "memberMgr.searchPlaceholder": "Search name or email…",
   "memberMgr.listSummary": "{shown} shown / {total} total",
   "memberMgr.noSearchMatch": "No members matched your search.",
 
@@ -470,12 +457,12 @@ export const en = {
   "errors.firebaseNotConfigured": "Firebase is not configured yet.",
   "errors.firebaseNotConfiguredLocal":
     "Firebase is not configured yet. Add your keys in .env.local first.",
-  "errors.enterValidToken": "Enter a valid group token.",
-  "errors.noGroupForToken": "No group found for that token.",
+  "errors.enterValidToken": "Please select a valid group.",
+  "errors.noGroupForToken": "No group found.",
   "errors.groupNoMembers":
     "This group has no members yet. Ask your admin to add members first.",
   "errors.findGroupFailed": "Failed to find that group.",
-  "errors.noGroupToken": "No group found for this token.",
+  "errors.noGroupToken": "No group found.",
   "errors.groupNotFound": "Group not found.",
   "errors.memberNotInGroup": "Member not found in this group.",
   "errors.loadMemberFailed": "Failed to load member.",
@@ -487,8 +474,6 @@ export const en = {
   "errors.loadSelectedMonth": "Failed to load selected month.",
   "errors.emailInUse": "Please provide another email, it's already taken",
   "errors.registerFailed": "Failed to register the group.",
-  "errors.copyTokenFailed":
-    "Could not copy the token automatically. Select the token and copy it manually.",
   "errors.adminProfileNotFound": "No admin profile was found for the current user.",
   "errors.adminProfileNotFoundShort": "No admin profile found.",
   "errors.adminProfileAccount": "No admin profile was found for this account.",
@@ -549,7 +534,7 @@ export const bn: Record<MessageKey, string> = {
   "home.badge": "হোস্টেল ও মেসের মিল ম্যানেজমেন্ট",
   "home.title": "একটি অ্যাপেই একাধিক গ্রুপ, পরিষ্কার মাসিক হিসাবসহ।",
   "home.description":
-    "অ্যাডমিন গ্রুপ রেজিস্টার করবে, সাথে সাথে টোকেন পাবে, তারপর সদস্য, মিল, খরচ, জমা, নোটিশ ও মাসিক চার্ট এক জায়গা থেকে পরিচালনা করবে। সদস্য টোকেন দিয়ে মিল যোগ করবে এবং অ্যাপটি মাসিক খরচ ও জমা হিসাব করবে — সবকিছু এক জায়গা থেকে।",
+    "অ্যাডমিন গ্রুপ রেজিস্টার করবে এবং সদস্য, মিল, খরচ, জমা, নোটিশ ও মাসিক চার্ট এক জায়গা থেকে পরিচালনা করবে। সদস্য সাইন ইন করে গ্রুপে যোগদানের অনুরোধ করবে এবং অ্যাপটি মাসিক খরচ ও জমা হিসাব করবে — সবকিছু এক জায়গা থেকে।",
   "home.ctaRegister": "গ্রুপ রেজিস্টার",
   "home.ctaEnter": "লগইন / গ্রুপে প্রবেশ",
   "home.ctaAdmin": "অ্যাডমিন লগইন",
@@ -565,10 +550,10 @@ export const bn: Record<MessageKey, string> = {
   "about.sectionSubtitle": "আপনার হোস্টেল বা মেসের মিল, টাকা ও সদস্য ব্যবস্থাপনার সবকিছু — ধাপে ধাপে বোঝানো হলো।",
 
   "about.step1Title": "১. গ্রুপ রেজিস্টার করুন",
-  "about.step1Body": "অ্যাডমিন গ্রুপের নাম দিয়ে গুগল দিয়ে সাইন ইন করে গ্রুপ তৈরি করবে। রেজিস্ট্রেশনের পর একটি ইউনিক গ্রুপ টোকেন তৈরি হবে। এই টোকেন হোস্টেল/মেসের সব সদস্যের সাথে শেয়ার করুন।",
+  "about.step1Body": "অ্যাডমিন গ্রুপের নাম দিয়ে গুগল দিয়ে সাইন ইন করে গ্রুপ তৈরি করবে। মেসের সদস্যদের গুগল দিয়ে সাইন ইন করে গ্রুপে যোগদানের অনুরোধ পাঠাতে বলুন।",
 
-  "about.step2Title": "২. সদস্য যোগ করুন",
-  "about.step2Body": "অ্যাডমিন প্যানেল → সদস্য-তে যান। প্রতিটি সদস্যের নাম, ফোন নম্বর ও যোগদানের তারিখ দিন। সদস্যরা মিল চার্ট ও টাকার হিসাবে দেখা যাবে।",
+  "about.step2Title": "২. সদস্যদের যোগদান",
+  "about.step2Body": "সদস্যরা গুগল দিয়ে সাইন ইন করে তালিকা থেকে গ্রুপটি বেছে নিয়ে যোগদানের অনুরোধ পাঠাবে। অ্যাডমিন 'সদস্য' প্যানেল থেকে অনুরোধগুলো অনুমোদন করবে। অনুমোদিত হলে সদস্যরা চার্টে যুক্ত হবে।",
 
   "about.step3Title": "৩. মাসিক চার্ট তৈরি করুন",
   "about.step3Body": "অ্যাডমিন প্যানেল → চার্ট তৈরি-তে যান। মাস ও বছর নির্বাচন করুন। এটি একটি নতুন মাসিক শীট তৈরি করবে যেখানে ওই মাসের মিল, খরচ, জমা ও নোটিশ ট্র্যাক হবে।",
@@ -591,7 +576,25 @@ export const bn: Record<MessageKey, string> = {
   "about.adminTitle": "অ্যাডমিনদের জন্য",
   "about.adminBody": "রেজিস্টার → সদস্য যোগ → মাসিক চার্ট তৈরি → মিল সম্পাদনা → টাকা সংগ্রহ → খরচ যোগ → নোটিশ দিন → শেষ হলে মাস লক।",
   "about.memberTitle": "সদস্যদের জন্য",
-  "about.memberBody": "গুগল দিয়ে সাইন ইন করুন → তালিকা থেকে আপনার গ্রুপটি বেছে নিন → চার্ট, টাকার ব্যালান্স ও নোটিশ দেখুন।",
+  "about.memberBody": "গুগল দিয়ে সাইন ইন করুন → যোগদানের অনুরোধ পাঠান → অ্যাডমিন অনুমোদন করবে → আপনার গ্রুপ ড্যাশবোর্ডে যান → চার্ট, টাকার ব্যালান্স ও নোটিশ দেখুন।",
+
+  "features.title": "প্রধান বৈশিষ্ট্যসমূহ",
+  "features.authTitle": "নিরাপদ লগইন",
+  "features.authDesc": "গুগল সাইন-ইন দিয়ে অ্যাডমিন এবং সদস্যদের নিরাপদ লগইন।",
+  "features.dashboardTitle": "স্মার্ট ড্যাশবোর্ড",
+  "features.dashboardDesc": "অ্যাডমিন ও সদস্যদের জন্য আলাদা এবং সাজানো ড্যাশবোর্ড সুবিধা।",
+  "features.mealsTitle": "ডায়নামিক মিল ট্র্যাকিং",
+  "features.mealsDesc": "প্রতিদিন সদস্যদের মিল (০.৫, ১, ১.৫, ২ ইত্যাদি) অ্যাডমিন বা সদস্য নিজেই যোগ করতে পারে।",
+  "features.financeTitle": "অটোমেটিক হিসাব নিকাশ",
+  "features.financeDesc": "বাজার খরচ এবং জমার হিসাব দিলে অ্যাপ নিজে থেকেই মিল রেট ও ব্যালান্স বের করবে।",
+  "features.exportTitle": "CSV রিপোর্ট",
+  "features.exportDesc": "অ্যাডমিন যেকোনো মাসের সম্পূর্ণ আর্থিক রিপোর্ট CSV আকারে ডাউনলোড করতে পারবেন।",
+  "features.noticesTitle": "গ্রুপ নোটিশ",
+  "features.noticesDesc": "অ্যাডমিনের ঘোষণা এবং অটো সিস্টেম নোটিশের মাধ্যমে সবাইকে আপডেট রাখুন।",
+  "features.bilingualTitle": "দ্বিভাষিক ইন্টারফেস",
+  "features.bilingualDesc": "যেকোনো সময় অ্যাপটিতে ইংরেজি থেকে বাংলা এবং বাংলা থেকে ইংরেজিতে পরিবর্তন করুন।",
+  "features.fastTitle": "অত্যন্ত দ্রুত",
+  "features.fastDesc": "আধুনিক প্রযুক্তির সাহায্যে মুহূর্তের মধ্যেই ডাটা লোড ও আপডেট হয়।",
 
   "common.loading": "লোড হচ্ছে…",
   "common.back": "← পিছনে",
@@ -609,8 +612,6 @@ export const bn: Record<MessageKey, string> = {
   "enterPage.description":
     "আপনার গুগল অ্যাকাউন্ট দিয়ে সাইন ইন করুন। আমরা আপনার ড্যাশবোর্ডটি (অ্যাডমিন বা সদস্য) খুঁজে বের করব, অথবা আপনি তালিকা থেকে বেছে নিয়ে নতুন গ্রুপে যোগদানের অনুরোধ করতে পারবেন।",
 
-  "enterForm.labelToken": "গ্রুপ টোকেন",
-  "enterForm.placeholderToken": "STAR-HOST-7XK29Q",
   "enterForm.warnEnv": "Firebase কী মিসিং। প্রথমে .env.local ফাইলে যোগ করুন।",
   "enterForm.submit": "চালিয়ে যান",
   "enterForm.submitting": "সাইন ইন হচ্ছে…",
@@ -619,17 +620,15 @@ export const bn: Record<MessageKey, string> = {
   "enterForm.existingMember": "ইতিমধ্যে সদস্য?",
   "enterForm.newToGroup": "গ্রুপে নতুন?",
   "enterForm.requestingToJoin": "যোগদানের অনুরোধ পাঠাচ্ছেন",
-  "enterForm.joinHelp": "আপনার অ্যাডমিনের শেয়ার করা গ্রুপ টোকেনটি দিন। অনুরোধ পাঠানোর জন্য আপনাকে গুগল দিয়ে সাইন ইন করতে হবে।",
+  "enterForm.joinHelp": "তালিকা থেকে আপনার গ্রুপটি বেছে নিয়ে যোগদানের অনুরোধ পাঠান। অনুরোধ পাঠানোর জন্য আপনাকে গুগল দিয়ে সাইন ইন করতে হবে।",
   "enterForm.fullName": "পুরো নাম",
   "enterForm.emailLabel": "ইমেইল (যাচাইকৃত)",
-  "enterForm.groupToken": "গ্রুপ টোকেন",
   "enterForm.submitJoinRequest": "অনুরোধ পাঠান",
   "enterForm.submittingRequest": "পাঠানো হচ্ছে…",
   "enterForm.joinRequestSuccess": "আপনার অনুরোধ পাঠানো হয়েছে! অ্যাডমিনের অনুমোদনের জন্য অপেক্ষা করুন।",
-  "enterForm.joinRequestError": "অনুরোধ পাঠানো সম্ভব হয়নি। টোকেনটি যাচাই করে আবার চেষ্টা করুন।",
+  "enterForm.joinRequestError": "অনুরোধ পাঠানো সম্ভব হয়নি। আবার চেষ্টা করুন।",
   "enterForm.signInHint": "ইতিমধ্যে সদস্য? গুগল দিয়ে সাইন ইন করুন এবং আমরা আপনাকে সরাসরি আপনার গ্রুপ ড্যাশবোর্ডে নিয়ে যাব।",
   "enterForm.joinHint": "নতুন? যোগদানের অনুরোধ করতে গুগল দিয়ে সাইন ইন করুন, তারপর তালিকা থেকে আপনার গ্রুপটি বেছে নিন।",
-  "enterForm.tokenHint": "আপনার গ্রুপ অ্যাডমিনের কাছে এই টোকেনটি চান।",
   "enterForm.selectGroup": "গ্রুপ নির্বাচন করুন",
   "enterForm.loadingGroups": "গ্রুপ লোড হচ্ছে...",
   "enterForm.noGroups": "কোনো গ্রুপ পাওয়া যায়নি।",
@@ -645,18 +644,9 @@ export const bn: Record<MessageKey, string> = {
 
   "registerForm.groupName": "গ্রুপের নাম",
   "registerForm.placeholderGroup": "স্টার হোস্টেল",
-  "registerForm.email": "ইমেইল",
-  "registerForm.password": "পাসওয়ার্ড",
-  "registerForm.placeholderPassword": "কমপক্ষে ৬ অক্ষর",
-  "registerForm.tokenPreview": "টোকেন প্রিভিউ",
-  "registerForm.tokenPreviewHelp":
-    "সফল রেজিস্ট্রেশনের পর চূড়ান্ত টোকেন তৈরি হবে; সেটি সব সদস্যের সাথে শেয়ার করুন।",
   "registerForm.warnEnv": "Firebase কী মিসিং। সাবমিট করার আগে .env.local এ যোগ করুন।",
   "registerForm.successTitle": "গ্রুপ সফলভাবে তৈরি!",
-  "registerForm.tokenLabel": "টোকেন:",
-  "registerForm.copyToken": "টোকেন কপি",
-  "registerForm.copied": "✓ কপি হয়েছে",
-  "registerForm.submit": "গ্রুপ ও টোকেন তৈরি করুন",
+  "registerForm.submit": "গ্রুপ তৈরি করুন",
   "registerForm.submitting": "তৈরি হচ্ছে…",
   "registerForm.goAdminLogin": "অ্যাডমিন লগইনে যান",
   "registerForm.postSignupNote":
@@ -668,26 +658,14 @@ export const bn: Record<MessageKey, string> = {
   "adminLoginPage.eyebrow": "অ্যাডমিন লগইন",
   "adminLoginPage.title": "প্যানেলে সাইন ইন করুন",
   "adminLoginPage.subtitle": "অ্যাডমিন ড্যাশবোর্ডে প্রবেশ করতে গুগল দিয়ে সাইন ইন করুন।",
-  "adminLoginPage.needGroup": "গ্রুপ ও টোকেন লাগবে?",
+  "adminLoginPage.needGroup": "এখনো কোনো গ্রুপ নেই?",
   "adminLoginPage.registerGroup": "গ্রুপ রেজিস্টার করুন",
 
-  "adminLoginForm.placeholderPassword": "আপনার অ্যাডমিন পাসওয়ার্ড",
   "adminLoginForm.warnEnv": "Firebase কী মিসিং। লগইনের আগে .env.local এ যোগ করুন।",
   "adminLoginForm.signIn": "সাইন ইন",
   "adminLoginForm.signingIn": "সাইন ইন হচ্ছে…",
-  "adminLogin.errInvalidCreds":
-    "ইমেইল বা পাসওয়ার্ড ভুল। এই Firebase প্রোজেক্টে গ্রুপ বানানো অ্যাডমিন অ্যাকাউন্ট ব্যবহার করুন।",
-  "adminLogin.errTooMany": "অনেকবার ভুল চেষ্টা। কিছুক্ষণ পর আবার চেষ্টা করুন।",
-  "adminLogin.errNetwork":
-    "Firebase Auth এ নেটওয়ার্ক সমস্যা। সংযোগ চেক করে আবার চেষ্টা করুন।",
-  "adminLogin.errNotAllowed": "Firebase Authentication এ ইমেইল/পাসওয়ার্ড লগইন চালু নেই।",
   "adminLogin.errFailed": "লগইন ব্যর্থ।",
 
-  "tokenHint.title": "টোকেন ভুল বা অজানা?",
-  "tokenHint.body":
-    "নিজের টোকেন পেতে নতুন গ্রুপ খুলুন, অথবা অ্যাডমিনের দেওয়া টোকেন আবার দেখুন।",
-  "tokenHint.register": "গ্রুপ রেজিস্টার",
-  "tokenHint.tryAgain": "অন্য টোকেন দিয়ে চেষ্টা",
 
   "groupNav.home": "হোম",
   "groupNav.chart": "চার্ট",
@@ -708,7 +686,7 @@ export const bn: Record<MessageKey, string> = {
   "groupDash.statRemaining": "বাকি টাকা",
   "groupDash.statMembers": "সদস্য",
   "groupDash.selectMember": "সদস্য বাছুন",
-  "groupDash.searchMembers": "সদস্য খুঁজুন…",
+  "groupDash.searchMembers": "নাম বা ইমেইল দিয়ে খুঁজুন…",
   "groupDash.joined": "যোগদান",
   "groupDash.exportCSV": "সিএসভি ডাউনলোড",
   "groupDash.financialOverview": "আর্থিক ওভারভিউ",
@@ -825,11 +803,6 @@ export const bn: Record<MessageKey, string> = {
   "adminDash.subtitle":
     "সদস্য, মিল, খরচ, জমা, নোটিশ ও মাসিক রিপোর্ট এক জায়গা থেকে।",
   "adminDash.signOut": "সাইন আউট",
-  "adminDash.tokenLabel": "গ্রুপ টোকেন",
-  "adminDash.tokenHelp": "এই টোকেন সদস্যদের সাথে শেয়ার করুন যাতে তারা গ্রুপে ঢুকতে পারে।",
-  "adminDash.copyToken": "টোকেন কপি",
-  "adminDash.tokenCopied": "✓ কপি হয়েছে",
-  "adminDash.copyFailed": "স্বয়ংক্রিয় কপি ব্যর্থ। টোকেন বেছে নিয়ে ম্যানুয়ালি কপি করুন।",
 
   "adminMembers.eyebrow": "সদস্য",
   "adminMembers.title": "সদস্য ব্যবস্থাপনা",
@@ -871,7 +844,7 @@ export const bn: Record<MessageKey, string> = {
   "memberMgr.remove": "সরান",
   "memberMgr.joinedLine": "যোগদান",
   "memberMgr.loadingList": "সদস্য লোড হচ্ছে…",
-  "memberMgr.searchPlaceholder": "নাম বা ফোনে খুঁজুন…",
+  "memberMgr.searchPlaceholder": "নাম বা ইমেইল দিয়ে খুঁজুন…",
   "memberMgr.listSummary": "{shown}টি দেখাচ্ছে / মোট {total}",
   "memberMgr.noSearchMatch": "খুঁজে কোনো সদস্য মেলেনি।",
 
@@ -981,12 +954,12 @@ export const bn: Record<MessageKey, string> = {
   "errors.firebaseNotConfigured": "Firebase এখনো কনফিগার হয়নি।",
   "errors.firebaseNotConfiguredLocal":
     "Firebase এখনো কনফিগার হয়নি। আগে .env.local এ কী যোগ করুন।",
-  "errors.enterValidToken": "বৈধ গ্রুপ টোকেন দিন।",
-  "errors.noGroupForToken": "এই টোকেনে কোনো গ্রুপ পাওয়া যায়নি।",
+  "errors.enterValidToken": "দয়া করে একটি সঠিক গ্রুপ নির্বাচন করুন।",
+  "errors.noGroupForToken": "কোনো গ্রুপ পাওয়া যায়নি।",
   "errors.groupNoMembers":
     "এই গ্রুপে এখনো সদস্য নেই। অ্যাডমিনকে আগে সদস্য যোগ করতে বলুন।",
   "errors.findGroupFailed": "গ্রুপ খুঁজতে ব্যর্থ।",
-  "errors.noGroupToken": "এই টোকেনে গ্রুপ পাওয়া যায়নি।",
+  "errors.noGroupToken": "কোনো গ্রুপ পাওয়া যায়নি।",
   "errors.groupNotFound": "গ্রুপ পাওয়া যায়নি।",
   "errors.memberNotInGroup": "এই গ্রুপে সদস্য পাওয়া যায়নি।",
   "errors.loadMemberFailed": "সদস্য লোড ব্যর্থ।",
@@ -998,8 +971,6 @@ export const bn: Record<MessageKey, string> = {
   "errors.loadSelectedMonth": "বাছাই করা মাস লোড ব্যর্থ।",
   "errors.emailInUse": "এই ইমেইলটি আগে থেকেই ব্যবহৃত হচ্ছে।",
   "errors.registerFailed": "গ্রুপ রেজিস্টার ব্যর্থ।",
-  "errors.copyTokenFailed":
-    "স্বয়ংক্রিয় কপি ব্যর্থ। টোকেন বেছে নিয়ে ম্যানুয়ালি কপি করুন।",
   "errors.adminProfileNotFound": "এই ইউজারের জন্য অ্যাডমিন প্রোফাইল নেই।",
   "errors.adminProfileNotFoundShort": "অ্যাডমিন প্রোফাইল নেই।",
   "errors.adminProfileAccount": "এই অ্যাকাউন্টের জন্য অ্যাডমিন প্রোফাইল নেই।",

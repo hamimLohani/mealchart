@@ -14,13 +14,11 @@ import { daysInMonth } from "@/lib/utils/date";
 export function buildGroupRecord(input: {
   id: string;
   name: string;
-  token: string;
   adminId: string;
 }): Group {
   return {
     id: input.id,
     name: input.name,
-    token: input.token,
     adminId: input.adminId,
     createdAt: new Date().toISOString(),
     active: true,

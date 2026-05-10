@@ -1,64 +1,34 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
-import { GroupTokenMismatchHint } from "@/components/forms/group-token-mismatch-hint";
-import { getGroupById, listMembers } from "@/lib/firebase/repositories";
-import type { Group, Member } from "@/types/domain";
+
+import { Skeleton } from "@/components/ui/skeleton";
+import { useGroup, useMembers } from "@/lib/hooks/use-data";
 
 export function GroupMemberDashboard({ groupId }: { groupId: string }) {
   const router = useRouter();
-  const { t, tx, language } = useT();
-  const [group, setGroup] = useState<Group | null>(null);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { t, language } = useT();
 
-  useEffect(() => {
-    let active = true;
+  const { data: group, error: groupError, isLoading: groupLoading } = useGroup(isFirebaseConfigured ? groupId : undefined);
+  const { data: members = [], isLoading: membersLoading } = useMembers(group?.id);
 
-    async function load() {
-      if (!isFirebaseConfigured) {
-        setError(t("errors.firebaseNotConfigured"));
-        setIsLoading(false);
-        return;
-      }
-      try {
-        const currentGroup = await getGroupById(groupId);
-        if (!currentGroup) throw new Error("No group found for this groupId.");
-        const currentMembers = await listMembers(currentGroup.id);
-        if (!active) return;
-        setGroup(currentGroup);
-        setMembers(currentMembers);
-      } catch (err) {
-        if (!active) return;
-        setError(tx(err instanceof Error ? err.message : t("errors.loadGroupFailed")));
-      } finally {
-        if (active) setIsLoading(false);
-      }
-    }
-
-    void load();
-    return () => {
-      active = false;
-    };
-  }, [t, tx, groupId]);
+  const isLoading = groupLoading || membersLoading;
 
   if (isLoading) {
     return (
-      <div className="group-page-grid">
-        <p className="py-16 text-center text-sm text-[color:var(--soft-foreground)]">{t("groupDash.loading")}</p>
+      <div className="group-page-grid py-16">
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-48 w-full" />
       </div>
     );
   }
-
-  if (error) {
+  if (groupError) {
+    const msg = groupError instanceof Error ? groupError.message : t("errors.loadGroupFailed");
     return (
       <div className="mt-8">
-        <div className="alert-error">{error}</div>
-        <GroupTokenMismatchHint message={error} />
+        <div className="alert-error">{msg}</div>
       </div>
     );
   }

@@ -3,6 +3,17 @@
 import Link from "next/link";
 import { useT } from "@/i18n/use-t";
 
+const featureKeys = [
+  { title: "features.authTitle", body: "features.authDesc", icon: "🔐" },
+  { title: "features.dashboardTitle", body: "features.dashboardDesc", icon: "📱" },
+  { title: "features.mealsTitle", body: "features.mealsDesc", icon: "🍛" },
+  { title: "features.financeTitle", body: "features.financeDesc", icon: "📈" },
+  { title: "features.exportTitle", body: "features.exportDesc", icon: "📥" },
+  { title: "features.noticesTitle", body: "features.noticesDesc", icon: "🔔" },
+  { title: "features.bilingualTitle", body: "features.bilingualDesc", icon: "🌐" },
+  { title: "features.fastTitle", body: "features.fastDesc", icon: "⚡" },
+] as const;
+
 const stepKeys = [
   { title: "about.step1Title", body: "about.step1Body", icon: "📋" },
   { title: "about.step2Title", body: "about.step2Body", icon: "👥" },
@@ -79,8 +90,36 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── Features ──────────────────────────────── */}
+      <section className="mt-20 scroll-mt-8">
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            {t("features.title")}
+          </h2>
+        </div>
+
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {featureKeys.map((feature) => (
+            <div
+              key={feature.title}
+              className="group relative overflow-hidden rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)] transition-all duration-300 hover:border-[color:var(--accent)] hover:shadow-[0_8px_30px_rgba(44,179,145,0.1)]"
+            >
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-[var(--radius-sm)] bg-[color:var(--accent-dim)] text-lg transition-transform duration-300 group-hover:scale-110">
+                {feature.icon}
+              </div>
+              <h3 className="text-sm font-semibold text-[color:var(--foreground)]">
+                {t(feature.title)}
+              </h3>
+              <p className="mt-2 text-xs leading-5 text-[color:var(--soft-foreground)]">
+                {t(feature.body)}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* ── About / How It Works ──────────────────────────────── */}
-      <section id="about" className="mt-16 scroll-mt-8 sm:mt-20">
+      <section id="about" className="mt-20 scroll-mt-8 border-t border-[color:var(--border)] pt-16">
         <div className="text-center">
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
             {t("about.sectionTitle")}

@@ -1,15 +1,14 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
-import { doc, serverTimestamp, setDoc, writeBatch } from "firebase/firestore";
+import { doc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase/client";
 import { buildAdminProfile, buildGroupRecord } from "@/lib/firebase/factories";
 import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { groupsCollection, adminsCollection } from "@/lib/firebase/paths";
-import { generateGroupToken, slugifyGroupName } from "@/lib/utils/group-token";
 import { getAdminProfile } from "@/lib/firebase/repositories";
 
 type FormState = { groupName: string };
@@ -20,19 +19,14 @@ export function RegisterGroupForm() {
   const [form, setForm] = useState<FormState>(initialState);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [createdToken, setCreatedToken] = useState<string | null>(null);
-  const [hasCopiedToken, setHasCopiedToken] = useState(false);
+  const [isCreated, setIsCreated] = useState(false);
 
-  const previewToken = useMemo(() => {
-    if (!form.groupName.trim()) return "MEAT-XXXXXX";
-    return `${slugifyGroupName(form.groupName)}-XXXXXX`;
-  }, [form.groupName]);
+
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    setCreatedToken(null);
-    setHasCopiedToken(false);
+    setIsCreated(false);
 
     if (!auth || !db || !isFirebaseConfigured) {
       setError(t("errors.firebaseNotConfiguredLocal"));
@@ -56,13 +50,12 @@ export function RegisterGroupForm() {
 
       const adminId = user.uid;
       const groupId = crypto.randomUUID();
-      const groupToken = generateGroupToken(form.groupName);
       const nameTrim = form.groupName.trim();
 
       const batch = writeBatch(db);
 
       batch.set(doc(db, groupsCollection, groupId), {
-        ...buildGroupRecord({ id: groupId, name: nameTrim, token: groupToken, adminId }),
+        ...buildGroupRecord({ id: groupId, name: nameTrim, adminId }),
         createdAt: serverTimestamp(),
       });
 
@@ -72,8 +65,7 @@ export function RegisterGroupForm() {
       });
 
       await batch.commit();
-
-      setCreatedToken(groupToken);
+      setIsCreated(true);
       setForm(initialState);
     } catch (err) {
       const code = typeof err === "object" && err !== null && "code" in err ? String((err as { code?: string }).code) : "";
@@ -87,16 +79,7 @@ export function RegisterGroupForm() {
     }
   }
 
-  async function handleCopyToken() {
-    if (!createdToken) return;
-    try {
-      await navigator.clipboard.writeText(createdToken);
-      setHasCopiedToken(true);
-      setError(null);
-    } catch {
-      setError(t("errors.copyTokenFailed"));
-    }
-  }
+
 
   return (
     <form className="mt-7 grid gap-5" onSubmit={handleSubmit}>
@@ -113,17 +96,7 @@ export function RegisterGroupForm() {
         </label>
       </div>
 
-      <div className="rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] p-4">
-        <p className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-[color:var(--muted)]">
-          {t("registerForm.tokenPreview")}
-        </p>
-        <p className="mt-2 font-mono text-base font-semibold text-[color:var(--foreground)]">
-          {previewToken}
-        </p>
-        <p className="mt-1.5 text-xs text-[color:var(--soft-foreground)]">
-          {t("registerForm.tokenPreviewHelp")}
-        </p>
-      </div>
+
 
       {!isFirebaseConfigured && (
         <p className="alert-warn">
@@ -133,25 +106,15 @@ export function RegisterGroupForm() {
 
       {error && <p className="alert-error">{error}</p>}
 
-      {createdToken && (
+      {isCreated && (
         <div className="alert-success">
           <p className="font-semibold">{t("registerForm.successTitle")}</p>
-          <p className="mt-1.5">
-            {t("registerForm.tokenLabel")} <span className="font-mono font-bold">{createdToken}</span>
-          </p>
         </div>
       )}
 
-      {createdToken ? (
+      {isCreated ? (
         <div className="grid gap-3">
-          <button
-            className="button-primary w-full"
-            onClick={() => void handleCopyToken()}
-            type="button"
-          >
-            {hasCopiedToken ? t("registerForm.copied") : t("registerForm.copyToken")}
-          </button>
-          <Link href="/admin" className="button-secondary w-full text-center">
+          <Link href="/admin" className="button-primary w-full text-center">
             {t("registerForm.openDashboard")}
           </Link>
           <p className="text-center text-xs text-[color:var(--soft-foreground)]">

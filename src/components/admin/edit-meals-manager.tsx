@@ -137,7 +137,6 @@ export function EditMealsManager() {
     savingRef.current[key] = setTimeout(() => {
       void (async () => {
         try {
-          const member = members.find(m => m.id === memberId);
           await saveMealEntry({
             groupId: adminProfile.groupId,
             memberId,

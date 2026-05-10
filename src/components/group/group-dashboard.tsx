@@ -1,113 +1,34 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
-import {
-  getGroupById,
-  listMembers,
-  listCharts,
-  getMealsForMonth,
-  listCostsForChart,
-  listDepositsForChart,
-} from "@/lib/firebase/repositories";
-import type { Chart, CostEntry, DepositEntry, Group, MealEntry, Member } from "@/types/domain";
+import type { Chart, Member } from "@/types/domain";
 import { useT } from "@/i18n/use-t";
-import { GroupTokenMismatchHint } from "@/components/forms/group-token-mismatch-hint";
+
 import { readStoredChartFromSession } from "@/lib/utils/group-chart-session";
 import { formatMeal, getMonthTotals, getMemberTotals } from "@/lib/utils/meal-money";
 import { motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { useGroup, useMembers, useCharts, useMealsForMonth, useCosts, useDeposits } from "@/lib/hooks/use-data";
 
-export function GroupDashboard({
-  groupId,
-}: {
-  groupId: string;
-}) {
+export function GroupDashboard({ groupId }: { groupId: string }) {
   const router = useRouter();
-  const { t, tx } = useT();
-  const [group, setGroup] = useState<Group | null>(null);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [charts, setCharts] = useState<Chart[]>([]);
-  const [monthMeals, setMonthMeals] = useState<MealEntry[]>([]);
-  const [monthCosts, setMonthCosts] = useState<CostEntry[]>([]);
-  const [monthDeposits, setMonthDeposits] = useState<DepositEntry[]>([]);
-  const [isMonthLoading, setIsMonthLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { t } = useT();
 
-  // Session state (restored synchronously from sessionStorage on client mount)
   const [activeChart, setActiveChart] = useState<Chart | null>(() => readStoredChartFromSession());
   const [memberSearch, setMemberSearch] = useState("");
 
-  // Load group, members, charts
-  useEffect(() => {
-    if (!groupId) return;
-    let active = true;
+  // SWR — shared cache, automatic dedup & background refresh
+  const { data: group, error: groupError, isLoading: groupLoading } = useGroup(isFirebaseConfigured ? groupId : undefined);
+  const { data: members = [] } = useMembers(group?.id);
+  const { data: charts = [] } = useCharts(group?.id);
+  const { data: monthMeals = [], isLoading: mealsLoading } = useMealsForMonth(group?.id, activeChart?.monthKey);
+  const { data: monthCosts = [], isLoading: costsLoading } = useCosts(group?.id, activeChart?.id);
+  const { data: monthDeposits = [], isLoading: depositsLoading } = useDeposits(group?.id, activeChart?.id);
 
-    async function load() {
-      if (!isFirebaseConfigured) {
-        setError(t("errors.firebaseNotConfigured"));
-        setIsLoading(false);
-        return;
-      }
-      try {
-        const currentGroup = await getGroupById(groupId);
-        if (!currentGroup) throw new Error("No group found for this groupId.");
-        const [currentMembers, currentCharts] = await Promise.all([
-          listMembers(currentGroup.id),
-          listCharts(currentGroup.id),
-        ]);
-        if (!active) return;
-        setGroup(currentGroup);
-        setMembers(currentMembers);
-        setCharts(currentCharts);
-      } catch (err) {
-        if (!active) return;
-        setError(tx(err instanceof Error ? err.message : t("errors.loadGroupFailed")));
-      } finally {
-        if (active) setIsLoading(false);
-      }
-    }
-
-    void load();
-    return () => { active = false; };
-  }, [groupId, t, tx]);
-
-  // Load chart scoped month data
-  useEffect(() => {
-    if (!group || !activeChart) return;
-    let active = true;
-
-    const loadMonthData = async () => {
-      setIsMonthLoading(true);
-      setMonthMeals([]);
-      setMonthCosts([]);
-      setMonthDeposits([]);
-
-      try {
-        const [meals, costs, deposits] = await Promise.all([
-          getMealsForMonth(group.id, activeChart.monthKey),
-          listCostsForChart(group.id, activeChart.id),
-          listDepositsForChart(group.id, activeChart.id),
-        ]);
-        if (!active) return;
-        setMonthMeals(meals);
-        setMonthCosts(costs);
-        setMonthDeposits(deposits);
-      } catch (err) {
-        if (!active) return;
-        setError(tx(err instanceof Error ? err.message : t("errors.loadSelectedMonth")));
-      } finally {
-        if (active) setIsMonthLoading(false);
-      }
-    };
-
-    void loadMonthData();
-
-    return () => { active = false; };
-  }, [group, activeChart, t, tx]);
+  const isMonthLoading = !!(activeChart && (mealsLoading || costsLoading || depositsLoading));
 
   function handleMemberSelect(member: Member) {
     router.push(`/group/${groupId}/member/${member.id}`);
@@ -155,7 +76,11 @@ export function GroupDashboard({
     document.body.removeChild(link);
   }
 
-  if (isLoading) {
+  if (!isFirebaseConfigured) {
+    return <p className="py-16 text-center text-sm text-[color:var(--soft-foreground)]">{t("errors.firebaseNotConfigured")}</p>;
+  }
+
+  if (groupLoading) {
     return (
       <div className="group-page-grid py-16">
         <Skeleton className="h-24 w-full" />
@@ -163,11 +88,11 @@ export function GroupDashboard({
       </div>
     );
   }
-  if (error) {
+  if (groupError) {
+    const msg = groupError instanceof Error ? groupError.message : t("errors.loadGroupFailed");
     return (
       <div className="mt-8">
-        <div className="alert-error">{error}</div>
-        <GroupTokenMismatchHint message={error} />
+        <div className="alert-error">{msg}</div>
       </div>
     );
   }
@@ -306,7 +231,9 @@ export function GroupDashboard({
           {members
             .filter((member) => {
               const query = memberSearch.trim().toLowerCase();
-              return !query || member.fullName.toLowerCase().includes(query);
+              return !query || 
+                member.fullName.toLowerCase().includes(query) ||
+                member.email.toLowerCase().includes(query);
             })
             .map((member) => (
               <button

@@ -1,95 +1,42 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
-import {
-  getGroupById,
-  getMealsForMonth,
-  listCostsForChart,
-  listDepositsForChart,
-  listMembers,
-} from "@/lib/firebase/repositories";
 import { useGroupSession } from "@/lib/hooks/use-group-session";
-import type { CostEntry, DepositEntry, Group, MealEntry, Member } from "@/types/domain";
-import { GroupTokenMismatchHint } from "@/components/forms/group-token-mismatch-hint";
+
 import { memberDisplayName, memberIdsForChartRows } from "@/lib/utils/chart-members";
 import { daysInMonth } from "@/lib/utils/date";
 import { formatMeal, getMonthTotals } from "@/lib/utils/meal-money";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useGroup, useMembers, useMealsForMonth, useCosts, useDeposits } from "@/lib/hooks/use-data";
 
 export function GroupChartView({ groupId }: { groupId: string }) {
   const router = useRouter();
-  const { t, tx } = useT();
+  const { t } = useT();
   const { chart } = useGroupSession();
-  const [group, setGroup] = useState<Group | null>(null);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [meals, setMeals] = useState<MealEntry[]>([]);
-  const [costs, setCosts] = useState<CostEntry[]>([]);
-  const [deposits, setDeposits] = useState<DepositEntry[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    let active = true;
-    async function load() {
-      if (!isFirebaseConfigured) {
-        setError(t("errors.firebaseNotConfiguredShort"));
-        setIsLoading(false);
-        return;
-      }
-      try {
-        const g = await getGroupById(groupId);
-        if (!g) throw new Error("Group not found.");
-        if (!active) return;
-        setGroup(g);
-      } catch (e) {
-        if (!active) return;
-        setError(tx(e instanceof Error ? e.message : t("errors.genericLoad")));
-      } finally {
-        if (active) setIsLoading(false);
-      }
-    }
-    void load();
-    return () => {
-      active = false;
-    };
-  }, [t, tx, groupId]);
+  const { data: group, error: groupError, isLoading: groupLoading } = useGroup(isFirebaseConfigured ? groupId : undefined);
+  const { data: members = [] } = useMembers(group?.id);
+  const { data: meals = [], isLoading: mealsLoading } = useMealsForMonth(group?.id, chart?.monthKey);
+  const { data: costs = [] } = useCosts(group?.id, chart?.id);
+  const { data: deposits = [] } = useDeposits(group?.id, chart?.id);
 
-  useEffect(() => {
-    if (!group || !chart) return;
-    let active = true;
+  const dataLoading = !!(chart && mealsLoading);
 
-    Promise.all([
-      listMembers(group.id),
-      getMealsForMonth(group.id, chart.monthKey),
-      listCostsForChart(group.id, chart.id),
-      listDepositsForChart(group.id, chart.id),
-    ])
-      .then(([memberList, mealList, costList, depositList]) => {
-        if (!active) return;
-        setMembers(memberList);
-        setMeals(mealList);
-        setCosts(costList);
-        setDeposits(depositList);
-      })
-      .catch((e) => {
-        if (active) setError(tx(e instanceof Error ? e.message : t("errors.loadChartFailed")));
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [group, chart, t, tx]);
-
-  if (isLoading) {
-    return <p className="py-16 text-center text-sm text-[color:var(--soft-foreground)]">{t("groupChart.loading")}</p>;
+  if (groupLoading) {
+    return (
+      <div className="group-page-grid py-16">
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-48 w-full" />
+      </div>
+    );
   }
-  if (error) {
+  if (groupError) {
+    const msg = groupError instanceof Error ? groupError.message : t("errors.genericLoad");
     return (
       <div className="mt-8">
-        <div className="alert-error">{error}</div>
-        <GroupTokenMismatchHint message={error} />
+        <div className="alert-error">{msg}</div>
       </div>
     );
   }
@@ -108,6 +55,16 @@ export function GroupChartView({ groupId }: { groupId: string }) {
             ← {t("groupNav.home")}
           </button>
         </div>
+      </div>
+    );
+  }
+
+  if (dataLoading) {
+    return (
+      <div className="group-page-grid py-8">
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-64 w-full" />
       </div>
     );
   }

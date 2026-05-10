@@ -47,7 +47,6 @@ export default function AdminPage() {
   const { t, tx } = useT();
   const [group, setGroup] = useState<Group | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [hasCopiedToken, setHasCopiedToken] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -79,28 +78,9 @@ export default function AdminPage() {
     };
   }, [admin, t, tx]);
 
-  const groupInitials = group?.name
-    ? group.name
-        .split(/\s+/)
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((p) => p[0]?.toUpperCase())
-        .join("")
-    : "MC";
-
   async function handleLogout() {
     if (auth) await signOut(auth);
     router.push("/admin/login");
-  }
-
-  async function handleCopyToken() {
-    if (!group?.token) return;
-    try {
-      await navigator.clipboard.writeText(group.token);
-      setHasCopiedToken(true);
-    } catch {
-      setLoadError(t("adminDash.copyFailed"));
-    }
   }
 
   if (!isLoaded) {
@@ -140,27 +120,6 @@ export default function AdminPage() {
         </div>
         <button onClick={handleLogout} type="button" className="button-secondary shrink-0">
           {t("adminDash.signOut")}
-        </button>
-      </section>
-
-      <section className="admin-token-panel">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="admin-token-mark">{groupInitials}</div>
-          <div className="min-w-0">
-            <p className="admin-section-label">{t("adminDash.tokenLabel")}</p>
-            <p className="mt-1 truncate font-mono text-lg font-semibold text-[color:var(--foreground)]">
-              {group?.token ?? t("common.loading")}
-            </p>
-            <p className="mt-0.5 text-xs text-[color:var(--soft-foreground)]">{t("adminDash.tokenHelp")}</p>
-          </div>
-        </div>
-        <button
-          className="button-primary w-full sm:w-auto"
-          disabled={!group?.token}
-          onClick={() => void handleCopyToken()}
-          type="button"
-        >
-          {hasCopiedToken ? t("adminDash.tokenCopied") : t("adminDash.copyToken")}
         </button>
       </section>
 

@@ -83,26 +83,6 @@ function serializeDate(value: unknown) {
 
 // ── Groups ────────────────────────────────────────────────────────────
 
-export async function findGroupByToken(token: string) {
-  const database = ensureDb();
-  const snapshot = await getDocs(
-    query(
-      collection(database, groupsCollection),
-      where("token", "==", token),
-      limit(1),
-    ),
-  );
-
-  const current = snapshot.docs[0];
-  if (!current) return null;
-
-  const data = current.data();
-  return {
-    ...normalizeDoc<Group>(current.id, data),
-    createdAt: serializeDate(data.createdAt),
-  };
-}
-
 export async function getGroupById(groupId: string) {
   const database = ensureDb();
   const snapshot = await getDoc(doc(database, groupsCollection, groupId));

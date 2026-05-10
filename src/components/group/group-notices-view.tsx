@@ -1,29 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Timestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
+import { Timestamp } from "firebase/firestore";
 import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
-import { GroupTokenMismatchHint } from "@/components/forms/group-token-mismatch-hint";
-import { getGroupById, listNoticesForChart } from "@/lib/firebase/repositories";
+
 import { useGroupSession } from "@/lib/hooks/use-group-session";
-import type { Group, Notice } from "@/types/domain";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useGroup, useNotices } from "@/lib/hooks/use-data";
 
 function formatNoticeCreatedAt(raw: unknown, locale: string): string {
   if (raw instanceof Timestamp) {
-    return raw.toDate().toLocaleString(locale === "bn" ? "bn-BD" : undefined, {
-      dateStyle: "medium",
-      timeStyle: "short",
-    });
+    return raw.toDate().toLocaleString(locale === "bn" ? "bn-BD" : undefined, { dateStyle: "medium", timeStyle: "short" });
   }
   if (typeof raw === "string" && raw.length > 0) {
     const d = new Date(raw);
     if (!Number.isNaN(d.getTime())) {
-      return d.toLocaleString(locale === "bn" ? "bn-BD" : undefined, {
-        dateStyle: "medium",
-        timeStyle: "short",
-      });
+      return d.toLocaleString(locale === "bn" ? "bn-BD" : undefined, { dateStyle: "medium", timeStyle: "short" });
     }
   }
   return "";
@@ -31,74 +24,26 @@ function formatNoticeCreatedAt(raw: unknown, locale: string): string {
 
 export function GroupNoticesView({ groupId }: { groupId: string }) {
   const router = useRouter();
-  const { t, tx, language } = useT();
+  const { t, language } = useT();
   const locale = language === "bn" ? "bn" : "en";
   const { chart } = useGroupSession();
-  
-  const [group, setGroup] = useState<Group | null>(null);
-  const [notices, setNotices] = useState<Notice[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [dataLoading, setDataLoading] = useState(false);
 
-  useEffect(() => {
-    let active = true;
-    async function load() {
-      if (!isFirebaseConfigured) {
-        setError(t("errors.firebaseNotConfiguredShort"));
-        setIsLoading(false);
-        return;
-      }
-      try {
-        const g = await getGroupById(groupId);
-        if (!g) throw new Error("Group not found.");
-        if (!active) return;
-        setGroup(g);
-      } catch (e) {
-        if (!active) return;
-        setError(tx(e instanceof Error ? e.message : t("errors.loadNoticesFailed")));
-      } finally {
-        if (active) setIsLoading(false);
-      }
-    }
-    void load();
-    return () => {
-      active = false;
-    };
-  }, [t, tx, groupId]);
+  const { data: group, error: groupError, isLoading: groupLoading } = useGroup(isFirebaseConfigured ? groupId : undefined);
+  const { data: notices = [], isLoading: noticesLoading } = useNotices(group?.id, chart?.id);
 
-  useEffect(() => {
-    if (!group || !chart) return;
-    let active = true;
-
-    const loadData = async () => {
-      setDataLoading(true);
-      try {
-        const list = await listNoticesForChart(group.id, chart.id);
-        if (!active) return;
-        setNotices(list);
-      } catch (e) {
-        if (active) setError(tx(e instanceof Error ? e.message : t("errors.genericLoad")));
-      } finally {
-        if (active) setDataLoading(false);
-      }
-    };
-
-    void loadData();
-
-    return () => {
-      active = false;
-    };
-  }, [group, chart, t, tx]);
-
-  if (isLoading) {
-    return <p className="py-16 text-center text-sm text-[color:var(--soft-foreground)]">{t("common.loading")}</p>;
+  if (groupLoading) {
+    return (
+      <div className="group-page-grid py-16">
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-48 w-full" />
+      </div>
+    );
   }
-  if (error) {
+  if (groupError) {
+    const msg = groupError instanceof Error ? groupError.message : t("errors.loadNoticesFailed");
     return (
       <div className="mt-8">
-        <div className="alert-error">{error}</div>
-        <GroupTokenMismatchHint message={error} />
+        <div className="alert-error">{msg}</div>
       </div>
     );
   }
@@ -121,8 +66,14 @@ export function GroupNoticesView({ groupId }: { groupId: string }) {
     );
   }
 
-  if (dataLoading) {
-    return <p className="py-16 text-center text-sm text-[color:var(--soft-foreground)]">{t("common.loading")}</p>;
+  if (noticesLoading) {
+    return (
+      <div className="group-page-grid py-8">
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-32 w-full" />
+      </div>
+    );
   }
 
   const subtitle =
