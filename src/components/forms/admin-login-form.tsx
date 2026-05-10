@@ -92,7 +92,7 @@ export function AdminLoginForm() {
       if (code === "auth/popup-closed-by-user") {
         setError(null);
       } else if (code === "auth/popup-blocked") {
-        setError("Your browser blocked the sign-in popup. Please allow popups or use the redirect method below.");
+        await handleGoogleSignInRedirect();
       } else if (code === "permission-denied") {
         setError(`${t("errors.permissionDenied")} (${code}: ${err instanceof Error ? err.message : "unknown"})`);
       } else {

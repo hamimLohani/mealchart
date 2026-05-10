@@ -110,7 +110,7 @@ export function RegisterGroupForm() {
       if (code === "auth/popup-closed-by-user") {
         setError(null);
       } else if (code === "auth/popup-blocked") {
-        setError("Your browser blocked the sign-in popup. Please allow popups or use the redirect method below.");
+        await handleGoogleSignInRedirect();
       } else {
         setError(tx(err instanceof Error ? err.message : t("errors.registerFailed")));
       }
