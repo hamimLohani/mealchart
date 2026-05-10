@@ -129,23 +129,31 @@ export async function createMember(input: {
   groupId: string;
   fullName: string;
   joinDate: string;
-  phoneNumber: string;
+  email: string;
 }) {
   const database = ensureDb();
-  const memberId = crypto.randomUUID();
+  const memberId = input.email.trim().toLowerCase();
+  
+  const memberRef = doc(database, membersCollection(input.groupId), memberId);
+  const snap = await getDoc(memberRef);
+  if (snap.exists()) {
+    throw new Error("A member with this email already exists.");
+  }
+
   const record = buildMemberRecord({
     id: memberId,
     fullName: input.fullName,
     joinDate: input.joinDate,
-    phoneNumber: input.phoneNumber,
+    email: memberId,
   });
 
-  await setDoc(
-    doc(database, membersCollection(input.groupId), memberId),
-    record,
-  );
+  await setDoc(memberRef, record);
 
-  await addSystemNoticeToCurrentChart(database, input.groupId, "Member added", `${input.fullName} was added to the group.`);
+  try {
+    await addSystemNoticeToCurrentChart(database, input.groupId, "Member added", `${input.fullName} was added to the group.`);
+  } catch (e) {
+    console.warn("Failed to add system notice:", e);
+  }
 
   return record;
 }
@@ -155,14 +163,14 @@ export async function updateMember(input: {
   memberId: string;
   fullName: string;
   joinDate: string;
-  phoneNumber: string;
+  email: string;
 }) {
   const database = ensureDb();
   const memberRef = doc(database, membersCollection(input.groupId), input.memberId);
   const payload = {
     fullName: input.fullName,
     joinDate: input.joinDate,
-    phoneNumber: input.phoneNumber,
+    email: input.email.trim().toLowerCase(),
     active: true,
   };
 
@@ -426,7 +434,6 @@ export async function getMealsForMonth(groupId: string, monthKey: string) {
   return snapshot.docs.map((entry) => mapMealEntryDoc(entry.id, entry.data()));
 }
 
-// Deterministic doc ID: memberId_date — allows setDoc upsert without a prior read
 export async function saveMealEntry(input: {
   groupId: string;
   memberId: string;
@@ -444,17 +451,30 @@ export async function saveMealEntry(input: {
     quantity: input.quantity,
     monthKey,
   });
+}
 
-  if (input.chartId && input.memberName) {
-    await addDoc(collection(database, chartNoticesCollection(input.groupId, input.chartId)), {
-      ...buildNoticeRecord({
-        title: "Meal updated",
-        body: `Meal entry for ${input.memberName} on ${input.date} was updated to ${input.quantity}.`,
-        systemGenerated: true,
-      }),
-      createdAt: serverTimestamp(),
+export async function saveMealsBatch(input: {
+  groupId: string;
+  memberIds: string[];
+  date: string;
+  quantity: number;
+}) {
+  const database = ensureDb();
+  const batch = writeBatch(database);
+  const monthKey = monthKeyFromDate(input.date);
+
+  for (const memberId of input.memberIds) {
+    const docId = `${memberId}_${input.date}`;
+    const ref = doc(database, mealsCollection(input.groupId), docId);
+    batch.set(ref, {
+      memberId,
+      date: input.date,
+      quantity: input.quantity,
+      monthKey,
     });
   }
+
+  await batch.commit();
 }
 
 export async function getMealsForMemberInDateRange(

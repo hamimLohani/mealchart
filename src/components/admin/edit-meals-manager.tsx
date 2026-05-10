@@ -11,6 +11,7 @@ import {
   listCharts,
   listMembers,
   saveMealEntry,
+  saveMealsBatch,
 } from "@/lib/firebase/repositories";
 import type { AdminProfile, Chart, MealEntry, Member } from "@/types/domain";
 import { memberDisplayName, memberIdsForChartRows } from "@/lib/utils/chart-members";
@@ -141,8 +142,39 @@ export function EditMealsManager() {
             memberId,
             date,
             quantity: val,
-            chartId: selectedChart.id,
-            memberName: member?.fullName,
+          });
+        } catch (e) {
+          setError(tx(e instanceof Error ? e.message : t("errors.saveMealFailed")));
+        }
+      })();
+    }, 600);
+  }
+
+  function handleDefaultChange(date: string, raw: string) {
+    if (!adminProfile || !selectedChart || selectedChart.locked) return;
+    const val = parseMealQuantity(raw);
+    
+    setMeals((prev) => {
+      const next = { ...prev };
+      for (const memberId of rowMemberIds) {
+        if (isActiveMember(memberId)) {
+          next[memberId] = { ...(next[memberId] ?? {}), [date]: val };
+        }
+      }
+      return next;
+    });
+
+    const key = `default_${date}`;
+    clearTimeout(savingRef.current[key]);
+    savingRef.current[key] = setTimeout(() => {
+      void (async () => {
+        try {
+          const activeMemberIds = rowMemberIds.filter(isActiveMember);
+          await saveMealsBatch({
+            groupId: adminProfile.groupId,
+            memberIds: activeMemberIds,
+            date,
+            quantity: val,
           });
         } catch (e) {
           setError(tx(e instanceof Error ? e.message : t("errors.saveMealFailed")));
@@ -262,6 +294,25 @@ export function EditMealsManager() {
               </tr>
             </thead>
             <tbody>
+              <tr className="border-b border-[color:var(--border)] bg-[color:var(--panel)]">
+                <td className="sticky left-0 z-10 bg-[color:var(--panel)] px-3 py-2 text-xs font-bold uppercase tracking-[0.15em] text-[color:var(--accent)]">
+                  {t("admin.defaultMeal") || "Default"}
+                </td>
+                {days.map((date) => (
+                  <td key={date} className="px-1 py-1 text-center">
+                    <input
+                      className="w-10 rounded-md border border-[color:var(--border)] bg-[color:var(--background)] text-center text-sm font-medium outline-none transition focus:border-[color:var(--accent)]"
+                      min="0"
+                      step="0.25"
+                      type="number"
+                      placeholder="-"
+                      disabled={selectedChart.locked}
+                      onChange={(e) => handleDefaultChange(date, e.target.value)}
+                    />
+                  </td>
+                ))}
+                <td className="px-3 py-2"></td>
+              </tr>
               {rowMemberIds.map((memberId, ri) => (
                 <tr key={memberId} className={ri % 2 === 0 ? "bg-[color:var(--background)]" : "bg-[color:var(--panel)]"}>
                   <td

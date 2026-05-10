@@ -32,7 +32,7 @@ export type Member = {
   id: string;
   fullName: string;
   joinDate: string;
-  phoneNumber: string;
+  email: string;
   active: boolean;
 };
 

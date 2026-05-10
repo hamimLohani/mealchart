@@ -63,13 +63,13 @@ export function buildMemberRecord(input: {
   id: string;
   fullName: string;
   joinDate: string;
-  phoneNumber: string;
+  email: string;
 }): Member {
   return {
     id: input.id,
     fullName: input.fullName,
     joinDate: input.joinDate,
-    phoneNumber: input.phoneNumber,
+    email: input.email,
     active: true,
   };
 }

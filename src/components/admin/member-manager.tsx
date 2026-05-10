@@ -9,11 +9,11 @@ import { createMember, deleteMember, getAdminProfile, listMembers, updateMember 
 import { toDateInputValue } from "@/lib/utils/date";
 import type { AdminProfile, Member } from "@/types/domain";
 
-type MemberFormState = { fullName: string; joinDate: string; phoneNumber: string };
+type MemberFormState = { fullName: string; joinDate: string; email: string };
 const initialForm: MemberFormState = {
   fullName: "",
   joinDate: toDateInputValue(new Date()),
-  phoneNumber: "",
+  email: "",
 };
 
 export function MemberManager() {
@@ -64,7 +64,7 @@ export function MemberManager() {
     const query = search.trim().toLowerCase();
     if (!query) return members;
     return members.filter((m) =>
-      m.fullName.toLowerCase().includes(query) || m.phoneNumber.toLowerCase().includes(query)
+      m.fullName.toLowerCase().includes(query) || m.email.toLowerCase().includes(query)
     );
   }, [members, search]);
 
@@ -78,8 +78,14 @@ export function MemberManager() {
     setError(null);
 
     if (!adminProfile) { setError("Admin profile is required before managing members."); return; }
-    if (!form.fullName.trim() || !form.joinDate.trim() || !form.phoneNumber.trim()) {
-      setError("Full name, join date, and phone number are required.");
+    if (!form.fullName.trim() || !form.joinDate.trim() || !form.email.trim()) {
+      setError("Full name, join date, and email are required.");
+      return;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email.trim())) {
+      setError("Please enter a valid email address.");
       return;
     }
 
@@ -91,7 +97,7 @@ export function MemberManager() {
           memberId: editingMemberId,
           fullName: form.fullName.trim(),
           joinDate: form.joinDate,
-          phoneNumber: form.phoneNumber.trim(),
+          email: form.email.trim(),
         });
         setMembers((c) =>
           c.map((m) => (m.id === updated.id ? updated : m)).sort((a, b) => a.fullName.localeCompare(b.fullName))
@@ -101,7 +107,7 @@ export function MemberManager() {
           groupId: adminProfile.groupId,
           fullName: form.fullName.trim(),
           joinDate: form.joinDate,
-          phoneNumber: form.phoneNumber.trim(),
+          email: form.email.trim(),
         });
         setMembers((c) => [...c, created].sort((a, b) => a.fullName.localeCompare(b.fullName)));
       }
@@ -127,7 +133,7 @@ export function MemberManager() {
 
   function startEdit(member: Member) {
     setEditingMemberId(member.id);
-    setForm({ fullName: member.fullName, joinDate: member.joinDate, phoneNumber: member.phoneNumber });
+    setForm({ fullName: member.fullName, joinDate: member.joinDate, email: member.email });
   }
 
   if (isLoading) {
@@ -164,12 +170,14 @@ export function MemberManager() {
             />
           </label>
           <label className="grid gap-1.5 text-sm font-medium">
-            {t("memberMgr.phone")}
+            {t("memberMgr.email")}
             <input
-              className="input"
-              onChange={(e) => setForm((c) => ({ ...c, phoneNumber: e.target.value }))}
-              placeholder="01XXXXXXXXX"
-              value={form.phoneNumber}
+              className="input disabled:opacity-50"
+              onChange={(e) => setForm((c) => ({ ...c, email: e.target.value }))}
+              placeholder="user@example.com"
+              type="email"
+              value={form.email}
+              disabled={!!editingMemberId}
             />
           </label>
         </div>
@@ -220,7 +228,7 @@ export function MemberManager() {
                 <div className="min-w-0">
                   <p className="font-semibold">{member.fullName}</p>
                   <p className="mt-0.5 text-xs text-[color:var(--muted)]">
-                    {t("memberMgr.joinedLine")} {member.joinDate} · {member.phoneNumber}
+                    {t("memberMgr.joinedLine")} {member.joinDate} · {member.email}
                   </p>
                 </div>
                 <div className="flex gap-2">
