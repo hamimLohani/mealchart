@@ -7,7 +7,7 @@ import { useGroupSession } from "@/lib/hooks/use-group-session";
 
 import { memberDisplayName, memberIdsForChartRows } from "@/lib/utils/chart-members";
 import { daysInMonth } from "@/lib/utils/date";
-import { formatMeal, getMonthTotals } from "@/lib/utils/meal-money";
+import { formatMeal, getMonthTotals, normalizeMealQuantity } from "@/lib/utils/meal-money";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGroup, useMembers, useMealsForMonth, useCosts, useDeposits } from "@/lib/hooks/use-data";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
@@ -82,14 +82,13 @@ export function GroupChartView({ groupId }: { groupId: string }) {
   meals.forEach((m) => {
     const mid = m.memberId.toLowerCase();
     if (!mealMap[mid]) mealMap[mid] = {};
-    mealMap[mid][m.date] = m.quantity;
+    mealMap[mid][m.date] = normalizeMealQuantity(m.quantity);
   });
 
   const rowMemberIds = memberIdsForChartRows(members, meals, chart.monthKey);
   const former = t("common.formerMember");
   const memberTotal = (id: string) => Object.values(mealMap[id] ?? {}).reduce((s, v) => s + v, 0);
-  const grandTotal = meals.reduce((s, m) => s + m.quantity, 0);
-  const { totalCost, totalPaid, mealRate, remainingTaka } = getMonthTotals(meals, costs, deposits);
+  const { totalMeals: grandTotal, totalCost, totalPaid, mealRate, remainingTaka } = getMonthTotals(meals, costs, deposits);
   const totalMembers = rowMemberIds.length;
   const tk = t("common.tk");
 

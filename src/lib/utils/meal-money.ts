@@ -6,9 +6,9 @@ export function normalizeMealQuantity(value: number): number {
 }
 
 export function formatMeal(n: number): string {
-  const normalized = normalizeMealQuantity(n);
-  const whole = Math.floor(normalized);
-  const frac = Math.round((normalized - whole) * 4);
+  const rounded = Math.round(n * 4) / 4;
+  const whole = Math.floor(rounded);
+  const frac = Math.round((rounded - whole) * 4);
   const fracStr = [" ", "\u00bc", "\u00bd", "\u00be"][frac] ?? "";
   if (whole === 0 && frac === 0) return "0";
   if (whole === 0) return fracStr.trim();

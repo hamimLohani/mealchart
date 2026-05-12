@@ -99,7 +99,7 @@ export function EditMealsManager() {
         mealList.forEach((m: MealEntry) => {
           const mid = m.memberId.toLowerCase();
           if (!map[mid]) map[mid] = {};
-          map[mid][m.date] = m.quantity;
+          map[mid][m.date] = normalizeMealQuantity(m.quantity);
         });
         setMeals(map);
       } catch (e) {
@@ -287,7 +287,7 @@ export function EditMealsManager() {
 
       <div className="flex items-center justify-between">
         <p className="text-lg font-semibold">
-          {grandTotal}{" "}
+          {formatMeal(grandTotal)}{" "}
           <span className="text-sm font-normal text-[color:var(--muted)]">{t("admin.totalMeals")}</span>
         </p>
       </div>
@@ -357,7 +357,7 @@ export function EditMealsManager() {
                     );
                   })}
                   <td className="px-3 py-2 text-center text-sm font-bold text-[color:var(--accent)]">
-                    {memberTotal(memberId)}
+                    {formatMeal(memberTotal(memberId))}
                   </td>
                 </tr>
               ))}
@@ -367,10 +367,10 @@ export function EditMealsManager() {
                 </td>
                 {days.map((date) => (
                   <td key={date} className="px-1 py-2 text-center text-xs font-semibold text-[color:var(--soft-foreground)]">
-                    {dayTotal(date) || ""}
+                    {dayTotal(date) ? formatMeal(dayTotal(date)) : ""}
                   </td>
                 ))}
-                <td className="px-3 py-2 text-center text-sm font-bold">{grandTotal}</td>
+                <td className="px-3 py-2 text-center text-sm font-bold">{formatMeal(grandTotal)}</td>
               </tr>
             </tbody>
           </table>
