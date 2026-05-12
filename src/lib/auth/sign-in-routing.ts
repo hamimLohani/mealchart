@@ -1,5 +1,5 @@
 import type { User } from "firebase/auth";
-import type { Group } from "@/types/domain";
+import type { Group, AdminProfile } from "@/types/domain";
 import {
   findAdminProfileByEmail,
   findMemberGroupByEmail,
