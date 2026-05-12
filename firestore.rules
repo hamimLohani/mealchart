@@ -32,7 +32,7 @@ service cloud.firestore {
     function isValidAdminCreate(adminId) {
       return isSignedIn()
         && request.auth.uid == adminId
-        && hasOnlyFields(["id", "email", "groupId", "createdAt"])
+        && hasOnlyFields(["id", "email", "fullName", "groupId", "createdAt"])
         && request.resource.data.id == adminId
         && request.resource.data.email is string
         && request.resource.data.email == signedInEmail()
@@ -44,7 +44,7 @@ service cloud.firestore {
     function isValidAdminUpdate(adminId) {
       return isSignedIn()
         && request.auth.uid == adminId
-        && hasOnlyFields(["id", "email", "groupId", "createdAt"])
+        && hasOnlyFields(["id", "email", "fullName", "groupId", "createdAt"])
         && request.resource.data.id == resource.data.id
         && request.resource.data.groupId == resource.data.groupId
         && request.resource.data.createdAt == resource.data.createdAt

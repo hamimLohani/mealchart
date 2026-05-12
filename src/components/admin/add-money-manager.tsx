@@ -174,7 +174,7 @@ export function AddMoneyManager() {
           member.fullName,
           amount,
           form.date,
-          activeAdminProfile.email,
+          activeAdminProfile.fullName || activeAdminProfile.email,
           groupName,
           currentMemberTotal,
         );

@@ -6,6 +6,7 @@ import {
   getAdminProfile,
   listGroups,
   migrateAdminProfile,
+  updateAdminProfile,
 } from "@/lib/firebase/repositories";
 
 export type SignInResolution =
@@ -18,25 +19,37 @@ export function normalizeEmail(email: string) {
 }
 
 export async function getAdminProfileForUser(user: User) {
-  if (!user.email) return getAdminProfile(user.uid);
+  let profile: AdminProfile | null = null;
 
-  const uidProfile = await getAdminProfile(user.uid);
-  if (uidProfile) return uidProfile;
-
-  const emailProfile = await findAdminProfileByEmail(user.email);
-  if (!emailProfile) return null;
-
-  try {
-    await migrateAdminProfile(emailProfile.id, user.uid);
-    const migratedProfile = await getAdminProfile(user.uid);
-    if (!migratedProfile) {
-      throw new Error("Admin profile repair did not complete.");
+  if (!user.email) {
+    profile = await getAdminProfile(user.uid);
+  } else {
+    profile = await getAdminProfile(user.uid);
+    if (!profile) {
+      const emailProfile = await findAdminProfileByEmail(user.email);
+      if (emailProfile) {
+        try {
+          await migrateAdminProfile(emailProfile.id, user.uid);
+          profile = await getAdminProfile(user.uid);
+        } catch (error) {
+          console.warn("Failed to migrate admin profile:", error);
+          throw new Error("Admin profile was found for this email, but account repair failed.");
+        }
+      }
     }
-    return migratedProfile;
-  } catch (error) {
-    console.warn("Failed to migrate admin profile:", error);
-    throw new Error("Admin profile was found for this email, but account repair failed. Deploy the latest Firestore rules, then sign in again.");
   }
+
+  // Backfill name if missing
+  if (profile && !profile.fullName && user.displayName) {
+    try {
+      await updateAdminProfile(profile.id, { fullName: user.displayName });
+      profile.fullName = user.displayName;
+    } catch (e) {
+      console.warn("Failed to backfill admin name:", e);
+    }
+  }
+
+  return profile;
 }
 
 export async function resolveSignInDestination(user: User): Promise<SignInResolution> {

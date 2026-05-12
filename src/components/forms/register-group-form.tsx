@@ -48,7 +48,12 @@ export function RegisterGroupForm() {
       });
 
       batch.set(doc(db, adminsCollection, adminId), {
-        ...buildAdminProfile({ id: adminId, email: normalizeEmail(user.email), groupId }),
+        ...buildAdminProfile({ 
+          id: adminId, 
+          email: normalizeEmail(user.email), 
+          groupId,
+          fullName: user.displayName || undefined
+        }),
         createdAt: serverTimestamp(),
       });
 

@@ -152,6 +152,11 @@ export async function findAdminProfileByEmail(email: string) {
     createdAt: serializeDate(data.createdAt),
   };
 }
+export async function updateAdminProfile(adminId: string, payload: Partial<AdminProfile>) {
+  const database = ensureDb();
+  await updateDoc(doc(database, adminsCollection, adminId), payload);
+}
+
 
 export async function migrateAdminProfile(oldUid: string, newUid: string) {
   const database = ensureDb();

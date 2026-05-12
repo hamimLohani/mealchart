@@ -50,11 +50,13 @@ export function buildChartRecord(input: {
 export function buildAdminProfile(input: {
   id: string;
   email: string;
+  fullName?: string;
   groupId: string;
 }): AdminProfile {
   return {
     id: input.id,
     email: input.email.trim().toLowerCase(),
+    fullName: input.fullName,
     groupId: input.groupId,
     createdAt: new Date().toISOString(),
   };
