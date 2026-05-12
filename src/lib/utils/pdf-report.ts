@@ -17,7 +17,16 @@ type ChartReportOptions = {
 
 export function saveChartReportPdf(options: ChartReportOptions) {
   const { groupName, chartLabel, monthKey, members, meals, costs, deposits, fileName } = options;
-  const [year, month] = monthKey.split("-").map((value) => Number(value));
+  
+  // Guard against invalid monthKey format
+  const parts = monthKey.split("-");
+  if (parts.length !== 2) {
+    throw new Error(`Invalid monthKey format: ${monthKey}. Expected YYYY-MM.`);
+  }
+  const [year, month] = parts.map((value) => Number(value));
+  if (Number.isNaN(year) || Number.isNaN(month) || month < 1 || month > 12) {
+    throw new Error(`Invalid monthKey values: year=${year}, month=${month}`);
+  }
   const totalDays = daysInMonth(year, month);
   const days = Array.from({ length: totalDays }, (_, index) => `${monthKey}-${String(index + 1).padStart(2, "0")}`);
 

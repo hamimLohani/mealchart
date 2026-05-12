@@ -217,9 +217,14 @@ export function CreateChartManager() {
         listDepositsForChart(groupId, chart.id),
       ]);
 
+      // Ensure all arrays are valid
+      if (!Array.isArray(members) || !Array.isArray(meals) || !Array.isArray(costs) || !Array.isArray(deposits)) {
+        throw new Error("Failed to load chart data - invalid response format");
+      }
+
       saveChartReportPdf({
-        groupName: group.name,
-        chartLabel: chart.label,
+        groupName: group.name || "Group",
+        chartLabel: chart.label || "Report",
         monthKey: chart.monthKey,
         members,
         meals,

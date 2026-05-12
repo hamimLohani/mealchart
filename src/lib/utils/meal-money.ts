@@ -18,8 +18,8 @@ export function formatMeal(n: number): string {
 
 export function getMonthTotals(meals: MealEntry[], costs: CostEntry[], deposits: DepositEntry[]) {
   const totalMeals = meals.reduce((sum, meal) => sum + normalizeMealQuantity(meal.quantity), 0);
-  const totalCost = costs.reduce((sum, cost) => sum + cost.amount, 0);
-  const totalPaid = deposits.reduce((sum, deposit) => sum + deposit.amount, 0);
+  const totalCost = Math.max(0, costs.reduce((sum, cost) => sum + (cost.amount || 0), 0));
+  const totalPaid = Math.max(0, deposits.reduce((sum, deposit) => sum + (deposit.amount || 0), 0));
   const mealRate = totalMeals > 0 ? totalCost / totalMeals : 0;
   const remainingTaka = totalPaid - totalCost;
   return { totalMeals, totalCost, totalPaid, mealRate, remainingTaka };

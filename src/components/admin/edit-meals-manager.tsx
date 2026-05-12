@@ -11,7 +11,7 @@ import {
   saveMealEntry,
   saveMealsBatch,
 } from "@/lib/firebase/repositories";
-import { normalizeMealQuantity } from "@/lib/utils/meal-money";
+import { normalizeMealQuantity, formatMeal } from "@/lib/utils/meal-money";
 import type { AdminProfile, Chart, MealEntry, Member } from "@/types/domain";
 import { memberDisplayName, memberIdsForChartRows } from "@/lib/utils/chart-members";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";

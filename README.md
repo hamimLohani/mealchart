@@ -1,13 +1,13 @@
 # Meal Chart
 
-Meal Chart is a multi-group hostel and mess meal-management app built with `Next.js`, `Firebase`, `SWR`, `Zustand`, and `nodemailer`.
+Meal Chart is a comprehensive multi-group hostel and mess meal-management web application built with `Next.js 16`, `React 19`, `Firebase Auth`, `Cloud Firestore`, `SWR`, `Zustand`, and `nodemailer`.
 
 ## What it does
 
 The app supports two roles:
 
 - `Admin`
-  Creates and manages a group, members, monthly charts, meals, deposits, costs, notices, CSV exports, and month locking.
+  Creates and manages a group, members, monthly charts, meals, deposits, costs, notices, PDF exports, and month locking.
 - `Member`
   Signs in with Google, joins a group, views monthly reports, and updates their own meals.
 
@@ -23,9 +23,10 @@ The app supports two roles:
 - Chart-scoped deposit and cost tracking
 - Group and member financial summaries
 - Manual and system-generated notices
-- CSV export for monthly chart reports
+- PDF export for monthly financial reports
 - Welcome, receipt, and month-summary emails
 - English / Bangla UI
+- Theme support (dark/light mode)
 - Responsive admin and member dashboards
 
 ## App routes

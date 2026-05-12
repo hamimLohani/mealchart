@@ -12,6 +12,10 @@ const featureKeys = [
   { title: "features.noticesTitle", body: "features.noticesDesc", icon: "🔔" },
   { title: "features.bilingualTitle", body: "features.bilingualDesc", icon: "🌐" },
   { title: "features.fastTitle", body: "features.fastDesc", icon: "⚡" },
+  { title: "features.themeTitle", body: "features.themeDesc", icon: "🌙" },
+  { title: "features.emailTitle", body: "features.emailDesc", icon: "📧" },
+  { title: "features.lockTitle", body: "features.lockDesc", icon: "🔒" },
+  { title: "features.loadingTitle", body: "features.loadingDesc", icon: "⏳" },
 ] as const;
 
 const stepKeys = [

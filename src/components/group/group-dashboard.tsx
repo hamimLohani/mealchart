@@ -64,16 +64,22 @@ export function GroupDashboard({ groupId }: { groupId: string }) {
   function handleDownloadPDF() {
     if (!activeChart || !group || members.length === 0) return;
 
-    saveChartReportPdf({
-      groupName: group.name,
-      chartLabel: activeChart.label,
-      monthKey: activeChart.monthKey,
-      members,
-      meals: monthMeals,
-      costs: monthCosts,
-      deposits: monthDeposits,
-      fileName: `${group.name}_${activeChart.label}_Report.pdf`,
-    });
+    try {
+      saveChartReportPdf({
+        groupName: group.name || "Group",
+        chartLabel: activeChart.label || "Report",
+        monthKey: activeChart.monthKey,
+        members,
+        meals: monthMeals || [],
+        costs: monthCosts || [],
+        deposits: monthDeposits || [],
+        fileName: `${group.name}_${activeChart.label}_Report.pdf`,
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to generate PDF";
+      console.error("PDF export error:", msg);
+      // Could set error state here if needed
+    }
   }
 
   if (!isFirebaseConfigured) {
