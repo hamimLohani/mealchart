@@ -1,0 +1,198 @@
+import { jsPDF } from "jspdf";
+import type { CostEntry, DepositEntry, MealEntry, Member } from "@/types/domain";
+import { daysInMonth } from "./date";
+import { formatMeal, getMonthTotals, getMemberTotals, normalizeMealQuantity } from "./meal-money";
+import { memberDisplayName, memberIdsForChartRows } from "./chart-members";
+
+type ChartReportOptions = {
+  groupName: string;
+  chartLabel: string;
+  monthKey: string;
+  members: Member[];
+  meals: MealEntry[];
+  costs: CostEntry[];
+  deposits: DepositEntry[];
+  fileName?: string;
+};
+
+export function saveChartReportPdf(options: ChartReportOptions) {
+  const { groupName, chartLabel, monthKey, members, meals, costs, deposits, fileName } = options;
+  const [year, month] = monthKey.split("-").map((value) => Number(value));
+  const totalDays = daysInMonth(year, month);
+  const days = Array.from({ length: totalDays }, (_, index) => `${monthKey}-${String(index + 1).padStart(2, "0")}`);
+
+  type RgbColor = [number, number, number];
+  const totals = getMonthTotals(meals, costs, deposits);
+  const doc = new jsPDF({ unit: "pt", format: "a4", orientation: "landscape" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 36;
+  const contentWidth = pageWidth - margin * 2;
+  const textColor: Record<"dark" | "muted" | "accent", RgbColor> = {
+    dark: [17, 24, 39],
+    muted: [71, 85, 105],
+    accent: [59, 130, 246],
+  };
+
+  doc.setFillColor(30, 64, 175);
+  doc.rect(0, 0, pageWidth, 92, "F");
+  doc.setFontSize(22);
+  doc.setTextColor(255, 255, 255);
+  doc.text("Meal Chart Report", margin, 56);
+
+  doc.setFontSize(11);
+  doc.setTextColor(245, 245, 245);
+  doc.text(`Group: ${groupName}`, margin, 80);
+  doc.text(`Month: ${chartLabel}`, margin + 300, 80);
+
+  const summaryTop = 110;
+  const summaryHeight = 96;
+  doc.setFillColor(249, 250, 251);
+  doc.setDrawColor(226, 232, 240);
+  doc.roundedRect(margin, summaryTop, contentWidth, summaryHeight, 10, 10, "FD");
+
+  doc.setFontSize(11);
+  doc.setTextColor(...textColor.dark);
+  const summaryLabelX = margin + 12;
+  const summaryValueX = margin + 128;
+  const summaryLineHeight = 18;
+  doc.text(`Total meals`, summaryLabelX, summaryTop + 24);
+  doc.text(formatMeal(totals.totalMeals), summaryValueX, summaryTop + 24);
+  doc.text(`Total cost`, summaryLabelX, summaryTop + 24 + summaryLineHeight);
+  doc.text(`${totals.totalCost.toFixed(2)} Tk`, summaryValueX, summaryTop + 24 + summaryLineHeight);
+  doc.text(`Total paid`, summaryLabelX, summaryTop + 24 + summaryLineHeight * 2);
+  doc.text(`${totals.totalPaid.toFixed(2)} Tk`, summaryValueX, summaryTop + 24 + summaryLineHeight * 2);
+
+  doc.text(`Meal rate`, summaryLabelX + 280, summaryTop + 24);
+  doc.text(`${totals.mealRate.toFixed(2)} Tk`, summaryValueX + 280, summaryTop + 24);
+  doc.text(`Remaining`, summaryLabelX + 280, summaryTop + 24 + summaryLineHeight);
+  doc.text(`${totals.remainingTaka.toFixed(2)} Tk`, summaryValueX + 280, summaryTop + 24 + summaryLineHeight);
+  doc.text(`Members`, summaryLabelX + 280, summaryTop + 24 + summaryLineHeight * 2);
+  doc.text(String(memberIdsForChartRows(members, meals, monthKey).length), summaryValueX + 280, summaryTop + 24 + summaryLineHeight * 2);
+
+  const chartSectionTop = summaryTop + summaryHeight + 24;
+  const chartSectionHeight = 108;
+  doc.setDrawColor(226, 232, 240);
+  doc.setFillColor(255, 255, 255);
+  doc.rect(margin, chartSectionTop, contentWidth, chartSectionHeight);
+
+  const chartBarBase = chartSectionTop + chartSectionHeight - 24;
+  const barWidth = 56;
+  const barSpacing = 88;
+  const barMaxValue = Math.max(totals.totalPaid, totals.totalCost, totals.totalMeals, 1);
+  const drawBar = (x: number, value: number, color: [number, number, number]) => {
+    const height = Math.max(12, Math.min(chartSectionHeight - 40, (value / barMaxValue) * (chartSectionHeight - 40)));
+    doc.setFillColor(...color);
+    doc.roundedRect(x, chartBarBase - height, barWidth, height, 6, 6, "F");
+  };
+
+  drawBar(margin + 30, totals.totalPaid, [59, 130, 246]);
+  drawBar(margin + 30 + barSpacing, totals.totalCost, [220, 38, 38]);
+  drawBar(margin + 30 + barSpacing * 2, totals.totalMeals, [16, 185, 129]);
+
+  doc.setFontSize(10);
+  doc.setTextColor(...textColor.dark);
+  doc.text("Paid", margin + 30, chartBarBase + 16);
+  doc.text("Cost", margin + 30 + barSpacing, chartBarBase + 16);
+  doc.text("Meals", margin + 30 + barSpacing * 2, chartBarBase + 16);
+
+  const tableTop = chartSectionTop + chartSectionHeight + 30;
+  const rowMemberIds = memberIdsForChartRows(members, meals, monthKey);
+  const mealMap: Record<string, Record<string, number>> = {};
+  meals.forEach((meal) => {
+    const memberId = meal.memberId.toLowerCase();
+    mealMap[memberId] = mealMap[memberId] ?? {};
+    mealMap[memberId][meal.date] = normalizeMealQuantity(meal.quantity);
+  });
+
+  const nameWidth = 120;
+  const dayWidth = 18;
+  const totalWidth = 50;
+  const tableWidth = nameWidth + totalDays * dayWidth + totalWidth;
+  const tableLeft = margin;
+  const tableRight = tableLeft + tableWidth;
+  const headerHeight = 20;
+  const bodyRowHeight = 18;
+  const bottomLimit = pageHeight - margin;
+
+  const drawTableHeader = (top: number) => {
+    doc.setFillColor(15, 23, 42);
+    doc.rect(tableLeft, top, tableWidth, headerHeight, "F");
+    doc.setFontSize(9);
+    doc.setTextColor(255, 255, 255);
+    let x = tableLeft + 4;
+    doc.text("Member", x, top + 13);
+    x += nameWidth;
+    for (let dayIndex = 0; dayIndex < totalDays; dayIndex += 1) {
+      const label = String(dayIndex + 1);
+      doc.text(label, x + dayWidth / 2, top + 13, { align: "center" });
+      x += dayWidth;
+    }
+    doc.text("Total", x + totalWidth / 2, top + 13, { align: "center" });
+  };
+
+  let currentY = tableTop;
+  drawTableHeader(currentY);
+  currentY += headerHeight;
+
+  const addPageAndHeader = () => {
+    doc.addPage();
+    currentY = margin;
+    drawTableHeader(currentY);
+    currentY += headerHeight;
+  };
+
+  rowMemberIds.forEach((memberId, rowIndex) => {
+    if (currentY + bodyRowHeight > bottomLimit) {
+      addPageAndHeader();
+    }
+
+    if (rowIndex % 2 === 0) {
+      doc.setFillColor(249, 250, 251);
+      doc.rect(tableLeft, currentY, tableWidth, bodyRowHeight, "F");
+    }
+
+    const memberName = memberDisplayName(memberId, members, "Former member");
+    doc.setFontSize(9);
+    doc.setTextColor(...textColor.dark);
+    const nameLines = doc.splitTextToSize(memberName, nameWidth - 8);
+    doc.text(nameLines, tableLeft + 4, currentY + 13);
+
+    let x = tableLeft + nameWidth;
+    const memberTotals = getMemberTotals(memberId, meals, deposits, totals.mealRate);
+
+    for (let dayIndex = 0; dayIndex < totalDays; dayIndex += 1) {
+      const dayKey = days[dayIndex];
+      const value = mealMap[memberId]?.[dayKey];
+      if (value) {
+        doc.text(formatMeal(value), x + dayWidth / 2, currentY + 13, { align: "center" });
+      }
+      x += dayWidth;
+    }
+
+    doc.text(formatMeal(memberTotals.totalMeals), x + totalWidth / 2, currentY + 13, { align: "center" });
+    currentY += bodyRowHeight;
+  });
+
+  if (currentY + bodyRowHeight > bottomLimit) {
+    addPageAndHeader();
+  }
+
+  doc.setFillColor(15, 23, 42);
+  doc.rect(tableLeft, currentY, tableWidth, bodyRowHeight, "F");
+  doc.setFontSize(9);
+  doc.setTextColor(255, 255, 255);
+  doc.text("Total", tableLeft + 4, currentY + 13);
+  let x = tableLeft + nameWidth;
+  for (let dayIndex = 0; dayIndex < totalDays; dayIndex += 1) {
+    const dayKey = days[dayIndex];
+    const dayTotal = rowMemberIds.reduce((sum, id) => sum + (mealMap[id]?.[dayKey] ?? 0), 0);
+    if (dayTotal) {
+      doc.text(formatMeal(dayTotal), x + dayWidth / 2, currentY + 13, { align: "center" });
+    }
+    x += dayWidth;
+  }
+  doc.text(formatMeal(totals.totalMeals), x + totalWidth / 2, currentY + 13, { align: "center" });
+
+  doc.save(fileName || `${groupName}_${chartLabel}_Report.pdf`);
+}

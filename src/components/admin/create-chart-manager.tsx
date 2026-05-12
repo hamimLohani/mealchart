@@ -20,6 +20,7 @@ import {
 import { formatChartLabel } from "@/lib/utils/date";
 import { daysInMonth } from "@/lib/utils/date";
 import { getMonthTotals, getMemberTotals } from "@/lib/utils/meal-money";
+import { saveChartReportPdf } from "@/lib/utils/pdf-report";
 import type { AdminProfile, Chart } from "@/types/domain";
 import { sendMonthSummaryEmails } from "@/lib/email/actions";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
@@ -201,7 +202,7 @@ export function CreateChartManager() {
     }
   }
 
-  async function handleDownloadCSV(chart: Chart) {
+  async function handleDownloadPDF(chart: Chart) {
     if (!activeAdminProfile) return;
     try {
       setExportingChartId(chart.id);
@@ -213,28 +214,21 @@ export function CreateChartManager() {
         listMembers(groupId),
         getMealsForMonth(groupId, chart.monthKey),
         listCostsForChart(groupId, chart.id),
-        listDepositsForChart(groupId, chart.id)
+        listDepositsForChart(groupId, chart.id),
       ]);
 
-      const { mealRate } = getMonthTotals(meals, costs, deposits);
-
-      let csvContent = "Member Name,Total Meals,Meal Cost,Amount Paid,Balance\n";
-
-      members.forEach(member => {
-        const totals = getMemberTotals(member.id, meals, deposits, mealRate);
-        csvContent += `"${member.fullName}",${totals.totalMeals},${totals.totalCost.toFixed(2)},${totals.totalPaid.toFixed(2)},${totals.balance.toFixed(2)}\n`;
+      saveChartReportPdf({
+        groupName: group.name,
+        chartLabel: chart.label,
+        monthKey: chart.monthKey,
+        members,
+        meals,
+        costs,
+        deposits,
+        fileName: `${group.name}_${chart.label}_Report.pdf`,
       });
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-      link.setAttribute("download", `${group.name}_${chart.label}_Report.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to export CSV");
+      setError(e instanceof Error ? e.message : "Failed to export PDF");
     } finally {
       setExportingChartId(null);
     }
@@ -339,11 +333,11 @@ export function CreateChartManager() {
                   {index === 0 && <span className="badge-accent">{t("common.active")}</span>}
                   <button
                     type="button"
-                    onClick={() => void handleDownloadCSV(chart)}
+                    onClick={() => void handleDownloadPDF(chart)}
                     disabled={exportingChartId === chart.id}
                     className="button-secondary"
                   >
-                    {exportingChartId === chart.id ? "..." : t("groupDash.exportCSV", { defaultValue: "Export CSV" })}
+                    {exportingChartId === chart.id ? "..." : t("groupDash.exportCSV", { defaultValue: "Export PDF" })}
                   </button>
                   <button
                     type="button"

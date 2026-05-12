@@ -7,6 +7,7 @@ import type { Chart, Member } from "@/types/domain";
 import { useT } from "@/i18n/use-t";
 
 import { readStoredChartFromSession } from "@/lib/utils/group-chart-session";
+import { saveChartReportPdf } from "@/lib/utils/pdf-report";
 import { formatMeal, getMonthTotals, getMemberTotals } from "@/lib/utils/meal-money";
 import { motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -60,26 +61,19 @@ export function GroupDashboard({ groupId }: { groupId: string }) {
     setActiveChart(null);
   }
 
-  function handleDownloadCSV() {
+  function handleDownloadPDF() {
     if (!activeChart || !group || members.length === 0) return;
 
-    const { mealRate } = getMonthTotals(monthMeals, monthCosts, monthDeposits);
-    
-    let csvContent = "Member Name,Total Meals,Meal Cost,Amount Paid,Balance\n";
-
-    members.forEach(member => {
-      const totals = getMemberTotals(member.id, monthMeals, monthDeposits, mealRate);
-      csvContent += `"${member.fullName}",${totals.totalMeals},${totals.totalCost.toFixed(2)},${totals.totalPaid.toFixed(2)},${totals.balance.toFixed(2)}\n`;
+    saveChartReportPdf({
+      groupName: group.name,
+      chartLabel: activeChart.label,
+      monthKey: activeChart.monthKey,
+      members,
+      meals: monthMeals,
+      costs: monthCosts,
+      deposits: monthDeposits,
+      fileName: `${group.name}_${activeChart.label}_Report.pdf`,
     });
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `${group.name}_${activeChart.label}_Report.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   }
 
   if (!isFirebaseConfigured) {
@@ -171,8 +165,8 @@ export function GroupDashboard({ groupId }: { groupId: string }) {
           )}
         </div>
         <div className="flex gap-2 shrink-0">
-          <button type="button" onClick={handleDownloadCSV} className="button-secondary">
-            {t("groupDash.exportCSV", { defaultValue: "Export CSV" })}
+          <button type="button" onClick={handleDownloadPDF} className="button-secondary">
+            {t("groupDash.exportCSV", { defaultValue: "Export PDF" })}
           </button>
           <button type="button" onClick={handleChangeChart} className="button-secondary">
             {t("common.back")}
