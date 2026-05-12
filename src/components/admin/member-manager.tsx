@@ -36,6 +36,7 @@ export function MemberManager() {
   const [error, setError] = useState<string | null>(configurationError);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
   const { adminProfile: currentAdminProfile, isLoading: profileLoading, error: profileError } = useCurrentAdminProfile();
   const activeAdminProfile =
     currentAdminProfile && adminProfile?.id === currentAdminProfile.id ? adminProfile : null;
@@ -59,12 +60,14 @@ export function MemberManager() {
 
   useGlobalLoading(
     "member-manager",
-    isLoading || profileLoading || isSubmitting,
+    isLoading || profileLoading || isSubmitting || isRemoving,
     isLoading
       ? t("memberMgr.loadingList")
-      : editingMemberId
-        ? t("memberMgr.submittingUpdate")
-        : t("memberMgr.submittingAdd"),
+      : isRemoving
+        ? t("memberMgr.submittingRemove")
+        : editingMemberId
+          ? t("memberMgr.submittingUpdate")
+          : t("memberMgr.submittingAdd"),
   );
 
   useEffect(() => {
@@ -172,12 +175,15 @@ export function MemberManager() {
   async function handleDelete(memberId: string) {
     if (!activeAdminProfile) return;
     setError(null);
+    setIsRemoving(true);
     try {
       await deleteMember(activeAdminProfile.groupId, memberId);
       setMembers((c) => c.filter((m) => m.id !== memberId));
       if (editingMemberId === memberId) resetForm();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to remove member.");
+    } finally {
+      setIsRemoving(false);
     }
   }
 
