@@ -168,13 +168,15 @@ export function AddMoneyManager() {
       });
 
       if (member) {
+        const currentMemberTotal = (memberTotals.get(mid) ?? 0) + amount;
         const emailResult = await sendMoneyReceiptEmail(
           member.email,
           member.fullName,
           amount,
           form.date,
           activeAdminProfile.email,
-          groupName
+          groupName,
+          currentMemberTotal,
         );
         if (!emailResult.success) {
           setError(`Money added, but receipt email failed: ${emailResult.error}`);

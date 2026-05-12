@@ -157,6 +157,7 @@ export async function sendMoneyReceiptEmail(
   date: string,
   adminName: string,
   groupName: string,
+  totalAmount: number,
 ) {
   try {
     const html = `
@@ -164,10 +165,21 @@ export async function sendMoneyReceiptEmail(
         <h1 style="color: #10b981; font-size: 24px; text-align: center; margin-bottom: 20px;">Money Receipt</h1>
         <p style="font-size: 16px; line-height: 1.6;">Hello <strong>${escapeHtml(fullName)}</strong>,</p>
         <p style="font-size: 16px; line-height: 1.6;">We have successfully received your payment for the current month.</p>
+
         <div style="background-color: #fff; padding: 25px; border-radius: 8px; margin: 20px 0; border: 1px dashed #10b981; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
           <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
             <span style="color: #666;">Amount Received:</span>
-            <span style="font-size: 20px; font-weight: bold; color: #10b981;">${amount.toFixed(2)} TK</span>
+            <span 
+              style="
+                font-size: 20px;
+                font-weight: bold;
+                color: ${amount < 0 ? "#ef4444" : "#10b981"};
+              "
+            >${amount.toFixed(2)} TK</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 10px; padding-top: 10px; border-top: 1px solid #f1f5f9;">
+            <span style="color: #666;">Total Deposited (This Month):</span>
+            <span style="font-weight: bold; color: #1e293b;">${totalAmount.toFixed(2)} TK</span>
           </div>
           <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
             <span style="color: #666;">Date:</span>
@@ -178,9 +190,9 @@ export async function sendMoneyReceiptEmail(
             <span style="font-weight: 500;">${escapeHtml(adminName)}</span>
           </div>
         </div>
-        <p style="font-size: 14px; color: #666; text-align: center;">Group: ${escapeHtml(groupName)}</p>
+        <p style="font-size: 14px; color: #10b981; text-align: center;">Group: ${escapeHtml(groupName)}</p>
         <p style="text-align: center; margin-top: 30px;">
-          <a href="${process.env.NEXT_PUBLIC_BASE_URL || "https://mealchart.app"}" style="background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">View Transaction History</a>
+          <a href="${process.env.NEXT_PUBLIC_BASE_URL || "https://mealchart.app"}"style="background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">View Transaction History</a>
         </p>
         <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;">
         <p style="font-size: 12px; color: #999; text-align: center;">This is an automated receipt from Meal Chart. Please keep it for your records.</p>
