@@ -209,12 +209,6 @@ export async function createMember(input: {
 
   await setDoc(memberRef, record);
 
-  try {
-    await addSystemNoticeToCurrentChart(database, input.groupId, "Member added", `${input.fullName} was added to the group.`);
-  } catch (e) {
-    console.warn("Failed to add system notice:", e);
-  }
-
   return record;
 }
 
@@ -241,12 +235,6 @@ export async function updateMember(input: {
 
   await updateDoc(memberRef, payload);
 
-  try {
-    await addSystemNoticeToCurrentChart(database, input.groupId, "Member updated", `${input.fullName} was updated.`);
-  } catch (e) {
-    console.warn("Failed to add system notice:", e);
-  }
-
   return { id: input.memberId, ...payload } as Member;
 }
 
@@ -260,11 +248,6 @@ export async function deleteMember(groupId: string, memberId: string) {
   const data = snapshot.data();
   await deleteDoc(memberRef);
 
-  try {
-    await addSystemNoticeToCurrentChart(database, groupId, "Member removed", `${String(data.fullName ?? "A member")} was removed from the group.`);
-  } catch (e) {
-    console.warn("Failed to add system notice:", e);
-  }
 }
 
 export async function findMemberGroupByEmail(email: string): Promise<string | null> {
@@ -414,15 +397,6 @@ export async function createChart(input: {
   await updateDoc(doc(database, groupsCollection, input.groupId), {
     currentChartId: chartId,
     currentChartMonth: monthKey,
-  });
-
-  await addDoc(collection(database, chartNoticesCollection(input.groupId, chartId)), {
-    ...buildNoticeRecord({
-      title: "New chart created",
-      body: `${record.label} chart was created with ${record.totalDays} days and set as active.`,
-      systemGenerated: true,
-    }),
-    createdAt: serverTimestamp(),
   });
 
   return record;
@@ -808,21 +782,7 @@ export async function deleteChart(groupId: string, chartId: string) {
   }
 }
 
-async function addSystemNoticeToCurrentChart(database: Firestore, groupId: string, title: string, body: string) {
-  const groupSnap = await getDoc(doc(database, groupsCollection, groupId));
-  if (!groupSnap.exists()) return;
-  const currentChartId = groupSnap.data().currentChartId;
-  if (!currentChartId) return;
 
-  await addDoc(collection(database, chartNoticesCollection(groupId, currentChartId)), {
-    ...buildNoticeRecord({
-      title,
-      body,
-      systemGenerated: true,
-    }),
-    createdAt: serverTimestamp(),
-  });
-}
 
 // ── Notices ───────────────────────────────────────────────────────────
 

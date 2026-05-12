@@ -179,7 +179,13 @@ export async function sendMoneyReceiptEmail(
           </div>
           <div style="display: flex; justify-content: space-between; margin-bottom: 10px; padding-top: 10px; border-top: 1px solid #f1f5f9;">
             <span style="color: #666;">Total Deposited (This Month):</span>
-            <span style="font-weight: bold; color: #1e293b;">${totalAmount.toFixed(2)} TK</span>
+            <span 
+              style="
+                font-size: 20px;
+                font-weight: bold;
+                color: ${amount < 0 ? "#ef4444" : "#10b981"};
+              "
+            >${totalAmount.toFixed(2)} TK</span>
           </div>
           <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
             <span style="color: #666;">Date:</span>
