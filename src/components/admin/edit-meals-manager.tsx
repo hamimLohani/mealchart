@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
@@ -12,12 +11,12 @@ import {
   saveMealEntry,
   saveMealsBatch,
 } from "@/lib/firebase/repositories";
-import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
 import { normalizeMealQuantity } from "@/lib/utils/meal-money";
 import type { AdminProfile, Chart, MealEntry, Member } from "@/types/domain";
 import { memberDisplayName, memberIdsForChartRows } from "@/lib/utils/chart-members";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
+import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
 
 function daysInMonth(year: number, month: number) {
   return new Date(year, month, 0).getDate();
@@ -30,17 +29,25 @@ export function EditMealsManager() {
   const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null);
   const [charts, setCharts] = useState<Chart[]>([]);
   const [error, setError] = useState<string | null>(blocked ? t("errors.firebaseNotConfigured") : null);
-  const [isLoading, setIsLoading] = useState(!blocked);
+  const [isLoading, setIsLoading] = useState(false);
 
   const [selectedChart, setSelectedChart] = useState<Chart | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [meals, setMeals] = useState<Record<string, Record<string, number>>>({});
   const [tableLoading, setTableLoading] = useState(false);
   const savingRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const { adminProfile: currentAdminProfile, isLoading: profileLoading, error: profileError } = useCurrentAdminProfile();
+  const resolvedError =
+    error ??
+    (profileError
+      ? tx(profileError instanceof Error ? profileError.message : t("errors.loadDataFailed"))
+      : !profileLoading && !currentAdminProfile && !blocked
+        ? t("errors.logInMeals")
+        : null);
 
   useGlobalLoading(
     "edit-meals-manager",
-    isLoading || tableLoading,
+    isLoading || profileLoading || tableLoading,
     isLoading ? t("common.loading") : t("admin.loadingMeals"),
   );
 
@@ -50,31 +57,34 @@ export function EditMealsManager() {
 
   useEffect(() => {
     if (blocked || !auth) return;
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        setError(t("errors.logInMeals"));
-        setIsLoading(false);
-        return;
-      }
+    if (profileLoading) return;
+    if (profileError) {
+      return;
+    }
+    if (!currentAdminProfile) return;
+    let active = true;
+    void (async () => {
       try {
-        const profile = await getAdminProfileForUser(user);
-        if (!profile) throw new Error("No admin profile found.");
+        if (!active) return;
+        setIsLoading(true);
         const [currentCharts, memberList] = await Promise.all([
-          listCharts(profile.groupId),
-          listMembers(profile.groupId),
+          listCharts(currentAdminProfile.groupId),
+          listMembers(currentAdminProfile.groupId),
         ]);
-        setAdminProfile(profile);
+        if (!active) return;
+        setAdminProfile(currentAdminProfile);
         setCharts(currentCharts);
         setMembers(memberList);
         setError(null);
       } catch (e) {
+        if (!active) return;
         setError(tx(e instanceof Error ? e.message : t("errors.loadDataFailed")));
       } finally {
-        setIsLoading(false);
+        if (active) setIsLoading(false);
       }
-    });
-    return unsub;
-  }, [blocked, t, tx]);
+    })();
+    return () => { active = false; };
+  }, [blocked, currentAdminProfile, profileError, profileLoading, t, tx]);
 
   useEffect(() => {
     if (!adminProfile || !selectedChart) return;
@@ -209,7 +219,7 @@ export function EditMealsManager() {
   if (!selectedChart) {
     return (
       <div className="mt-6 grid gap-5">
-        {error && <p className="alert-error">{error}</p>}
+        {resolvedError && <p className="alert-error">{resolvedError}</p>}
 
         <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]">
           <p className="admin-section-label">{t("admin.selectMonth")}</p>
@@ -253,7 +263,7 @@ export function EditMealsManager() {
 
   return (
     <div className="mt-6 grid gap-5">
-      {error && <p className="alert-error">{error}</p>}
+      {resolvedError && <p className="alert-error">{resolvedError}</p>}
 
       <div className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--panel)] px-4 py-3">
         <div>

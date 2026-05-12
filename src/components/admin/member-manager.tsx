@@ -1,17 +1,16 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { useT } from "@/i18n/use-t";
 import { createMember, deleteMember, listMembers, updateMember, listJoinRequests, approveJoinRequest, rejectJoinRequest, getGroupById } from "@/lib/firebase/repositories";
-import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
 import { toDateInputValue } from "@/lib/utils/date";
 import type { AdminProfile, Member, JoinRequest } from "@/types/domain";
 import { sendWelcomeEmail } from "@/lib/email/actions";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
+import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
 
 type MemberFormState = { fullName: string; joinDate: string; email: string };
 const initialForm: MemberFormState = {
@@ -35,12 +34,32 @@ export function MemberManager() {
   const [search, setSearch] = useState("");
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(configurationError);
-  const [isLoading, setIsLoading] = useState(!configurationError);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { adminProfile: currentAdminProfile, isLoading: profileLoading, error: profileError } = useCurrentAdminProfile();
+  const activeAdminProfile =
+    currentAdminProfile && adminProfile?.id === currentAdminProfile.id ? adminProfile : null;
+  const visibleMembers = useMemo(
+    () => (activeAdminProfile ? members : []),
+    [activeAdminProfile, members],
+  );
+  const visibleJoinRequests = useMemo(
+    () => (activeAdminProfile ? joinRequests : []),
+    [activeAdminProfile, joinRequests],
+  );
+  const resolvedError =
+    error ??
+    (profileError
+      ? profileError instanceof Error
+        ? profileError.message
+        : "Failed to load members."
+      : !profileLoading && !currentAdminProfile && !configurationError
+        ? "Log in as an admin to manage members."
+        : null);
 
   useGlobalLoading(
     "member-manager",
-    isLoading || isSubmitting,
+    isLoading || profileLoading || isSubmitting,
     isLoading
       ? t("memberMgr.loadingList")
       : editingMemberId
@@ -50,45 +69,45 @@ export function MemberManager() {
 
   useEffect(() => {
     if (configurationError || !auth) return;
+    if (profileLoading) return;
+    if (profileError || !currentAdminProfile) return;
 
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        setAdminProfile(null);
-        setMembers([]);
-        setError("Log in as an admin to manage members.");
-        setIsLoading(false);
-        return;
-      }
+    let active = true;
+    void (async () => {
       try {
+        if (!active) return;
+        setIsLoading(true);
         setError(null);
-        const profile = await getAdminProfileForUser(user);
-        if (!profile) throw new Error("No admin profile was found for the current user.");
         const [currentMembers, currentRequests, group] = await Promise.all([
-          listMembers(profile.groupId),
-          listJoinRequests(profile.groupId),
-          getGroupById(profile.groupId),
+          listMembers(currentAdminProfile.groupId),
+          listJoinRequests(currentAdminProfile.groupId),
+          getGroupById(currentAdminProfile.groupId),
         ]);
-        setAdminProfile(profile);
+        if (!active) return;
+        setAdminProfile(currentAdminProfile);
         setGroupName(group?.name ?? "");
         setMembers(currentMembers);
         setJoinRequests(currentRequests);
       } catch (e) {
+        if (!active) return;
         setError(e instanceof Error ? e.message : "Failed to load members.");
       } finally {
-        setIsLoading(false);
+        if (active) setIsLoading(false);
       }
-    });
+    })();
 
-    return unsubscribe;
-  }, [configurationError]);
+    return () => {
+      active = false;
+    };
+  }, [configurationError, currentAdminProfile, profileError, profileLoading]);
 
   const filteredMembers = useMemo(() => {
     const query = search.trim().toLowerCase();
-    if (!query) return members;
-    return members.filter((m) =>
+    if (!query) return visibleMembers;
+    return visibleMembers.filter((m) =>
       m.fullName.toLowerCase().includes(query) || m.email.toLowerCase().includes(query)
     );
-  }, [members, search]);
+  }, [search, visibleMembers]);
 
   function resetForm() {
     setForm(initialForm);
@@ -99,7 +118,7 @@ export function MemberManager() {
     event.preventDefault();
     setError(null);
 
-    if (!adminProfile) { setError("Admin profile is required before managing members."); return; }
+    if (!activeAdminProfile) { setError("Admin profile is required before managing members."); return; }
     if (!form.fullName.trim() || !form.joinDate.trim() || !form.email.trim()) {
       setError("Full name, join date, and email are required.");
       return;
@@ -115,7 +134,7 @@ export function MemberManager() {
     try {
       if (editingMemberId) {
         const updated = await updateMember({
-          groupId: adminProfile.groupId,
+          groupId: activeAdminProfile.groupId,
           memberId: editingMemberId,
           fullName: form.fullName.trim(),
           joinDate: form.joinDate,
@@ -126,7 +145,7 @@ export function MemberManager() {
         );
       } else {
         const created = await createMember({
-          groupId: adminProfile.groupId,
+          groupId: activeAdminProfile.groupId,
           fullName: form.fullName.trim(),
           joinDate: form.joinDate,
           email: form.email.trim(),
@@ -136,7 +155,7 @@ export function MemberManager() {
         const emailResult = await sendWelcomeEmail(
           created.email,
           created.fullName,
-          groupName || adminProfile.groupId,
+          groupName || activeAdminProfile.groupId,
         );
         if (!emailResult.success) {
           setError(`Member saved, but welcome email failed: ${emailResult.error}`);
@@ -151,10 +170,10 @@ export function MemberManager() {
   }
 
   async function handleDelete(memberId: string) {
-    if (!adminProfile) return;
+    if (!activeAdminProfile) return;
     setError(null);
     try {
-      await deleteMember(adminProfile.groupId, memberId);
+      await deleteMember(activeAdminProfile.groupId, memberId);
       setMembers((c) => c.filter((m) => m.id !== memberId));
       if (editingMemberId === memberId) resetForm();
     } catch (e) {
@@ -168,18 +187,18 @@ export function MemberManager() {
   }
 
   async function handleApproveRequest(req: JoinRequest) {
-    if (!adminProfile) return;
+    if (!activeAdminProfile) return;
     setIsSubmitting(true);
     try {
-      await approveJoinRequest(adminProfile.groupId, req.id, req.fullName, req.email);
+      await approveJoinRequest(activeAdminProfile.groupId, req.id, req.fullName, req.email);
       setJoinRequests(c => c.filter(r => r.id !== req.id));
-      const currentMembers = await listMembers(adminProfile.groupId);
+      const currentMembers = await listMembers(activeAdminProfile.groupId);
       setMembers(currentMembers);
 
       const emailResult = await sendWelcomeEmail(
         req.email,
         req.fullName,
-        groupName || adminProfile.groupId,
+        groupName || activeAdminProfile.groupId,
       );
       if (!emailResult.success) {
         setError(`Member approved, but welcome email failed: ${emailResult.error}`);
@@ -192,9 +211,9 @@ export function MemberManager() {
   }
 
   async function handleRejectRequest(req: JoinRequest) {
-    if (!adminProfile) return;
+    if (!activeAdminProfile) return;
     try {
-      await rejectJoinRequest(adminProfile.groupId, req.id);
+      await rejectJoinRequest(activeAdminProfile.groupId, req.id);
       setJoinRequests(c => c.filter(r => r.id !== req.id));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to reject request.");
@@ -208,7 +227,7 @@ export function MemberManager() {
 
   return (
     <div className="mt-6 grid gap-5">
-      {error && <p className="alert-error">{tx(error)}</p>}
+      {resolvedError && <p className="alert-error">{tx(resolvedError)}</p>}
 
       <form
         className="grid gap-4 rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]"
@@ -248,7 +267,7 @@ export function MemberManager() {
           </label>
         </div>
         <div className="flex flex-wrap gap-3">
-          <button className="button-primary" disabled={!adminProfile || isSubmitting} type="submit">
+          <button className="button-primary" disabled={!activeAdminProfile || isSubmitting} type="submit">
             {isSubmitting
               ? editingMemberId ? t("memberMgr.submittingUpdate") : t("memberMgr.submittingAdd")
               : editingMemberId ? t("memberMgr.submitUpdate") : t("memberMgr.submitAdd")}
@@ -261,11 +280,11 @@ export function MemberManager() {
         </div>
       </form>
 
-      {joinRequests.length > 0 && (
+      {visibleJoinRequests.length > 0 && (
         <div className="rounded-[var(--radius)] border-2 border-[color:var(--accent)] bg-[color:var(--panel)] p-5 shadow-[0_0_0_4px_var(--accent-dim)]">
           <p className="admin-section-label">Pending Join Requests</p>
           <div className="mt-4 grid gap-2.5">
-            {joinRequests.map((req) => (
+            {visibleJoinRequests.map((req) => (
               <article
                 key={req.id}
                 className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3"
@@ -295,7 +314,7 @@ export function MemberManager() {
             <p className="mt-1.5 text-lg font-semibold">
               {t("memberMgr.listSummary", {
                 shown: String(filteredMembers.length),
-                total: String(members.length),
+                total: String(visibleMembers.length),
               })}
             </p>
           </div>
@@ -308,7 +327,7 @@ export function MemberManager() {
         </div>
 
         <div className="mt-4 grid gap-2.5">
-          {members.length === 0 ? (
+          {visibleMembers.length === 0 ? (
             <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">
               {t("admin.noMembersYet")}
             </p>

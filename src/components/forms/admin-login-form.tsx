@@ -120,7 +120,7 @@ export function AdminLoginForm() {
     setIsSubmitting(true);
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      await signInWithRedirect(auth, provider);
     } catch (err) {
       setError(tx(getAuthErrorMessage(err, t("adminLogin.errFailed"))));
       setIsSubmitting(false);

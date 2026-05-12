@@ -8,11 +8,11 @@ import { auth, db } from "@/lib/firebase/client";
 import { doc, getDoc } from "firebase/firestore";
 import { useT } from "@/i18n/use-t";
 import { groupsCollection } from "@/lib/firebase/paths";
-import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
 import { useAuthStore } from "@/store/auth-store";
 import type { Group } from "@/types/domain";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
+import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
 
 const navItemKeys = [
   { href: "/admin/members", labelKey: "adminNav.members" as const, hintKey: "adminNav.membersHint" as const, metric: "01" },
@@ -49,7 +49,12 @@ export default function AdminPage() {
   const { t, tx } = useT();
   const [group, setGroup] = useState<Group | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const isPageLoading = !isLoaded || (!!admin && !group && !loadError);
+  const { adminProfile, isLoading: profileLoading, error: profileError } = useCurrentAdminProfile();
+  const visibleGroup = adminProfile && group?.id === adminProfile.groupId ? group : null;
+  const isPageLoading = !isLoaded || profileLoading || (!!adminProfile && !visibleGroup && !loadError);
+  const displayError =
+    loadError ??
+    (profileError ? tx(profileError instanceof Error ? profileError.message : t("errors.loadGroupDetails")) : null);
 
   useGlobalLoading("admin-page", isPageLoading, t("adminDash.loading"));
 
@@ -57,16 +62,11 @@ export default function AdminPage() {
     let active = true;
 
     async function loadGroup() {
-      if (!admin) {
-        setGroup(null);
-        return;
-      }
+      if (!adminProfile) return;
       try {
         setLoadError(null);
-        const profile = await getAdminProfileForUser(admin);
-        if (!profile) throw new Error("No admin profile was found for this account.");
         if (!db) throw new Error("Firebase not configured.");
-        const groupSnap = await getDoc(doc(db, groupsCollection, profile.groupId));
+        const groupSnap = await getDoc(doc(db, groupsCollection, adminProfile.groupId));
         const currentGroup = groupSnap.exists() ? ({ id: groupSnap.id, ...groupSnap.data() } as Group) : null;
         if (!currentGroup) throw new Error("No group was found for this admin profile.");
         if (!active) return;
@@ -81,8 +81,7 @@ export default function AdminPage() {
     return () => {
       active = false;
     };
-  }, [admin, t, tx]);
-
+  }, [adminProfile, t, tx]);
   async function handleLogout() {
     if (auth) await signOut(auth);
     router.push("/admin/login");
@@ -109,14 +108,14 @@ export default function AdminPage() {
 
   return (
     <div className="grid gap-5">
-      {loadError && <p className="alert-error">{loadError}</p>}
-      {!group && !loadError ? <AdminLoadingState compact message={t("adminDash.loading")} /> : null}
+      {displayError && <p className="alert-error">{displayError}</p>}
+      {!visibleGroup && !displayError ? <AdminLoadingState compact message={t("adminDash.loading")} /> : null}
 
       <section className="admin-dashboard-hero">
         <div className="min-w-0">
           <p className="admin-section-label">{t("adminDash.workspace")}</p>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
-            {group?.name ?? t("adminDash.manageFallback")}
+            {visibleGroup?.name ?? t("adminDash.manageFallback")}
           </h1>
           <p className="mt-1.5 max-w-2xl text-sm leading-6 text-[color:var(--soft-foreground)]">
             {t("adminDash.subtitle")}

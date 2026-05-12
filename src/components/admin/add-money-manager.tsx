@@ -1,7 +1,6 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { useT } from "@/i18n/use-t";
@@ -12,12 +11,12 @@ import {
   listDepositsForChart,
   listMembers,
 } from "@/lib/firebase/repositories";
-import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
 import { chartMonthDateBounds, toDateInputValue } from "@/lib/utils/date";
 import type { AdminProfile, Chart, DepositEntry, Member } from "@/types/domain";
 import { sendMoneyReceiptEmail } from "@/lib/email/actions";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
+import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
 
 type DepositFormState = { memberId: string; amount: string; date: string };
 
@@ -33,63 +32,78 @@ export function AddMoneyManager() {
   const [charts, setCharts] = useState<Chart[]>([]);
   const [groupName, setGroupName] = useState("");
   const [error, setError] = useState<string | null>(configurationError);
-  const [isLoading, setIsLoading] = useState(!configurationError);
+  const [isLoading, setIsLoading] = useState(false);
 
   const [selectedChart, setSelectedChart] = useState<Chart | null>(null);
   const [deposits, setDeposits] = useState<DepositEntry[]>([]);
   const [depositsLoading, setDepositsLoading] = useState(false);
   const [form, setForm] = useState<DepositFormState>({ memberId: "", amount: "", date: toDateInputValue(new Date()) });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { adminProfile: currentAdminProfile, isLoading: profileLoading, error: profileError } = useCurrentAdminProfile();
+  const activeAdminProfile =
+    currentAdminProfile && adminProfile?.id === currentAdminProfile.id ? adminProfile : null;
+  const visibleMembers = activeAdminProfile ? members : [];
+  const visibleCharts = activeAdminProfile ? charts : [];
+  const resolvedError =
+    error ??
+    (profileError
+      ? profileError instanceof Error
+        ? profileError.message
+        : "Failed to load data."
+      : !profileLoading && !currentAdminProfile && !configurationError
+        ? "Log in as an admin to add money for members."
+        : null);
 
   useGlobalLoading(
     "add-money-manager",
-    isLoading || depositsLoading || isSubmitting,
+    isLoading || profileLoading || depositsLoading || isSubmitting,
     isLoading ? t("common.loading") : isSubmitting ? t("addMoney.adding") : t("common.loading"),
   );
 
   useEffect(() => {
     if (configurationError || !auth) return;
+    if (profileLoading) return;
+    if (profileError || !currentAdminProfile) return;
 
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        setAdminProfile(null); setMembers([]); setCharts([]);
-        setError("Log in as an admin to add money for members.");
-        setIsLoading(false);
-        return;
-      }
+    let active = true;
+    void (async () => {
       try {
+        if (!active) return;
+        setIsLoading(true);
         setError(null);
-        const profile = await getAdminProfileForUser(user);
-        if (!profile) throw new Error("No admin profile was found for the current user.");
         const [currentMembers, currentCharts, group] = await Promise.all([
-          listMembers(profile.groupId),
-          listCharts(profile.groupId),
-          getGroupById(profile.groupId),
+          listMembers(currentAdminProfile.groupId),
+          listCharts(currentAdminProfile.groupId),
+          getGroupById(currentAdminProfile.groupId),
         ]);
-        setAdminProfile(profile);
+        if (!active) return;
+        setAdminProfile(currentAdminProfile);
         setMembers(currentMembers);
         setCharts(currentCharts);
         setGroupName(group?.name ?? "");
         setForm((c) => ({ ...c, memberId: c.memberId || currentMembers[0]?.id || "" }));
       } catch (e) {
+        if (!active) return;
         setError(e instanceof Error ? e.message : "Failed to load data.");
       } finally {
-        setIsLoading(false);
+        if (active) setIsLoading(false);
       }
-    });
+    })();
 
-    return unsubscribe;
-  }, [configurationError]);
+    return () => {
+      active = false;
+    };
+  }, [configurationError, currentAdminProfile, profileError, profileLoading]);
 
   useEffect(() => {
-    if (!adminProfile || !selectedChart) return;
+    if (!activeAdminProfile || !selectedChart) return;
     let active = true;
 
     const loadDeposits = async () => {
       setDepositsLoading(true);
       setDeposits([]);
       try {
-        const list = await listDepositsForChart(adminProfile.groupId, selectedChart.id);
+        const list = await listDepositsForChart(activeAdminProfile.groupId, selectedChart.id);
         if (active) setDeposits(list);
       } catch (e) {
         if (active) setError(e instanceof Error ? e.message : "Failed to load deposits.");
@@ -101,7 +115,7 @@ export function AddMoneyManager() {
     void loadDeposits();
 
     return () => { active = false; };
-  }, [adminProfile, selectedChart]);
+  }, [activeAdminProfile, selectedChart]);
 
   useEffect(() => {
     if (!selectedChart) return;
@@ -128,7 +142,7 @@ export function AddMoneyManager() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    if (!adminProfile || !selectedChart) return;
+    if (!activeAdminProfile || !selectedChart) return;
     if (selectedChart.locked) { setError("This month is locked."); return; }
     const amount = Number(form.amount);
     if (!form.memberId || Number.isNaN(amount) || amount === 0) {
@@ -138,14 +152,14 @@ export function AddMoneyManager() {
     setIsSubmitting(true);
     try {
       const mid = form.memberId.toLowerCase();
-      const member = members.find(m => m.id.toLowerCase() === mid);
+      const member = visibleMembers.find(m => m.id.toLowerCase() === mid);
       const deposit = await createDeposit({
-        groupId: adminProfile.groupId,
+        groupId: activeAdminProfile.groupId,
         chartId: selectedChart.id,
         memberId: form.memberId,
         amount,
         date: form.date,
-        collectedByAdminId: adminProfile.id,
+        collectedByAdminId: activeAdminProfile.id,
         memberName: member?.fullName,
       });
       setDeposits((prev) => {
@@ -159,7 +173,7 @@ export function AddMoneyManager() {
           member.fullName,
           amount,
           form.date,
-          adminProfile.email, // Or use admin name if available in profile
+          activeAdminProfile.email,
           groupName
         );
         if (!emailResult.success) {
@@ -184,20 +198,20 @@ export function AddMoneyManager() {
   if (!selectedChart) {
     return (
       <div className="mt-6 grid gap-5">
-        {error && <p className="alert-error">{tx(error)}</p>}
+        {resolvedError && <p className="alert-error">{tx(resolvedError)}</p>}
 
         <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]">
           <p className="admin-section-label">{t("admin.selectMonth")}</p>
           <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">
             {t("addMoney.selectHelp")}
           </p>
-          {charts.length === 0 ? (
+          {visibleCharts.length === 0 ? (
             <p className="mt-4 py-6 text-center text-sm text-[color:var(--soft-foreground)]">
               {t("admin.noChartsMeals")}
             </p>
           ) : (
             <div className="mt-4 grid gap-2">
-              {charts.map((chart, i) => (
+              {visibleCharts.map((chart, i) => (
                 <button
                   key={chart.id}
                   type="button"
@@ -225,7 +239,7 @@ export function AddMoneyManager() {
 
   return (
     <div className="mt-6 grid gap-5">
-      {error && <p className="alert-error">{tx(error)}</p>}
+      {resolvedError && <p className="alert-error">{tx(resolvedError)}</p>}
 
       <div className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--panel)] px-4 py-3">
         <div>
@@ -248,7 +262,7 @@ export function AddMoneyManager() {
         {[
           { label: t("addMoney.statMonth"), value: selectedChart.label },
           { label: t("addMoney.statTotalDeposited"), value: `${totalDeposited.toFixed(2)} ${tk}` },
-          { label: t("addMoney.statMembers"), value: String(members.length) },
+          { label: t("addMoney.statMembers"), value: String(visibleMembers.length) },
         ].map((s) => (
           <div key={s.label} className="group-stat-card">
             <p className="group-stat-label">{s.label}</p>
@@ -271,7 +285,7 @@ export function AddMoneyManager() {
               value={form.memberId}
             >
               <option value="">{t("addMoney.selectMember")}</option>
-              {members.map((m) => (
+              {visibleMembers.map((m) => (
                 <option key={m.id} value={m.id}>{m.fullName}</option>
               ))}
             </select>
@@ -302,7 +316,7 @@ export function AddMoneyManager() {
         </div>
         <button
           className="button-primary w-full sm:w-fit"
-          disabled={!adminProfile || !members.length || isSubmitting || selectedChart.locked}
+          disabled={!activeAdminProfile || !visibleMembers.length || isSubmitting || selectedChart.locked}
           type="submit"
         >
           {isSubmitting ? t("addMoney.adding") : t("addMoney.submit")}
@@ -312,7 +326,7 @@ export function AddMoneyManager() {
       <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]">
         <p className="admin-section-label">{t("addMoney.memberTotals")} — {selectedChart.label}</p>
         <div className="mt-3 grid gap-2.5 md:grid-cols-2">
-          {members.map((member) => (
+          {visibleMembers.map((member) => (
             <div
               key={member.id}
               className="flex items-center justify-between rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3"
@@ -338,7 +352,7 @@ export function AddMoneyManager() {
             </p>
           )}
           {deposits.map((deposit) => {
-            const member = members.find((m) => m.id.toLowerCase() === deposit.memberId.toLowerCase());
+            const member = visibleMembers.find((m) => m.id.toLowerCase() === deposit.memberId.toLowerCase());
             return (
               <article
                 key={deposit.id}

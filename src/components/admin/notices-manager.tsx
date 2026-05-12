@@ -1,7 +1,6 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { useT } from "@/i18n/use-t";
@@ -12,10 +11,10 @@ import {
   listNoticesForChart,
   updateNotice,
 } from "@/lib/firebase/repositories";
-import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
 import type { AdminProfile, Chart, Notice } from "@/types/domain";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
+import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
 
 export function NoticesManager() {
   const { t, tx, language } = useT();
@@ -25,7 +24,7 @@ export function NoticesManager() {
   const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null);
   const [charts, setCharts] = useState<Chart[]>([]);
   const [error, setError] = useState<string | null>(configError);
-  const [isLoading, setIsLoading] = useState(!configError);
+  const [isLoading, setIsLoading] = useState(false);
 
   const [selectedChart, setSelectedChart] = useState<Chart | null>(null);
   const [notices, setNotices] = useState<Notice[]>([]);
@@ -34,29 +33,44 @@ export function NoticesManager() {
   const [body, setBody] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { adminProfile: currentAdminProfile, isLoading: profileLoading, error: profileError } = useCurrentAdminProfile();
+  const resolvedError =
+    error ??
+    (profileError
+      ? profileError instanceof Error
+        ? profileError.message
+        : "Failed to load data."
+      : !profileLoading && !currentAdminProfile && !configError
+        ? "Log in as admin to manage notices."
+        : null);
 
   useGlobalLoading(
     "notices-manager",
-    isLoading || noticesLoading || isSubmitting,
+    isLoading || profileLoading || noticesLoading || isSubmitting,
     isLoading ? t("common.loading") : isSubmitting ? t("admin.saving") : t("common.loading"),
   );
 
   useEffect(() => {
     if (configError || !auth) return;
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) { setError("Log in as admin to manage notices."); setIsLoading(false); return; }
+    if (profileLoading) return;
+    if (profileError) return;
+    if (!currentAdminProfile) return;
+    let active = true;
+    void (async () => {
       try {
-        const profile = await getAdminProfileForUser(user);
-        if (!profile) throw new Error("No admin profile found.");
-        const currentCharts = await listCharts(profile.groupId);
-        setAdminProfile(profile);
+        if (!active) return;
+        setIsLoading(true);
+        const currentCharts = await listCharts(currentAdminProfile.groupId);
+        if (!active) return;
+        setAdminProfile(currentAdminProfile);
         setCharts(currentCharts);
       } catch (e) {
+        if (!active) return;
         setError(e instanceof Error ? e.message : "Failed to load data.");
-      } finally { setIsLoading(false); }
-    });
-    return unsub;
-  }, [configError]);
+      } finally { if (active) setIsLoading(false); }
+    })();
+    return () => { active = false; };
+  }, [configError, currentAdminProfile, profileError, profileLoading]);
 
   useEffect(() => {
     if (!adminProfile || !selectedChart) return;
@@ -143,7 +157,7 @@ export function NoticesManager() {
   if (!selectedChart) {
     return (
       <div className="mt-6 grid gap-5">
-        {error && <p className="alert-error">{tx(error)}</p>}
+        {resolvedError && <p className="alert-error">{tx(resolvedError)}</p>}
 
         <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]">
           <p className="admin-section-label">{t("admin.selectMonth")}</p>
@@ -182,7 +196,7 @@ export function NoticesManager() {
 
   return (
     <div className="mt-6 grid gap-5">
-      {error && <p className="alert-error">{tx(error)}</p>}
+      {resolvedError && <p className="alert-error">{tx(resolvedError)}</p>}
 
       <div className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--panel)] px-4 py-3">
         <div>

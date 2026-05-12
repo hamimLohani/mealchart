@@ -70,13 +70,18 @@ export function RegisterGroupForm() {
       setError(null);
       try {
         const result = await getRedirectResult(firebaseAuth);
-        if (!active || !result?.user) return;
+        if (!active) return;
+        if (!result?.user) {
+          window.sessionStorage.removeItem(pendingGroupNameKey);
+          return;
+        }
         await createGroupForUser(result.user, pendingGroupName);
         window.sessionStorage.removeItem(pendingGroupNameKey);
         setIsCreated(true);
         setForm(initialState);
       } catch (err) {
         if (!active) return;
+        window.sessionStorage.removeItem(pendingGroupNameKey);
         setError(tx(getAuthErrorMessage(err, t("errors.registerFailed"))));
       } finally {
         if (!active) return;
@@ -139,7 +144,7 @@ export function RegisterGroupForm() {
       }
       window.sessionStorage.setItem(pendingGroupNameKey, groupName);
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      await signInWithRedirect(auth, provider);
     } catch (err) {
       setError(tx(getAuthErrorMessage(err, t("errors.registerFailed"))));
       setIsSubmitting(false);

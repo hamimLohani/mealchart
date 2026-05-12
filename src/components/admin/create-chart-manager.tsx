@@ -1,7 +1,6 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { useT } from "@/i18n/use-t";
@@ -18,7 +17,6 @@ import {
   listMembers,
   getGroupById,
 } from "@/lib/firebase/repositories";
-import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
 import { formatChartLabel } from "@/lib/utils/date";
 import { daysInMonth } from "@/lib/utils/date";
 import { getMonthTotals, getMemberTotals } from "@/lib/utils/meal-money";
@@ -26,6 +24,7 @@ import type { AdminProfile, Chart } from "@/types/domain";
 import { sendMonthSummaryEmails } from "@/lib/email/actions";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
+import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
 
 type ChartFormState = { year: string; month: string };
 
@@ -46,15 +45,31 @@ export function CreateChartManager() {
   const [charts, setCharts] = useState<Chart[]>([]);
   const [form, setForm] = useState<ChartFormState>(initialState);
   const [error, setError] = useState<string | null>(configurationError);
-  const [isLoading, setIsLoading] = useState(!configurationError);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [exportingChartId, setExportingChartId] = useState<string | null>(null);
+  const [isRepairingData, setIsRepairingData] = useState(false);
+  const { adminProfile: currentAdminProfile, isLoading: profileLoading, error: profileError } = useCurrentAdminProfile();
+  const activeAdminProfile =
+    currentAdminProfile && adminProfile?.id === currentAdminProfile.id ? adminProfile : null;
+  const visibleCharts = activeAdminProfile ? charts : [];
+  const resolvedError =
+    error ??
+    (profileError
+      ? profileError instanceof Error
+        ? profileError.message
+        : "Failed to load charts."
+      : !profileLoading && !currentAdminProfile && !configurationError
+        ? "Log in as an admin to create charts."
+        : null);
 
   useGlobalLoading(
     "create-chart-manager",
-    isLoading || isSubmitting || exportingChartId !== null,
+    isLoading || profileLoading || isSubmitting || exportingChartId !== null || isRepairingData,
     isLoading
       ? t("createChart.loadingCharts")
+      : isRepairingData
+        ? "Repairing older chart data…"
       : isSubmitting
         ? t("createChart.createBtnBusy")
         : t("common.loading"),
@@ -62,32 +77,27 @@ export function CreateChartManager() {
 
   useEffect(() => {
     if (configurationError || !auth) return;
-
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        setAdminProfile(null); setCharts([]);
-        setError("Log in as an admin to create charts.");
-        setIsLoading(false);
-        return;
-      }
+    if (profileLoading) return;
+    if (profileError || !currentAdminProfile) return;
+    let active = true;
+    void (async () => {
       try {
+        if (!active) return;
+        setIsLoading(true);
         setError(null);
-        const profile = await getAdminProfileForUser(user);
-        if (!profile) throw new Error("No admin profile was found for the current user.");
-        const currentCharts = await listCharts(profile.groupId);
-        await backfillMealMonthKeys(profile.groupId);
-        await syncLockedMonthDocsFromCharts(profile.groupId);
-        setAdminProfile(profile);
+        const currentCharts = await listCharts(currentAdminProfile.groupId);
+        if (!active) return;
+        setAdminProfile(currentAdminProfile);
         setCharts(currentCharts);
       } catch (e) {
+        if (!active) return;
         setError(e instanceof Error ? e.message : "Failed to load charts.");
       } finally {
-        setIsLoading(false);
+        if (active) setIsLoading(false);
       }
-    });
-
-    return unsubscribe;
-  }, [configurationError]);
+    })();
+    return () => { active = false; };
+  }, [configurationError, currentAdminProfile, profileError, profileLoading]);
 
   const previewLabel = useMemo(() => {
     const y = Number(form.year);
@@ -101,7 +111,7 @@ export function CreateChartManager() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    if (!adminProfile) { setError("Admin profile is required before creating a chart."); return; }
+    if (!activeAdminProfile) { setError("Admin profile is required before creating a chart."); return; }
     const year = Number(form.year);
     const month = Number(form.month);
     if (Number.isNaN(year) || Number.isNaN(month) || month < 1 || month > 12) {
@@ -110,7 +120,7 @@ export function CreateChartManager() {
     }
     setIsSubmitting(true);
     try {
-      const created = await createChart({ groupId: adminProfile.groupId, year, month });
+      const created = await createChart({ groupId: activeAdminProfile.groupId, year, month });
       setCharts((c) => [created, ...c].sort((a, b) => b.monthKey.localeCompare(a.monthKey)));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to create the chart.");
@@ -120,11 +130,11 @@ export function CreateChartManager() {
   }
 
   async function handleToggleLock(chart: Chart) {
-    if (!adminProfile) return;
+    if (!activeAdminProfile) return;
     setError(null);
     try {
       await updateChartLock({
-        groupId: adminProfile.groupId,
+        groupId: activeAdminProfile.groupId,
         chartId: chart.id,
         locked: !chart.locked,
       });
@@ -135,13 +145,13 @@ export function CreateChartManager() {
       );
 
       if (!chart.locked) {
-        const group = await getGroupById(adminProfile.groupId);
+        const group = await getGroupById(activeAdminProfile.groupId);
         if (!group) throw new Error("Group not found");
         const [members, meals, costs, deposits] = await Promise.all([
-          listMembers(adminProfile.groupId),
-          getMealsForMonth(adminProfile.groupId, chart.monthKey),
-          listCostsForChart(adminProfile.groupId, chart.id),
-          listDepositsForChart(adminProfile.groupId, chart.id),
+          listMembers(activeAdminProfile.groupId),
+          getMealsForMonth(activeAdminProfile.groupId, chart.monthKey),
+          listCostsForChart(activeAdminProfile.groupId, chart.id),
+          listDepositsForChart(activeAdminProfile.groupId, chart.id),
         ]);
         const emailResult = await sendMonthSummaryEmails(
           {
@@ -163,23 +173,39 @@ export function CreateChartManager() {
   }
 
   async function handleDeleteChart(chart: Chart) {
-    if (!adminProfile) return;
+    if (!activeAdminProfile) return;
     const confirmed = window.confirm(t("createChart.deleteConfirm"));
     if (!confirmed) return;
     setError(null);
     try {
-      await deleteChart(adminProfile.groupId, chart.id);
+      await deleteChart(activeAdminProfile.groupId, chart.id);
       setCharts((prev) => prev.filter((c) => c.id !== chart.id));
     } catch (e) {
       setError(e instanceof Error ? e.message : t("createChart.deleteFailed"));
     }
   }
 
+  async function handleRepairData() {
+    if (!activeAdminProfile) return;
+    setError(null);
+    setIsRepairingData(true);
+    try {
+      await backfillMealMonthKeys(activeAdminProfile.groupId);
+      await syncLockedMonthDocsFromCharts(activeAdminProfile.groupId);
+      const currentCharts = await listCharts(activeAdminProfile.groupId);
+      setCharts(currentCharts);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to repair older chart data.");
+    } finally {
+      setIsRepairingData(false);
+    }
+  }
+
   async function handleDownloadCSV(chart: Chart) {
-    if (!adminProfile) return;
+    if (!activeAdminProfile) return;
     try {
       setExportingChartId(chart.id);
-      const groupId = adminProfile.groupId;
+      const groupId = activeAdminProfile.groupId;
       const group = await getGroupById(groupId);
       if (!group) throw new Error("Group not found");
 
@@ -222,13 +248,26 @@ export function CreateChartManager() {
 
   return (
     <div className="mt-6 grid gap-5">
-      {error && <p className="alert-error">{tx(error)}</p>}
+      {resolvedError && <p className="alert-error">{tx(resolvedError)}</p>}
 
       <div className="rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] p-4">
         <p className="admin-section-label">{t("createChart.aboutTitle")}</p>
         <p className="mt-2 text-sm leading-6 text-[color:var(--soft-foreground)]">
           {t("createChart.aboutBody")}
         </p>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => void handleRepairData()}
+            disabled={!activeAdminProfile || isRepairingData}
+            className="button-secondary"
+          >
+            {isRepairingData ? "Repairing…" : "Repair Older Data"}
+          </button>
+          <p className="text-xs text-[color:var(--muted)]">
+            Runs one-time fixes for legacy meal month keys and locked-month mirror docs.
+          </p>
+        </div>
       </div>
 
       <form
@@ -269,7 +308,7 @@ export function CreateChartManager() {
 
         <button
           className="button-primary w-full sm:w-fit"
-          disabled={!adminProfile || isSubmitting}
+          disabled={!activeAdminProfile || isSubmitting}
           type="submit"
         >
           {isSubmitting ? t("createChart.createBtnBusy") : t("createChart.createBtn")}
@@ -279,8 +318,8 @@ export function CreateChartManager() {
       <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]">
         <p className="admin-section-label">{t("createChart.existingTitle")}</p>
         <div className="mt-3 grid gap-2.5">
-          {charts.length ? (
-            charts.map((chart, index) => (
+          {visibleCharts.length ? (
+            visibleCharts.map((chart, index) => (
               <article
                 key={chart.id}
                 className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3"
