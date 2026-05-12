@@ -37,15 +37,15 @@ function buildMealChartTable(member: Member, meals: MealEntry[]) {
       </thead>
       <tbody>
         ${memberMeals
-          .map(
-            (meal) => `
+      .map(
+        (meal) => `
               <tr>
                 <td style="padding: 8px 10px; border-bottom: 1px solid #f1f5f9;">${escapeHtml(meal.date)}</td>
                 <td style="padding: 8px 10px; text-align: right; border-bottom: 1px solid #f1f5f9;">${formatMeal(meal.quantity)}</td>
               </tr>
             `,
-          )
-          .join("")}
+      )
+      .join("")}
       </tbody>
     </table>
   `;
@@ -67,18 +67,18 @@ function buildCostBreakdown(costs: CostEntry[]) {
       </thead>
       <tbody>
         ${costs
-          .slice()
-          .sort((a, b) => a.date.localeCompare(b.date))
-          .map(
-            (cost) => `
+      .slice()
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map(
+        (cost) => `
               <tr>
                 <td style="padding: 8px 10px; border-bottom: 1px solid #f1f5f9;">${escapeHtml(cost.itemName)}</td>
                 <td style="padding: 8px 10px; border-bottom: 1px solid #f1f5f9;">${escapeHtml(cost.date)}</td>
                 <td style="padding: 8px 10px; text-align: right; border-bottom: 1px solid #f1f5f9;">${cost.amount.toFixed(2)} TK</td>
               </tr>
             `,
-          )
-          .join("")}
+      )
+      .join("")}
       </tbody>
     </table>
   `;
@@ -103,15 +103,15 @@ function buildDepositSummary(member: Member, deposits: DepositEntry[]) {
       </thead>
       <tbody>
         ${memberDeposits
-          .map(
-            (deposit) => `
+      .map(
+        (deposit) => `
               <tr>
                 <td style="padding: 8px 10px; border-bottom: 1px solid #f1f5f9;">${escapeHtml(deposit.date)}</td>
                 <td style="padding: 8px 10px; text-align: right; border-bottom: 1px solid #f1f5f9;">${deposit.amount.toFixed(2)} TK</td>
               </tr>
             `,
-          )
-          .join("")}
+      )
+      .join("")}
       </tbody>
     </table>
   `;
@@ -130,7 +130,7 @@ export async function sendWelcomeEmail(memberEmail: string, fullName: string, gr
         </div>
         <p style="font-size: 16px; line-height: 1.6;">You can now track your meals, deposits, and monthly costs through our portal.</p>
         <p style="text-align: center; margin-top: 30px;">
-          <a href="${process.env.NEXT_PUBLIC_BASE_URL || "https://mealchart.app"}" style="background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Go to Dashboard</a>
+          <a href="${process.env.NEXT_PUBLIC_BASE_URL || "https://mealchart.vercel.app"}" style="background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Go to Dashboard</a>
         </p>
         <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;">
         <p style="font-size: 12px; color: #999; text-align: center;">This is an automated email from Meal Chart. Please do not reply.</p>
@@ -168,7 +168,7 @@ export async function sendMoneyReceiptEmail(
 
         <div style="background-color: #fff; padding: 25px; border-radius: 8px; margin: 20px 0; border: 1px dashed #10b981; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
           <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-            <span style="color: #666;">Amount Received:</span>
+            <span style="color: #666;">Amount Received:  </span>
             <span 
               style="
                 font-size: 20px;
@@ -178,27 +178,27 @@ export async function sendMoneyReceiptEmail(
             >${amount.toFixed(2)} TK</span>
           </div>
           <div style="display: flex; justify-content: space-between; margin-bottom: 10px; padding-top: 10px; border-top: 1px solid #f1f5f9;">
-            <span style="color: #666;">Total Deposited (This Month):</span>
+            <span style="color: #666;">Total Deposited (This Month):  </span>
             <span 
               style="
                 font-size: 20px;
                 font-weight: bold;
-                color: ${amount < 0 ? "#ef4444" : "#10b981"};
+                color: ${totalAmount < 0 ? "#ef4444" : "#10b981"};
               "
             >${totalAmount.toFixed(2)} TK</span>
           </div>
           <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-            <span style="color: #666;">Date:</span>
+            <span style="color: #666;">Date:  </span>
             <span style="font-weight: 500;">${escapeHtml(date)}</span>
           </div>
           <div style="display: flex; justify-content: space-between;">
-            <span style="color: #666;">Collected By:</span>
+            <span style="color: #666;">Collected By:  </span>
             <span style="font-weight: 500;">${escapeHtml(adminName)}</span>
           </div>
         </div>
         <p style="font-size: 14px; color: #10b981; text-align: center;">Group: ${escapeHtml(groupName)}</p>
         <p style="text-align: center; margin-top: 30px;">
-          <a href="${process.env.NEXT_PUBLIC_BASE_URL || "https://mealchart.app"}"style="background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">View Transaction History</a>
+          <a href="${process.env.NEXT_PUBLIC_BASE_URL || "https://mealchart.vercel.app"}"style="background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">View Transaction History</a>
         </p>
         <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;">
         <p style="font-size: 12px; color: #999; text-align: center;">This is an automated receipt from Meal Chart. Please keep it for your records.</p>
