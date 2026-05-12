@@ -226,16 +226,22 @@ export async function sendMonthSummaryEmails(input: {
   costs: CostEntry[];
   deposits: DepositEntry[];
 }) {
+  const { groupName, chartLabel, members, meals, costs, deposits } = input;
+  console.log(`[Email] Starting monthly summary batch for group "${groupName}" (${chartLabel}) to ${members.length} members.`);
+
   try {
-    const { groupName, chartLabel, members, meals, costs, deposits } = input;
     const { totalMeals, totalCost, totalPaid, mealRate, remainingTaka } = getMonthTotals(
       meals,
       costs,
       deposits,
     );
 
-    await Promise.all(
+    const results = await Promise.allSettled(
       members.map(async (member) => {
+        if (!member.email || !member.email.includes("@")) {
+          throw new Error(`Invalid email for member ${member.fullName}`);
+        }
+
         const totals = getMemberTotals(member.id, meals, deposits, mealRate);
 
         const html = `
@@ -324,18 +330,38 @@ export async function sendMonthSummaryEmails(input: {
           </div>
         `;
 
-        return transporter.sendMail({
+        await transporter.sendMail({
           from: fromEmail,
           to: member.email,
           subject: `Monthly Report: ${chartLabel} - ${groupName}`,
           html,
         });
+
+        console.log(`[Email] Successfully sent report to ${member.email}`);
+        return { email: member.email, success: true };
       }),
     );
 
-    return { success: true };
+    const successful = results.filter((r) => r.status === "fulfilled" && (r.value as any).success).length;
+    const failed = results.filter((r) => r.status === "rejected" || !(r.value as any).success);
+
+    if (failed.length > 0) {
+      console.error(`[Email] Batch completed with ${failed.length} failures out of ${members.length}.`);
+      failed.forEach((f) => {
+        if (f.status === "rejected") console.error(`[Email] Failure:`, f.reason);
+      });
+    } else {
+      console.log(`[Email] Batch completed successfully! Sent ${successful} reports.`);
+    }
+
+    return {
+      success: true,
+      sentCount: successful,
+      failedCount: failed.length,
+      totalCount: members.length,
+    };
   } catch (error) {
-    console.error("Failed to send month summary emails:", error);
+    console.error("[Email] Critical batch failure:", error);
     return { success: false, error: getErrorMessage(error) };
   }
 }

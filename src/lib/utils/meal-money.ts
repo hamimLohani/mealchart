@@ -2,7 +2,7 @@ import type { CostEntry, DepositEntry, MealEntry } from "@/types/domain";
 
 export function normalizeMealQuantity(value: number): number {
   if (!Number.isFinite(value) || value < 0) return 0;
-  return Math.min(20, Math.round(value * 4) / 4);
+  return Math.round(value * 4) / 4;
 }
 
 export function formatMeal(n: number): string {

@@ -154,18 +154,20 @@ export function CreateChartManager() {
           listCostsForChart(activeAdminProfile.groupId, chart.id),
           listDepositsForChart(activeAdminProfile.groupId, chart.id),
         ]);
-        const emailResult = await sendMonthSummaryEmails(
-          {
-            groupName: group.name,
-            chartLabel: chart.label,
-            members,
-            meals,
-            costs,
-            deposits,
-          }
-        );
+        const emailResult = await sendMonthSummaryEmails({
+          groupName: group.name,
+          chartLabel: chart.label,
+          members,
+          meals,
+          costs,
+          deposits,
+        });
         if (!emailResult.success) {
           setError(`Month locked, but summary emails failed: ${emailResult.error}`);
+        } else if ((emailResult as any).failedCount > 0) {
+          setError(
+            `Month locked. Summary emails: ${(emailResult as any).sentCount} sent, ${(emailResult as any).failedCount} failed. Check server logs for details.`
+          );
         }
       }
     } catch (e) {
