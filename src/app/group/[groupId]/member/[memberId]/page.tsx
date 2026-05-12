@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { useGroup, useMembers, useMealsForMonth, useMealsForDate, useCosts, useDeposits } from "@/lib/hooks/use-data";
 import { mutate } from "swr";
+import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 export default function MemberPage({
   params,
 }: {
@@ -44,6 +45,19 @@ export default function MemberPage({
 
   // Normalize member from the list
   const normalizedMemberId = decodeURIComponent(memberId).toLowerCase();
+
+  useGlobalLoading(
+    `member-page-${groupId}-${normalizedMemberId}`,
+    groupLoading || monthLoading || dateMealLoading || isSaving,
+    groupLoading
+      ? t("memberPage.loading")
+      : monthLoading
+        ? t("memberPage.loadingMonth")
+        : dateMealLoading
+          ? t("memberPage.loadingMeal")
+          : t("memberPage.saving"),
+  );
+
   const member = allMembers.find((m) => m.id.toLowerCase() === normalizedMemberId) ?? null;
 
   // Sync mealCount from SWR date data

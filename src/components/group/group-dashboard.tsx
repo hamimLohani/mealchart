@@ -12,6 +12,7 @@ import { motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { useGroup, useMembers, useCharts, useMealsForMonth, useCosts, useDeposits } from "@/lib/hooks/use-data";
+import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 
 export function GroupDashboard({ groupId }: { groupId: string }) {
   const router = useRouter();
@@ -29,6 +30,11 @@ export function GroupDashboard({ groupId }: { groupId: string }) {
   const { data: monthDeposits = [], isLoading: depositsLoading } = useDeposits(group?.id, activeChart?.id);
 
   const isMonthLoading = !!(activeChart && (mealsLoading || costsLoading || depositsLoading));
+  useGlobalLoading(
+    `group-dashboard-${groupId}`,
+    groupLoading || isMonthLoading,
+    groupLoading ? t("groupDash.loading") : t("groupDash.loadingTotals"),
+  );
 
   function handleMemberSelect(member: Member) {
     router.push(`/group/${groupId}/member/${member.id}`);

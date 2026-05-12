@@ -6,6 +6,7 @@ import { isFirebaseConfigured } from "@/lib/firebase/config";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGroup, useMembers } from "@/lib/hooks/use-data";
+import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 
 export function GroupMemberDashboard({ groupId }: { groupId: string }) {
   const router = useRouter();
@@ -15,6 +16,7 @@ export function GroupMemberDashboard({ groupId }: { groupId: string }) {
   const { data: members = [], isLoading: membersLoading } = useMembers(group?.id);
 
   const isLoading = groupLoading || membersLoading;
+  useGlobalLoading(`group-member-dashboard-${groupId}`, isLoading, t("groupMembers.loading"));
 
   if (isLoading) {
     return (

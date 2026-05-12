@@ -11,6 +11,8 @@ import { groupsCollection } from "@/lib/firebase/paths";
 import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
 import { useAuthStore } from "@/store/auth-store";
 import type { Group } from "@/types/domain";
+import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
+import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 
 const navItemKeys = [
   { href: "/admin/members", labelKey: "adminNav.members" as const, hintKey: "adminNav.membersHint" as const, metric: "01" },
@@ -47,6 +49,9 @@ export default function AdminPage() {
   const { t, tx } = useT();
   const [group, setGroup] = useState<Group | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const isPageLoading = !isLoaded || (!!admin && !group && !loadError);
+
+  useGlobalLoading("admin-page", isPageLoading, t("adminDash.loading"));
 
   useEffect(() => {
     let active = true;
@@ -85,9 +90,7 @@ export default function AdminPage() {
 
   if (!isLoaded) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <p className="text-sm text-[color:var(--soft-foreground)]">{t("adminDash.loading")}</p>
-      </div>
+      <AdminLoadingState message={t("adminDash.loading")} />
     );
   }
 
@@ -107,6 +110,7 @@ export default function AdminPage() {
   return (
     <div className="grid gap-5">
       {loadError && <p className="alert-error">{loadError}</p>}
+      {!group && !loadError ? <AdminLoadingState compact message={t("adminDash.loading")} /> : null}
 
       <section className="admin-dashboard-hero">
         <div className="min-w-0">

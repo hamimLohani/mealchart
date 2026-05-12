@@ -9,6 +9,7 @@ import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { submitJoinRequest } from "@/lib/firebase/repositories";
 import { resolveSignInDestination } from "@/lib/auth/sign-in-routing";
 import { getAuthErrorMessage } from "@/lib/auth/errors";
+import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import type { Group } from "@/types/domain";
 
 export function AdminLoginForm() {
@@ -25,6 +26,12 @@ export function AdminLoginForm() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState("");
   const [isLoadingGroups, setIsLoadingGroups] = useState(false);
+
+  useGlobalLoading(
+    "admin-login-form",
+    isSubmitting || isLoadingGroups,
+    isLoadingGroups ? t("enterForm.loadingGroups") : t("adminLoginForm.signingIn"),
+  );
 
   const finishSignIn = useCallback(
     async (user: NonNullable<typeof auth>["currentUser"]) => {
@@ -113,7 +120,7 @@ export function AdminLoginForm() {
     setIsSubmitting(true);
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithRedirect(auth, provider);
+      await signInWithPopup(auth, provider);
     } catch (err) {
       setError(tx(getAuthErrorMessage(err, t("adminLogin.errFailed"))));
       setIsSubmitting(false);

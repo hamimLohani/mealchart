@@ -14,6 +14,8 @@ import {
 } from "@/lib/firebase/repositories";
 import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
 import type { AdminProfile, Chart, Notice } from "@/types/domain";
+import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
+import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 
 export function NoticesManager() {
   const { t, tx, language } = useT();
@@ -32,6 +34,12 @@ export function NoticesManager() {
   const [body, setBody] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useGlobalLoading(
+    "notices-manager",
+    isLoading || noticesLoading || isSubmitting,
+    isLoading ? t("common.loading") : isSubmitting ? t("admin.saving") : t("common.loading"),
+  );
 
   useEffect(() => {
     if (configError || !auth) return;
@@ -130,7 +138,7 @@ export function NoticesManager() {
     }
   }
 
-  if (isLoading) return <p className="mt-8 text-sm text-[color:var(--soft-foreground)]">{t("common.loading")}</p>;
+  if (isLoading) return <AdminLoadingState message={t("common.loading")} />;
 
   if (!selectedChart) {
     return (
@@ -218,7 +226,7 @@ export function NoticesManager() {
 
       <div className="grid gap-3">
         {noticesLoading && (
-          <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">{t("common.loading")}</p>
+          <AdminLoadingState compact message={t("common.loading")} />
         )}
         {!noticesLoading && notices.length === 0 && (
           <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">{t("noticeMgr.empty")}</p>

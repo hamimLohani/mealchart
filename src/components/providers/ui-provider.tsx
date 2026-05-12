@@ -5,10 +5,13 @@ import { onAuthStateChanged } from "firebase/auth";
 import { useUiStore } from "@/store/ui-store";
 import { useAuthStore } from "@/store/auth-store";
 import { auth } from "@/lib/firebase/client";
+import { useT } from "@/i18n/use-t";
 
 export function UiProvider({ children }: { children: React.ReactNode }) {
   const { language, theme } = useUiStore();
+  const loadingEntries = useUiStore((state) => state.loadingEntries);
   const { setAdmin, setLoaded } = useAuthStore();
+  const { t } = useT();
 
   useEffect(() => {
     document.documentElement.lang = language;
@@ -29,5 +32,21 @@ export function UiProvider({ children }: { children: React.ReactNode }) {
     return unsubscribe;
   }, [setAdmin, setLoaded]);
 
-  return children;
+  const loadingMessages = Object.values(loadingEntries);
+  const loadingMessage = loadingMessages.at(-1) ?? t("common.loading");
+  const isLoading = loadingMessages.length > 0;
+
+  return (
+    <>
+      {children}
+      {isLoading ? (
+        <div className="global-loading-overlay" aria-live="polite" aria-busy="true" role="status">
+          <div className="global-loading-card">
+            <span className="global-loading-spinner" aria-hidden="true" />
+            <p className="global-loading-message">{loadingMessage}</p>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
 }

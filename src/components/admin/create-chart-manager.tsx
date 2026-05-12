@@ -23,6 +23,9 @@ import { formatChartLabel } from "@/lib/utils/date";
 import { daysInMonth } from "@/lib/utils/date";
 import { getMonthTotals, getMemberTotals } from "@/lib/utils/meal-money";
 import type { AdminProfile, Chart } from "@/types/domain";
+import { sendMonthSummaryEmails } from "@/lib/email/actions";
+import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
+import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 
 type ChartFormState = { year: string; month: string };
 
@@ -46,6 +49,16 @@ export function CreateChartManager() {
   const [isLoading, setIsLoading] = useState(!configurationError);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [exportingChartId, setExportingChartId] = useState<string | null>(null);
+
+  useGlobalLoading(
+    "create-chart-manager",
+    isLoading || isSubmitting || exportingChartId !== null,
+    isLoading
+      ? t("createChart.loadingCharts")
+      : isSubmitting
+        ? t("createChart.createBtnBusy")
+        : t("common.loading"),
+  );
 
   useEffect(() => {
     if (configurationError || !auth) return;
@@ -120,6 +133,30 @@ export function CreateChartManager() {
           current.id === chart.id ? { ...current, locked: !current.locked } : current,
         ),
       );
+
+      if (!chart.locked) {
+        const group = await getGroupById(adminProfile.groupId);
+        if (!group) throw new Error("Group not found");
+        const [members, meals, costs, deposits] = await Promise.all([
+          listMembers(adminProfile.groupId),
+          getMealsForMonth(adminProfile.groupId, chart.monthKey),
+          listCostsForChart(adminProfile.groupId, chart.id),
+          listDepositsForChart(adminProfile.groupId, chart.id),
+        ]);
+        const emailResult = await sendMonthSummaryEmails(
+          {
+            groupName: group.name,
+            chartLabel: chart.label,
+            members,
+            meals,
+            costs,
+            deposits,
+          }
+        );
+        if (!emailResult.success) {
+          setError(`Month locked, but summary emails failed: ${emailResult.error}`);
+        }
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to update chart lock.");
     }
@@ -154,7 +191,7 @@ export function CreateChartManager() {
       ]);
 
       const { mealRate } = getMonthTotals(meals, costs, deposits);
-      
+
       let csvContent = "Member Name,Total Meals,Meal Cost,Amount Paid,Balance\n";
 
       members.forEach(member => {
@@ -178,7 +215,7 @@ export function CreateChartManager() {
   }
 
   if (isLoading) {
-    return <p className="mt-8 text-sm text-[color:var(--soft-foreground)]">{t("createChart.loadingCharts")}</p>;
+    return <AdminLoadingState message={t("createChart.loadingCharts")} />;
   }
 
   const daysUnit = t("createChart.daysUnit");

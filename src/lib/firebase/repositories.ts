@@ -350,6 +350,35 @@ export async function listCharts(groupId: string) {
   });
 }
 
+export async function getChartById(groupId: string, chartId: string) {
+  const database = ensureDb();
+  const snapshot = await getDoc(doc(database, chartsCollection(groupId), chartId));
+  if (!snapshot.exists()) return null;
+
+  const data = snapshot.data();
+  const year = Number(data.year);
+  const month = Number(data.month);
+  const monthKey =
+    typeof data.monthKey === "string" && data.monthKey.length >= 7
+      ? data.monthKey
+      : !Number.isNaN(year) && !Number.isNaN(month) && month >= 1 && month <= 12
+        ? toMonthKey(year, month)
+        : "";
+
+  return {
+    ...normalizeDoc<Chart>(snapshot.id, data),
+    monthKey,
+    totalDays:
+      typeof data.totalDays === "number"
+        ? data.totalDays
+        : !Number.isNaN(year) && !Number.isNaN(month)
+          ? new Date(year, month, 0).getDate()
+          : 31,
+    locked: data.locked === true,
+    createdAt: serializeDate(data.createdAt),
+  };
+}
+
 export async function createChart(input: {
   groupId: string;
   year: number;

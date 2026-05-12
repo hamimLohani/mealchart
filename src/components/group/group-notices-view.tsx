@@ -8,6 +8,7 @@ import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { useGroupSession } from "@/lib/hooks/use-group-session";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGroup, useNotices } from "@/lib/hooks/use-data";
+import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 
 function formatNoticeCreatedAt(raw: unknown, locale: string): string {
   if (raw instanceof Timestamp) {
@@ -30,6 +31,11 @@ export function GroupNoticesView({ groupId }: { groupId: string }) {
 
   const { data: group, error: groupError, isLoading: groupLoading } = useGroup(isFirebaseConfigured ? groupId : undefined);
   const { data: notices = [], isLoading: noticesLoading } = useNotices(group?.id, chart?.id);
+  useGlobalLoading(
+    `group-notices-view-${groupId}`,
+    groupLoading || noticesLoading,
+    t("common.loading"),
+  );
 
   if (groupLoading) {
     return (

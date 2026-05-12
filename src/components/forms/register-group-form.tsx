@@ -11,6 +11,7 @@ import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { groupsCollection, adminsCollection } from "@/lib/firebase/paths";
 import { getAdminProfileForUser, normalizeEmail } from "@/lib/auth/sign-in-routing";
 import { getAuthErrorMessage } from "@/lib/auth/errors";
+import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 
 type FormState = { groupName: string };
 const initialState: FormState = { groupName: "" };
@@ -22,6 +23,8 @@ export function RegisterGroupForm() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCreated, setIsCreated] = useState(false);
+
+  useGlobalLoading("register-group-form", isSubmitting, t("registerForm.submitting"));
 
   const createGroupForUser = useCallback(
     async (user: User, groupName: string) => {
@@ -136,7 +139,7 @@ export function RegisterGroupForm() {
       }
       window.sessionStorage.setItem(pendingGroupNameKey, groupName);
       const provider = new GoogleAuthProvider();
-      await signInWithRedirect(auth, provider);
+      await signInWithPopup(auth, provider);
     } catch (err) {
       setError(tx(getAuthErrorMessage(err, t("errors.registerFailed"))));
       setIsSubmitting(false);

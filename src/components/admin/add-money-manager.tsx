@@ -7,6 +7,7 @@ import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { useT } from "@/i18n/use-t";
 import {
   createDeposit,
+  getGroupById,
   listCharts,
   listDepositsForChart,
   listMembers,
@@ -14,6 +15,9 @@ import {
 import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
 import { chartMonthDateBounds, toDateInputValue } from "@/lib/utils/date";
 import type { AdminProfile, Chart, DepositEntry, Member } from "@/types/domain";
+import { sendMoneyReceiptEmail } from "@/lib/email/actions";
+import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
+import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 
 type DepositFormState = { memberId: string; amount: string; date: string };
 
@@ -27,6 +31,7 @@ export function AddMoneyManager() {
   const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [charts, setCharts] = useState<Chart[]>([]);
+  const [groupName, setGroupName] = useState("");
   const [error, setError] = useState<string | null>(configurationError);
   const [isLoading, setIsLoading] = useState(!configurationError);
 
@@ -35,6 +40,12 @@ export function AddMoneyManager() {
   const [depositsLoading, setDepositsLoading] = useState(false);
   const [form, setForm] = useState<DepositFormState>({ memberId: "", amount: "", date: toDateInputValue(new Date()) });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useGlobalLoading(
+    "add-money-manager",
+    isLoading || depositsLoading || isSubmitting,
+    isLoading ? t("common.loading") : isSubmitting ? t("addMoney.adding") : t("common.loading"),
+  );
 
   useEffect(() => {
     if (configurationError || !auth) return;
@@ -50,13 +61,15 @@ export function AddMoneyManager() {
         setError(null);
         const profile = await getAdminProfileForUser(user);
         if (!profile) throw new Error("No admin profile was found for the current user.");
-        const [currentMembers, currentCharts] = await Promise.all([
+        const [currentMembers, currentCharts, group] = await Promise.all([
           listMembers(profile.groupId),
           listCharts(profile.groupId),
+          getGroupById(profile.groupId),
         ]);
         setAdminProfile(profile);
         setMembers(currentMembers);
         setCharts(currentCharts);
+        setGroupName(group?.name ?? "");
         setForm((c) => ({ ...c, memberId: c.memberId || currentMembers[0]?.id || "" }));
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load data.");
@@ -139,6 +152,21 @@ export function AddMoneyManager() {
         if (prev.some((d) => d.id === deposit.id)) return prev;
         return [deposit, ...prev];
       });
+
+      if (member) {
+        const emailResult = await sendMoneyReceiptEmail(
+          member.email,
+          member.fullName,
+          amount,
+          form.date,
+          adminProfile.email, // Or use admin name if available in profile
+          groupName
+        );
+        if (!emailResult.success) {
+          setError(`Money added, but receipt email failed: ${emailResult.error}`);
+        }
+      }
+
       setForm((c) => ({ ...c, amount: "" }));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to add money.");
@@ -150,7 +178,7 @@ export function AddMoneyManager() {
   const tk = t("common.tk");
 
   if (isLoading) {
-    return <p className="mt-8 text-sm text-[color:var(--soft-foreground)]">{t("common.loading")}</p>;
+    return <AdminLoadingState message={t("common.loading")} />;
   }
 
   if (!selectedChart) {
@@ -301,9 +329,9 @@ export function AddMoneyManager() {
       <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]">
         <p className="admin-section-label">{t("addMoney.depositHistory")} — {selectedChart.label}</p>
         <div className="mt-3 grid gap-2.5">
-          {depositsLoading && (
-            <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">{t("common.loading")}</p>
-          )}
+        {depositsLoading && (
+          <AdminLoadingState compact message={t("common.loading")} />
+        )}
           {!depositsLoading && deposits.length === 0 && (
             <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">
               {t("addMoney.emptyDeposits")}

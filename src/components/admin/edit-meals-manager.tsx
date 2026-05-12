@@ -16,6 +16,8 @@ import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
 import { normalizeMealQuantity } from "@/lib/utils/meal-money";
 import type { AdminProfile, Chart, MealEntry, Member } from "@/types/domain";
 import { memberDisplayName, memberIdsForChartRows } from "@/lib/utils/chart-members";
+import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
+import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 
 function daysInMonth(year: number, month: number) {
   return new Date(year, month, 0).getDate();
@@ -35,6 +37,12 @@ export function EditMealsManager() {
   const [meals, setMeals] = useState<Record<string, Record<string, number>>>({});
   const [tableLoading, setTableLoading] = useState(false);
   const savingRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  useGlobalLoading(
+    "edit-meals-manager",
+    isLoading || tableLoading,
+    isLoading ? t("common.loading") : t("admin.loadingMeals"),
+  );
 
   useEffect(() => {
     if (blocked) setTimeout(() => setError(t("errors.firebaseNotConfigured")), 0);
@@ -195,7 +203,7 @@ export function EditMealsManager() {
   const former = t("common.formerMember");
 
   if (isLoading) {
-    return <p className="mt-8 text-sm text-[color:var(--soft-foreground)]">{t("common.loading")}</p>;
+    return <AdminLoadingState message={t("common.loading")} />;
   }
 
   if (!selectedChart) {
@@ -275,7 +283,7 @@ export function EditMealsManager() {
       </div>
 
       {tableLoading ? (
-        <p className="py-8 text-center text-sm text-[color:var(--soft-foreground)]">{t("admin.loadingMeals")}</p>
+        <AdminLoadingState compact message={t("admin.loadingMeals")} />
       ) : (
         <div className="overflow-x-auto rounded-[var(--radius)] border border-[color:var(--border)] shadow-[var(--shadow-sm)]">
           <table className="w-full border-collapse text-sm">

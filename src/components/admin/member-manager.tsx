@@ -5,10 +5,13 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { useT } from "@/i18n/use-t";
-import { createMember, deleteMember, listMembers, updateMember, listJoinRequests, approveJoinRequest, rejectJoinRequest } from "@/lib/firebase/repositories";
+import { createMember, deleteMember, listMembers, updateMember, listJoinRequests, approveJoinRequest, rejectJoinRequest, getGroupById } from "@/lib/firebase/repositories";
 import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
 import { toDateInputValue } from "@/lib/utils/date";
 import type { AdminProfile, Member, JoinRequest } from "@/types/domain";
+import { sendWelcomeEmail } from "@/lib/email/actions";
+import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
+import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 
 type MemberFormState = { fullName: string; joinDate: string; email: string };
 const initialForm: MemberFormState = {
@@ -25,6 +28,7 @@ export function MemberManager() {
       : null;
 
   const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null);
+  const [groupName, setGroupName] = useState("");
   const [members, setMembers] = useState<Member[]>([]);
   const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
   const [form, setForm] = useState<MemberFormState>(initialForm);
@@ -33,6 +37,16 @@ export function MemberManager() {
   const [error, setError] = useState<string | null>(configurationError);
   const [isLoading, setIsLoading] = useState(!configurationError);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useGlobalLoading(
+    "member-manager",
+    isLoading || isSubmitting,
+    isLoading
+      ? t("memberMgr.loadingList")
+      : editingMemberId
+        ? t("memberMgr.submittingUpdate")
+        : t("memberMgr.submittingAdd"),
+  );
 
   useEffect(() => {
     if (configurationError || !auth) return;
@@ -49,9 +63,13 @@ export function MemberManager() {
         setError(null);
         const profile = await getAdminProfileForUser(user);
         if (!profile) throw new Error("No admin profile was found for the current user.");
-        const currentMembers = await listMembers(profile.groupId);
-        const currentRequests = await listJoinRequests(profile.groupId);
+        const [currentMembers, currentRequests, group] = await Promise.all([
+          listMembers(profile.groupId),
+          listJoinRequests(profile.groupId),
+          getGroupById(profile.groupId),
+        ]);
         setAdminProfile(profile);
+        setGroupName(group?.name ?? "");
         setMembers(currentMembers);
         setJoinRequests(currentRequests);
       } catch (e) {
@@ -86,7 +104,7 @@ export function MemberManager() {
       setError("Full name, join date, and email are required.");
       return;
     }
-    
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(form.email.trim())) {
       setError("Please enter a valid email address.");
@@ -114,6 +132,15 @@ export function MemberManager() {
           email: form.email.trim(),
         });
         setMembers((c) => [...c, created].sort((a, b) => a.fullName.localeCompare(b.fullName)));
+
+        const emailResult = await sendWelcomeEmail(
+          created.email,
+          created.fullName,
+          groupName || adminProfile.groupId,
+        );
+        if (!emailResult.success) {
+          setError(`Member saved, but welcome email failed: ${emailResult.error}`);
+        }
       }
       resetForm();
     } catch (e) {
@@ -148,6 +175,15 @@ export function MemberManager() {
       setJoinRequests(c => c.filter(r => r.id !== req.id));
       const currentMembers = await listMembers(adminProfile.groupId);
       setMembers(currentMembers);
+
+      const emailResult = await sendWelcomeEmail(
+        req.email,
+        req.fullName,
+        groupName || adminProfile.groupId,
+      );
+      if (!emailResult.success) {
+        setError(`Member approved, but welcome email failed: ${emailResult.error}`);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to approve request.");
     } finally {
@@ -167,7 +203,7 @@ export function MemberManager() {
 
 
   if (isLoading) {
-    return <p className="mt-8 text-sm text-[color:var(--soft-foreground)]">{t("memberMgr.loadingList")}</p>;
+    return <AdminLoadingState message={t("memberMgr.loadingList")} />;
   }
 
   return (

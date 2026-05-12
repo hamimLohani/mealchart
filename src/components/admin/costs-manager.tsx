@@ -14,6 +14,8 @@ import {
 import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
 import { chartMonthDateBounds, toDateInputValue } from "@/lib/utils/date";
 import type { AdminProfile, Chart, CostEntry } from "@/types/domain";
+import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
+import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 
 export function CostsManager() {
   const { t, tx } = useT();
@@ -31,6 +33,12 @@ export function CostsManager() {
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(toDateInputValue(new Date()));
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useGlobalLoading(
+    "costs-manager",
+    isLoading || costsLoading || isSubmitting,
+    isLoading ? t("common.loading") : isSubmitting ? t("costs.adding") : t("common.loading"),
+  );
 
   useEffect(() => {
     if (configError || !auth) return;
@@ -120,7 +128,7 @@ export function CostsManager() {
     }
   }
 
-  if (isLoading) return <p className="mt-8 text-sm text-[color:var(--soft-foreground)]">{t("common.loading")}</p>;
+  if (isLoading) return <AdminLoadingState message={t("common.loading")} />;
 
   if (!selectedChart) {
     return (
@@ -231,7 +239,7 @@ export function CostsManager() {
 
       <div className="grid gap-2.5">
         {costsLoading && (
-          <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">{t("common.loading")}</p>
+          <AdminLoadingState compact message={t("common.loading")} />
         )}
         {!costsLoading && costs.length === 0 && (
           <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">{t("costs.empty")}</p>

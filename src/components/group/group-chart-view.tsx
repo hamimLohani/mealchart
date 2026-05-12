@@ -10,6 +10,7 @@ import { daysInMonth } from "@/lib/utils/date";
 import { formatMeal, getMonthTotals } from "@/lib/utils/meal-money";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGroup, useMembers, useMealsForMonth, useCosts, useDeposits } from "@/lib/hooks/use-data";
+import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 
 export function GroupChartView({ groupId }: { groupId: string }) {
   const router = useRouter();
@@ -23,6 +24,11 @@ export function GroupChartView({ groupId }: { groupId: string }) {
   const { data: deposits = [] } = useDeposits(group?.id, chart?.id);
 
   const dataLoading = !!(chart && mealsLoading);
+  useGlobalLoading(
+    `group-chart-view-${groupId}`,
+    groupLoading || dataLoading,
+    groupLoading ? t("groupChart.loading") : t("groupChart.loading"),
+  );
 
   if (groupLoading) {
     return (

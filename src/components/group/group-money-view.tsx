@@ -10,6 +10,7 @@ import { memberDisplayName, memberIdsForMoneyRows } from "@/lib/utils/chart-memb
 import { formatMeal, getMonthTotals } from "@/lib/utils/meal-money";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGroup, useMembers, useMealsForMonth, useCosts, useDeposits } from "@/lib/hooks/use-data";
+import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 
 export function GroupMoneyView({ groupId }: { groupId: string }) {
   const router = useRouter();
@@ -23,6 +24,11 @@ export function GroupMoneyView({ groupId }: { groupId: string }) {
   const { data: deposits = [], isLoading: depositsLoading } = useDeposits(group?.id, chart?.id);
 
   const dataLoading = !!(chart && (mealsLoading || costsLoading || depositsLoading));
+  useGlobalLoading(
+    `group-money-view-${groupId}`,
+    groupLoading || dataLoading,
+    groupLoading ? t("common.loading") : t("common.loading"),
+  );
 
   const tk = t("common.tk");
   const former = t("common.formerMember");
