@@ -246,7 +246,7 @@ export function CreateChartManager() {
   const daysUnit = t("createChart.daysUnit");
 
   return (
-    <div className="mt-6 grid gap-5">
+    <div className="mt-6 grid gap-4">
       {resolvedError && <p className="alert-error">{tx(resolvedError)}</p>}
 
       <div className="rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] p-4">
@@ -254,12 +254,12 @@ export function CreateChartManager() {
         <p className="mt-2 text-sm leading-6 text-[color:var(--soft-foreground)]">
           {t("createChart.aboutBody")}
         </p>
-        <div className="mt-4 flex flex-wrap items-center gap-3">
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
           <button
             type="button"
             onClick={() => void handleRepairData()}
             disabled={!activeAdminProfile || isRepairingData}
-            className="button-secondary"
+            className="button-secondary w-full sm:w-fit"
           >
             {isRepairingData ? "Repairing…" : "Repair Older Data"}
           </button>
@@ -270,7 +270,7 @@ export function CreateChartManager() {
       </div>
 
       <form
-        className="grid gap-4 rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]"
+        className="grid gap-4 rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-4 shadow-[var(--shadow-sm)]"
         onSubmit={handleSubmit}
       >
         <p className="admin-section-label">{t("createChart.formTitle")}</p>
@@ -314,47 +314,60 @@ export function CreateChartManager() {
         </button>
       </form>
 
-      <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]">
+      <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-4 shadow-[var(--shadow-sm)]">
         <p className="admin-section-label">{t("createChart.existingTitle")}</p>
         <div className="mt-3 grid gap-2.5">
           {visibleCharts.length ? (
             visibleCharts.map((chart, index) => (
               <article
                 key={chart.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3"
+                className="grid gap-4 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] p-4 sm:flex sm:items-center sm:justify-between sm:px-4 sm:py-3"
               >
-                <div>
-                  <p className="font-semibold">{chart.label}</p>
-                  <p className="mt-0.5 text-xs text-[color:var(--muted)]">
-                    {chart.totalDays} {daysUnit} · {chart.monthKey}
-                  </p>
+                <div className="flex items-start justify-between sm:block">
+                  <div className="min-w-0">
+                    <p className="font-semibold">{chart.label}</p>
+                    <p className="mt-0.5 text-xs text-[color:var(--muted)]">
+                      {chart.totalDays} {daysUnit} · {chart.monthKey}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1.5 sm:hidden">
+                    {chart.locked ? (
+                      <span className="rounded-full border border-[color:var(--danger-border)] bg-[color:var(--danger-bg)] px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-wider text-[color:var(--danger)]">
+                        {t("createChart.lockedBadge")}
+                      </span>
+                    ) : null}
+                    {index === 0 && <span className="badge-accent !py-0.5 !text-[0.65rem]">{t("common.active")}</span>}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {chart.locked ? (
-                    <span className="rounded-full border border-[color:var(--danger-border)] bg-[color:var(--danger-bg)] px-2 py-0.5 text-xs font-semibold text-[color:var(--danger)]">
-                      {t("createChart.lockedBadge")}
-                    </span>
-                  ) : null}
-                  {index === 0 && <span className="badge-accent">{t("common.active")}</span>}
+
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  <div className="hidden items-center gap-2 sm:flex">
+                    {chart.locked ? (
+                      <span className="rounded-full border border-[color:var(--danger-border)] bg-[color:var(--danger-bg)] px-2 py-0.5 text-xs font-semibold text-[color:var(--danger)]">
+                        {t("createChart.lockedBadge")}
+                      </span>
+                    ) : null}
+                    {index === 0 && <span className="badge-accent">{t("common.active")}</span>}
+                  </div>
                   <button
                     type="button"
                     onClick={() => void handleDownloadPDF(chart)}
                     disabled={exportingChartId === chart.id}
-                    className="button-secondary"
+                    className="button-secondary flex-1 sm:flex-none"
                   >
                     {exportingChartId === chart.id ? "..." : t("groupDash.exportCSV", { defaultValue: "Export PDF" })}
                   </button>
                   <button
                     type="button"
                     onClick={() => void handleToggleLock(chart)}
-                    className="button-secondary"
+                    className="button-secondary flex-1 sm:flex-none"
                   >
                     {chart.locked ? t("createChart.unlock") : t("createChart.lock")}
                   </button>
                   <button
                     type="button"
                     onClick={() => void handleDeleteChart(chart)}
-                    className="rounded-full border border-[color:var(--danger-border)] px-3 py-1.5 text-xs font-semibold text-[color:var(--danger)] transition hover:bg-[color:var(--danger)] hover:text-white"
+                    className="rounded-full border border-[color:var(--danger-border)] px-3 py-1.5 text-xs font-semibold text-[color:var(--danger)] transition hover:bg-[color:var(--danger)] hover:text-white sm:px-4"
                   >
                     {t("createChart.deleteBtn")}
                   </button>

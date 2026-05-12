@@ -232,11 +232,11 @@ export function MemberManager() {
   }
 
   return (
-    <div className="mt-6 grid gap-5">
+    <div className="mt-6 grid gap-4">
       {resolvedError && <p className="alert-error">{tx(resolvedError)}</p>}
 
       <form
-        className="grid gap-4 rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]"
+        className="grid gap-4 rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-4 shadow-[var(--shadow-sm)]"
         onSubmit={handleSubmit}
       >
         <p className="admin-section-label">{editingMemberId ? t("memberMgr.editTitle") : t("memberMgr.addTitle")}</p>
@@ -287,7 +287,7 @@ export function MemberManager() {
       </form>
 
       {visibleJoinRequests.length > 0 && (
-        <div className="rounded-[var(--radius)] border-2 border-[color:var(--accent)] bg-[color:var(--panel)] p-5 shadow-[0_0_0_4px_var(--accent-dim)]">
+        <div className="rounded-[var(--radius)] border-2 border-[color:var(--accent)] bg-[color:var(--panel)] p-4 shadow-[0_0_0_4px_var(--accent-dim)]">
           <p className="admin-section-label">Pending Join Requests</p>
           <div className="mt-4 grid gap-2.5">
             {visibleJoinRequests.map((req) => (
@@ -313,7 +313,7 @@ export function MemberManager() {
         </div>
       )}
 
-      <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]">
+      <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-4 shadow-[var(--shadow-sm)]">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="admin-section-label">{t("memberMgr.listTitle")}</p>
