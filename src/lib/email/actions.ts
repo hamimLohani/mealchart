@@ -351,8 +351,10 @@ export async function sendMonthSummaryEmails(input: {
       deposits,
     );
 
-    const results = await Promise.allSettled(
-      members.map(async (member) => {
+    const results: any[] = [];
+
+    for (const member of members) {
+      try {
         if (!member.email || !member.email.includes("@")) {
           throw new Error(`Invalid email for member ${member.fullName}`);
         }
@@ -453,12 +455,15 @@ export async function sendMonthSummaryEmails(input: {
         });
 
         console.log(`[Email] Successfully sent report to ${member.email}`);
-        return { email: member.email, success: true };
-      }),
-    );
+        results.push({ status: 'fulfilled', value: { email: member.email, success: true } });
+      } catch (err) {
+        console.error(`[Email] Failed to send to ${member.email}:`, err);
+        results.push({ status: 'rejected', reason: err });
+      }
+    }
 
-    const successful = results.filter((r) => r.status === "fulfilled" && (r.value as any).success).length;
-    const failed = results.filter((r) => r.status === "rejected" || !(r.value as any).success);
+    const successful = results.filter((r) => r.status === "fulfilled" && r.value.success).length;
+    const failed = results.filter((r) => r.status === "rejected" || !r.value.success);
 
     if (failed.length > 0) {
       console.error(`[Email] Batch completed with ${failed.length} failures out of ${members.length}.`);
