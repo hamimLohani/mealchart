@@ -1,6 +1,6 @@
 "use server";
 
-import { resend, fromEmail } from "./transporter";
+import { transporter, fromEmail } from "./transporter";
 import { getMonthTotals, getMemberTotals, formatMeal } from "@/lib/utils/meal-money";
 import type { CostEntry, DepositEntry, MealEntry, Member } from "@/types/domain";
 
@@ -137,12 +137,13 @@ export async function sendWelcomeEmail(memberEmail: string, fullName: string, gr
       </div>
     `;
 
-    await resend.emails.send({
+    await transporter.sendMail({
       from: fromEmail,
       to: memberEmail,
       subject: `Welcome to ${groupName}!`,
       html,
     });
+
     return { success: true };
   } catch (error) {
     console.error("Failed to send welcome email:", error);
@@ -167,12 +168,13 @@ export async function sendRemovalEmail(memberEmail: string, fullName: string, gr
       </div>
     `;
 
-    await resend.emails.send({
+    await transporter.sendMail({
       from: fromEmail,
       to: memberEmail,
       subject: `Account Removed - ${groupName}`,
       html,
     });
+
     return { success: true };
   } catch (error) {
     console.error("Failed to send removal email:", error);
@@ -252,12 +254,13 @@ export async function sendAdminWelcomeEmail(adminEmail: string, adminName: strin
       </div>
     `;
 
-    await resend.emails.send({
+    await transporter.sendMail({
       from: fromEmail,
       to: adminEmail,
       subject: `Your Admin Dashboard is Ready - ${groupName}`,
       html,
     });
+
     return { success: true };
   } catch (error) {
     console.error("Failed to send admin welcome email:", error);
@@ -320,12 +323,13 @@ export async function sendMoneyReceiptEmail(
       </div>
     `;
 
-    await resend.emails.send({
+    await transporter.sendMail({
       from: fromEmail,
       to: memberEmail,
       subject: `Receipt: ${amount.toFixed(2)} TK - ${groupName}`,
       html,
     });
+
     return { success: true };
   } catch (error) {
     console.error("Failed to send receipt email:", error);
@@ -447,7 +451,7 @@ export async function sendMonthSummaryEmails(input: {
           </div>
         `;
 
-        await resend.emails.send({
+        await transporter.sendMail({
           from: fromEmail,
           to: member.email,
           subject: `Monthly Report: ${chartLabel} - ${groupName}`,

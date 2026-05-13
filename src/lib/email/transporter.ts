@@ -1,8 +1,6 @@
-import { Resend } from 'resend';
-
-// Nodemailer setup (Commented out)
-/*
 import nodemailer from "nodemailer";
+// import { Resend } from 'resend';
+
 const user = process.env.SMTP_USER;
 const pass = process.env.SMTP_PASS;
 
@@ -20,11 +18,10 @@ export const transporter = nodemailer.createTransport({
     pass,
   },
 });
+
+/*
+// Resend setup (Commented out)
+export const resend = new Resend(process.env.RESEND_API_KEY);
 */
 
-// Resend setup
-export const resend = new Resend(process.env.RESEND_API_KEY);
-
-// When using Resend, you MUST use a verified domain. 
-// If you haven't verified a domain yet, you can only send to yourself using 'onboarding@resend.dev'
-export const fromEmail = process.env.SMTP_FROM || 'Meal Chart <onboarding@resend.dev>';
+export const fromEmail = process.env.SMTP_FROM || (user ? `Meal Chart <${user}>` : "Meal Chart <noreply@example.com>");
