@@ -1,6 +1,6 @@
 "use server";
 
-import { transporter, fromEmail } from "./transporter";
+import { resend, fromEmail } from "./transporter";
 import { getMonthTotals, getMemberTotals, formatMeal } from "@/lib/utils/meal-money";
 import type { CostEntry, DepositEntry, MealEntry, Member } from "@/types/domain";
 
@@ -137,7 +137,7 @@ export async function sendWelcomeEmail(memberEmail: string, fullName: string, gr
       </div>
     `;
 
-    await transporter.sendMail({
+    await resend.emails.send({
       from: fromEmail,
       to: memberEmail,
       subject: `Welcome to ${groupName}!`,
@@ -167,7 +167,7 @@ export async function sendRemovalEmail(memberEmail: string, fullName: string, gr
       </div>
     `;
 
-    await transporter.sendMail({
+    await resend.emails.send({
       from: fromEmail,
       to: memberEmail,
       subject: `Account Removed - ${groupName}`,
@@ -252,7 +252,7 @@ export async function sendAdminWelcomeEmail(adminEmail: string, adminName: strin
       </div>
     `;
 
-    await transporter.sendMail({
+    await resend.emails.send({
       from: fromEmail,
       to: adminEmail,
       subject: `Your Admin Dashboard is Ready - ${groupName}`,
@@ -320,7 +320,7 @@ export async function sendMoneyReceiptEmail(
       </div>
     `;
 
-    await transporter.sendMail({
+    await resend.emails.send({
       from: fromEmail,
       to: memberEmail,
       subject: `Receipt: ${amount.toFixed(2)} TK - ${groupName}`,
@@ -447,7 +447,7 @@ export async function sendMonthSummaryEmails(input: {
           </div>
         `;
 
-        await transporter.sendMail({
+        await resend.emails.send({
           from: fromEmail,
           to: member.email,
           subject: `Monthly Report: ${chartLabel} - ${groupName}`,
