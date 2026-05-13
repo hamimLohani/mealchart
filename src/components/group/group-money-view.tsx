@@ -164,10 +164,16 @@ export function GroupMoneyView({ groupId }: { groupId: string }) {
               >
                 <div className="min-w-0">
                   <p className="font-semibold">{memberDisplayName(memberId, members, former)}</p>
-                  <p className="group-stat-label">{detail}</p>
+                  <p 
+                    className="group-stat-label"
+                    style={{ color: remaining >= 0 ? "var(--accent)" : "var(--danger)", opacity: 0.8 }}
+                  >
+                    {detail}
+                  </p>
                 </div>
                 <p
-                  className={`shrink-0 font-bold ${remaining >= 0 ? "text-[color:var(--accent)]" : "text-[color:var(--danger)]"}`}
+                  className="shrink-0 font-bold"
+                  style={{ color: remaining >= 0 ? "var(--accent)" : "var(--danger)" }}
                 >
                   {remaining >= 0 ? "+" : ""}
                   {remaining.toFixed(2)} {tk}
@@ -195,8 +201,11 @@ export function GroupMoneyView({ groupId }: { groupId: string }) {
                   <p className="text-sm font-semibold">{member?.fullName ?? t("common.unknown")}</p>
                   <p className="group-stat-label">{d.date}</p>
                 </div>
-                <p className="font-bold text-[color:var(--accent)]">
-                  {d.amount.toFixed(2)} {tk}
+                <p 
+                  className="font-bold"
+                  style={{ color: d.amount >= 0 ? "var(--accent)" : "var(--danger)" }}
+                >
+                  {d.amount >= 0 ? "+" : ""}{d.amount.toFixed(2)} {tk}
                 </p>
               </div>
             );

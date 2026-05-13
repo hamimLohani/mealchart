@@ -223,11 +223,15 @@ export default function MemberPage({
                 { label: t("memberPage.statTotalMeals"), value: formatMeal(myTotalMeals) },
                 { label: t("memberPage.statTotalCost"), value: `${myCost.toFixed(2)} ${tk}` },
                 { label: t("memberPage.statTotalPaid"), value: `${myTotalPaid.toFixed(2)} ${tk}` },
-                { label: t("memberPage.statBalance"), value: `${myBalance.toFixed(2)} ${tk}` },
+                { 
+                  label: t("memberPage.statBalance"), 
+                  value: `${myBalance >= 0 ? "+" : ""}${myBalance.toFixed(2)} {tk}`,
+                  color: myBalance < 0 ? "var(--danger)" : "var(--accent)"
+                },
               ].map((s) => (
                 <div key={s.label} className="group-stat-card">
-                  <p className="group-stat-label">{s.label}</p>
-                  <p className="group-stat-value">{s.value}</p>
+                  <p className="group-stat-label" style={s.color ? { color: s.color, opacity: 0.8 } : {}}>{s.label}</p>
+                  <p className="group-stat-value" style={s.color ? { color: s.color } : {}}>{s.value}</p>
                 </div>
               ))}
             </div>

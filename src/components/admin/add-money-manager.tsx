@@ -8,11 +8,14 @@ import {
   createDeposit,
   getGroupById,
   listCharts,
+  listCostsForChart,
   listDepositsForChart,
   listMembers,
+  getMealsForMonth,
 } from "@/lib/firebase/repositories";
-import { chartMonthDateBounds, toDateInputValue } from "@/lib/utils/date";
-import type { AdminProfile, Chart, DepositEntry, Member } from "@/types/domain";
+import { chartMonthDateBounds, toMonthKey, toDateInputValue } from "@/lib/utils/date";
+import { getMonthTotals, normalizeMealQuantity } from "@/lib/utils/meal-money";
+import type { AdminProfile, Chart, CostEntry, DepositEntry, Member, MealEntry } from "@/types/domain";
 import { sendMoneyReceiptEmail } from "@/lib/email/actions";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
@@ -36,7 +39,10 @@ export function AddMoneyManager() {
 
   const [selectedChart, setSelectedChart] = useState<Chart | null>(null);
   const [deposits, setDeposits] = useState<DepositEntry[]>([]);
-  const [depositsLoading, setDepositsLoading] = useState(false);
+  const [costs, setCosts] = useState<CostEntry[]>([]);
+  const [meals, setMeals] = useState<MealEntry[]>([]);
+  const [dataLoading, setDataLoading] = useState(false);
+  const [search, setSearch] = useState("");
   const [form, setForm] = useState<DepositFormState>({ memberId: "", amount: "", date: toDateInputValue(new Date()) });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { adminProfile: currentAdminProfile, isLoading: profileLoading, error: profileError } = useCurrentAdminProfile();
@@ -56,7 +62,7 @@ export function AddMoneyManager() {
 
   useGlobalLoading(
     "add-money-manager",
-    isLoading || profileLoading || depositsLoading || isSubmitting,
+    isLoading || profileLoading || dataLoading || isSubmitting,
     isLoading ? t("common.loading") : isSubmitting ? t("addMoney.adding") : t("common.loading"),
   );
 
@@ -99,20 +105,30 @@ export function AddMoneyManager() {
     if (!activeAdminProfile || !selectedChart) return;
     let active = true;
 
-    const loadDeposits = async () => {
-      setDepositsLoading(true);
+    const loadData = async () => {
+      setDataLoading(true);
       setDeposits([]);
+      setCosts([]);
+      setMeals([]);
       try {
-        const list = await listDepositsForChart(activeAdminProfile.groupId, selectedChart.id);
-        if (active) setDeposits(list);
+        const [dList, cList, mList] = await Promise.all([
+          listDepositsForChart(activeAdminProfile.groupId, selectedChart.id),
+          listCostsForChart(activeAdminProfile.groupId, selectedChart.id),
+          getMealsForMonth(activeAdminProfile.groupId, selectedChart.monthKey || toMonthKey(selectedChart.year, selectedChart.month)),
+        ]);
+        if (active) {
+          setDeposits(dList);
+          setCosts(cList);
+          setMeals(mList);
+        }
       } catch (e) {
-        if (active) setError(e instanceof Error ? e.message : "Failed to load deposits.");
+        if (active) setError(e instanceof Error ? e.message : "Failed to load data.");
       } finally {
-        if (active) setDepositsLoading(false);
+        if (active) setDataLoading(false);
       }
     };
 
-    void loadDeposits();
+    void loadData();
 
     return () => { active = false; };
   }, [activeAdminProfile, selectedChart]);
@@ -128,16 +144,24 @@ export function AddMoneyManager() {
     }, 0);
   }, [selectedChart]);
 
-  const memberTotals = useMemo(() => {
-    const totals = new Map<string, number>();
-    for (const d of deposits) {
-      const mid = d.memberId.toLowerCase();
-      totals.set(mid, (totals.get(mid) ?? 0) + d.amount);
-    }
-    return totals;
-  }, [deposits]);
+  const { totalCost, totalPaid, remainingTaka: balance, mealRate } = useMemo(() => {
+    return getMonthTotals(meals, costs, deposits);
+  }, [meals, costs, deposits]);
 
-  const totalDeposited = useMemo(() => deposits.reduce((s, d) => s + d.amount, 0), [deposits]);
+  const filteredMembers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return visibleMembers;
+    return visibleMembers.filter(m => m.fullName.toLowerCase().includes(q));
+  }, [search, visibleMembers]);
+
+  const filteredDeposits = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return deposits;
+    return deposits.filter(d => {
+      const member = visibleMembers.find(m => m.id.toLowerCase() === d.memberId.toLowerCase());
+      return member?.fullName.toLowerCase().includes(q);
+    });
+  }, [search, deposits, visibleMembers]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -168,7 +192,10 @@ export function AddMoneyManager() {
       });
 
       if (member) {
-        const currentMemberTotal = (memberTotals.get(mid) ?? 0) + amount;
+        const memberTotal = deposits
+          .filter(d => d.memberId.toLowerCase() === mid)
+          .reduce((s, d) => s + d.amount, 0) + amount;
+        
         const emailResult = await sendMoneyReceiptEmail(
           member.email,
           member.fullName,
@@ -176,7 +203,7 @@ export function AddMoneyManager() {
           form.date,
           activeAdminProfile.fullName || activeAdminProfile.email,
           groupName,
-          currentMemberTotal,
+          memberTotal,
         );
         if (!emailResult.success) {
           setError(`Money added, but receipt email failed: ${emailResult.error}`);
@@ -260,15 +287,20 @@ export function AddMoneyManager() {
         </button>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-4">
         {[
           { label: t("addMoney.statMonth"), value: selectedChart.label },
-          { label: t("addMoney.statTotalDeposited"), value: `${totalDeposited.toFixed(2)} ${tk}` },
+          { label: t("groupMoney.statTotalPaid"), value: `${totalPaid.toFixed(2)} ${tk}` },
           { label: t("addMoney.statMembers"), value: String(visibleMembers.length) },
+          { 
+            label: t("groupChart.statRemaining"), 
+            value: `${balance >= 0 ? "+" : ""}${balance.toFixed(2)} ${tk}`,
+            className: balance >= 0 ? "text-[color:var(--success-text)]" : "text-[color:var(--danger)]"
+          },
         ].map((s) => (
           <div key={s.label} className="group-stat-card">
             <p className="group-stat-label">{s.label}</p>
-            <p className="group-stat-value">{s.value}</p>
+            <p className={`group-stat-value ${s.className || ""}`}>{s.value}</p>
           </div>
         ))}
       </div>
@@ -326,34 +358,80 @@ export function AddMoneyManager() {
       </form>
 
       <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]">
-        <p className="admin-section-label">{t("addMoney.memberTotals")} — {selectedChart.label}</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="admin-section-label">{t("addMoney.memberTotals")} — {selectedChart.label}</p>
+          <input
+            className="input w-full sm:w-64"
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t("memberMgr.searchPlaceholder")}
+            value={search}
+          />
+        </div>
         <div className="mt-3 grid gap-2.5 md:grid-cols-2">
-          {visibleMembers.map((member) => (
-            <div
-              key={member.id}
-              className="flex items-center justify-between rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3"
-            >
-              <p className="font-semibold">{member.fullName}</p>
-              <p className="font-bold text-[color:var(--accent)]">
-                {(memberTotals.get(member.id.toLowerCase()) ?? 0).toFixed(2)} {tk}
-              </p>
-            </div>
-          ))}
+          {filteredMembers.map((member) => {
+            const mid = member.id.toLowerCase();
+            const memberPaid = deposits
+              .filter(d => d.memberId.toLowerCase() === mid)
+              .reduce((s, d) => s + d.amount, 0);
+            const memberMealsCount = meals
+              .filter(m => m.memberId.toLowerCase() === mid)
+              .reduce((s, m) => s + normalizeMealQuantity(m.quantity), 0);
+            const memberEaten = memberMealsCount * mealRate;
+            const memberRemaining = memberPaid - memberEaten;
+
+            return (
+              <div
+                key={member.id}
+                className="flex flex-wrap items-center justify-between gap-4 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3.5"
+              >
+                <div className="min-w-[120px] flex-1">
+                  <p className="font-bold text-[color:var(--foreground)]">{member.fullName}</p>
+                  <p className="text-xs text-[color:var(--muted)]">{member.email}</p>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 sm:gap-8">
+                  <div className="text-right">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[color:var(--muted)]">
+                      {t("groupMoney.statTotalPaid")}
+                    </p>
+                    <p className="font-semibold text-[color:var(--foreground)]">
+                      {memberPaid.toFixed(2)} {tk}
+                    </p>
+                  </div>
+                  
+                  <div className="text-right">
+                    <p 
+                      className="text-[10px] font-bold uppercase tracking-wider"
+                      style={{ color: memberRemaining >= 0 ? "var(--accent)" : "var(--danger)" }}
+                    >
+                      {t("groupChart.statRemaining")}
+                    </p>
+                    <p 
+                      className="font-bold"
+                      style={{ color: memberRemaining >= 0 ? "var(--accent)" : "var(--danger)" }}
+                    >
+                      {memberRemaining >= 0 ? "+" : ""}{memberRemaining.toFixed(2)} {tk}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
       <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]">
         <p className="admin-section-label">{t("addMoney.depositHistory")} — {selectedChart.label}</p>
         <div className="mt-3 grid gap-2.5">
-        {depositsLoading && (
-          <AdminLoadingState compact message={t("common.loading")} />
-        )}
-          {!depositsLoading && deposits.length === 0 && (
+          {dataLoading && (
+            <AdminLoadingState compact message={t("common.loading")} />
+          )}
+          {!dataLoading && filteredDeposits.length === 0 && (
             <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">
-              {t("addMoney.emptyDeposits")}
+              {search ? t("memberMgr.noSearchMatch") : t("addMoney.emptyDeposits")}
             </p>
           )}
-          {deposits.map((deposit) => {
+          {filteredDeposits.map((deposit) => {
             const member = visibleMembers.find((m) => m.id.toLowerCase() === deposit.memberId.toLowerCase());
             return (
               <article
@@ -364,7 +442,12 @@ export function AddMoneyManager() {
                   <p className="font-semibold">{member?.fullName ?? t("addMoney.unknownMember")}</p>
                   <p className="mt-0.5 text-xs text-[color:var(--muted)]">{deposit.date}</p>
                 </div>
-                <p className="text-base font-bold text-[color:var(--accent)]">{deposit.amount.toFixed(2)} {tk}</p>
+                <p 
+                  className="text-base font-bold"
+                  style={{ color: deposit.amount >= 0 ? "var(--accent)" : "var(--danger)" }}
+                >
+                  {deposit.amount >= 0 ? "+" : ""}{deposit.amount.toFixed(2)} {tk}
+                </p>
               </article>
             );
           })}

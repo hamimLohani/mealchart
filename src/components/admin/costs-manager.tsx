@@ -9,9 +9,11 @@ import {
   deleteCost,
   listCharts,
   listCostsForChart,
+  listDepositsForChart,
 } from "@/lib/firebase/repositories";
 import { chartMonthDateBounds, toDateInputValue } from "@/lib/utils/date";
-import type { AdminProfile, Chart, CostEntry } from "@/types/domain";
+import { getMonthTotals } from "@/lib/utils/meal-money";
+import type { AdminProfile, Chart, CostEntry, DepositEntry } from "@/types/domain";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
@@ -27,7 +29,9 @@ export function CostsManager() {
 
   const [selectedChart, setSelectedChart] = useState<Chart | null>(null);
   const [costs, setCosts] = useState<CostEntry[]>([]);
-  const [costsLoading, setCostsLoading] = useState(false);
+  const [deposits, setDeposits] = useState<DepositEntry[]>([]);
+  const [dataLoading, setDataLoading] = useState(false);
+  const [search, setSearch] = useState("");
   const [itemName, setItemName] = useState("");
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(toDateInputValue(new Date()));
@@ -45,7 +49,7 @@ export function CostsManager() {
 
   useGlobalLoading(
     "costs-manager",
-    isLoading || profileLoading || costsLoading || isSubmitting,
+    isLoading || profileLoading || dataLoading || isSubmitting,
     isLoading ? t("common.loading") : isSubmitting ? t("costs.adding") : t("common.loading"),
   );
 
@@ -74,20 +78,27 @@ export function CostsManager() {
   useEffect(() => {
     if (!adminProfile || !selectedChart) return;
     let active = true;
-    const fetchCosts = async () => {
-      setCostsLoading(true);
+    const fetchData = async () => {
+      setDataLoading(true);
       setCosts([]);
+      setDeposits([]);
       try {
-        const list = await listCostsForChart(adminProfile.groupId, selectedChart.id);
-        if (active) setCosts(list);
+        const [cList, dList] = await Promise.all([
+          listCostsForChart(adminProfile.groupId, selectedChart.id),
+          listDepositsForChart(adminProfile.groupId, selectedChart.id),
+        ]);
+        if (active) {
+          setCosts(cList);
+          setDeposits(dList);
+        }
       } catch (e) {
-        if (active) setError(e instanceof Error ? e.message : "Failed to load costs.");
+        if (active) setError(e instanceof Error ? e.message : "Failed to load data.");
       } finally {
-        if (active) setCostsLoading(false);
+        if (active) setDataLoading(false);
       }
     };
 
-    void fetchCosts();
+    void fetchData();
 
     return () => { active = false; };
   }, [adminProfile, selectedChart]);
@@ -100,7 +111,10 @@ export function CostsManager() {
     }, 0);
   }, [selectedChart]);
 
-  const total = costs.reduce((s, c) => s + c.amount, 0);
+  const { totalCost, totalPaid, remainingTaka: balance } = getMonthTotals([], costs, deposits);
+  const filteredCosts = costs.filter(c => 
+    c.itemName.toLowerCase().includes(search.trim().toLowerCase())
+  );
   const tk = t("common.tk");
 
   async function handleSubmit(e: FormEvent) {
@@ -207,10 +221,23 @@ export function CostsManager() {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="group-stat-card">
+          <p className="group-stat-label">{t("groupMoney.statTotalPaid")}</p>
+          <p className="group-stat-value">{totalPaid.toFixed(2)} {tk}</p>
+        </div>
         <div className="group-stat-card">
           <p className="group-stat-label">{t("costs.totalCost")}</p>
-          <p className="group-stat-value">{total.toFixed(2)} {tk}</p>
+          <p className="group-stat-value">{totalCost.toFixed(2)} {tk}</p>
+        </div>
+        <div className="group-stat-card">
+          <p className="group-stat-label">{t("groupChart.statRemaining")}</p>
+          <p 
+            className="group-stat-value"
+            style={{ color: balance >= 0 ? "var(--accent)" : "var(--danger)" }}
+          >
+            {balance >= 0 ? "+" : ""}{balance.toFixed(2)} {tk}
+          </p>
         </div>
         <div className="group-stat-card">
           <p className="group-stat-label">{t("costs.entries")}</p>
@@ -252,13 +279,24 @@ export function CostsManager() {
       </form>
 
       <div className="grid gap-2.5">
-        {costsLoading && (
+        <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+          <p className="admin-section-label">{t("costs.historyTitle") || t("addMoney.depositHistory")}</p>
+          <input
+            className="input w-full sm:w-64"
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t("memberMgr.searchPlaceholder")}
+            value={search}
+          />
+        </div>
+        {dataLoading && (
           <AdminLoadingState compact message={t("common.loading")} />
         )}
-        {!costsLoading && costs.length === 0 && (
-          <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">{t("costs.empty")}</p>
+        {!dataLoading && filteredCosts.length === 0 && (
+          <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">
+            {search ? t("memberMgr.noSearchMatch") : t("costs.empty")}
+          </p>
         )}
-        {costs.map((cost) => (
+        {filteredCosts.map((cost) => (
           <div
             key={cost.id}
             className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--panel)] px-4 py-3"
