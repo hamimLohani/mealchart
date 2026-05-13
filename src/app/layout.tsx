@@ -22,8 +22,9 @@ export default function RootLayout({
       lang="en"
       data-theme="light"
       className="h-full antialiased"
+      suppressHydrationWarning
     >
-      <body className="min-h-full">
+      <body className="min-h-full" suppressHydrationWarning>
         <UiProvider>
           <div className="min-h-screen flex flex-col bg-[color:var(--background)]">
             <AppHeader />

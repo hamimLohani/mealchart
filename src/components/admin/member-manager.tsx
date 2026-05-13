@@ -7,7 +7,7 @@ import { useT } from "@/i18n/use-t";
 import { createMember, deleteMember, listMembers, updateMember, listJoinRequests, approveJoinRequest, rejectJoinRequest, getGroupById } from "@/lib/firebase/repositories";
 import { toDateInputValue } from "@/lib/utils/date";
 import type { AdminProfile, Member, JoinRequest } from "@/types/domain";
-import { sendWelcomeEmail } from "@/lib/email/actions";
+import { sendWelcomeEmail, sendRemovalEmail } from "@/lib/email/actions";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
@@ -177,9 +177,22 @@ export function MemberManager() {
     setError(null);
     setIsRemoving(true);
     try {
+      const memberToRemove = members.find(m => m.id === memberId);
       await deleteMember(activeAdminProfile.groupId, memberId);
       setMembers((c) => c.filter((m) => m.id !== memberId));
       if (editingMemberId === memberId) resetForm();
+
+      if (memberToRemove && memberToRemove.email) {
+        void sendRemovalEmail(
+          memberToRemove.email,
+          memberToRemove.fullName,
+          groupName || activeAdminProfile.groupId
+        ).then(result => {
+          if (!result.success) {
+            console.error("Failed to send removal email:", result.error);
+          }
+        });
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to remove member.");
     } finally {

@@ -150,6 +150,36 @@ export async function sendWelcomeEmail(memberEmail: string, fullName: string, gr
   }
 }
 
+export async function sendRemovalEmail(memberEmail: string, fullName: string, groupName: string) {
+  try {
+    const html = `
+      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333; background-color: #f9f9f9; border-radius: 12px; border: 1px solid #eee;">
+        <h1 style="color: #ef4444; font-size: 24px; text-align: center; margin-bottom: 20px;">Account Removed</h1>
+        <p style="font-size: 16px; line-height: 1.6;">Hello <strong>${escapeHtml(fullName)}</strong>,</p>
+        <p style="font-size: 16px; line-height: 1.6;">Your member account for <strong>${escapeHtml(groupName)}</strong> has been removed by the administrator.</p>
+        <div style="background-color: #fff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ef4444; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+          <p style="margin: 0; font-size: 14px; color: #666;">Group Name:  </p>
+          <p style="margin: 5px 0 0 0; font-size: 18px; font-weight: bold; color: #333;">${escapeHtml(groupName)}</p>
+        </div>
+        <p style="font-size: 16px; line-height: 1.6;">If you believe this was a mistake, please contact your group administrator.</p>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;">
+        <p style="font-size: 12px; color: #999; text-align: center;">This is an automated email from Meal Chart. Please do not reply.</p>
+      </div>
+    `;
+
+    await transporter.sendMail({
+      from: fromEmail,
+      to: memberEmail,
+      subject: `Account Removed - ${groupName}`,
+      html,
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to send removal email:", error);
+    return { success: false, error: getErrorMessage(error) };
+  }
+}
+
 export async function sendMoneyReceiptEmail(
   memberEmail: string,
   fullName: string,
