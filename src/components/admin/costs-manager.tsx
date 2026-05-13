@@ -280,7 +280,7 @@ export function CostsManager() {
 
       <div className="grid gap-2.5">
         <div className="flex flex-wrap items-center justify-between gap-3 px-1">
-          <p className="admin-section-label">{t("costs.historyTitle") || t("addMoney.depositHistory")}</p>
+          <p className="admin-section-label">{t("costs.historyTitle")}</p>
           <input
             className="input w-full sm:w-64"
             onChange={(e) => setSearch(e.target.value)}

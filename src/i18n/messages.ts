@@ -445,6 +445,7 @@ export const en = {
   "costs.placeholderItem": "Rice, vegetables…",
   "costs.adding": "Adding…",
   "costs.addCostBtn": "Add cost",
+  "costs.historyTitle": "Cost History",
   "costs.empty": "No costs added yet.",
   "costs.invalidMonth": "Invalid month",
 
@@ -953,6 +954,7 @@ export const bn: Record<MessageKey, string> = {
   "costs.placeholderItem": "চাল, সবজি…",
   "costs.adding": "যোগ হচ্ছে…",
   "costs.addCostBtn": "খরচ যোগ",
+  "costs.historyTitle": "খরচের ইতিহাস",
   "costs.empty": "এখনো কোনো খরচ যোগ হয়নি।",
   "costs.invalidMonth": "অবৈধ মাস",
 
