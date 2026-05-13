@@ -17,6 +17,7 @@ import { chartMonthDateBounds, toMonthKey, toDateInputValue } from "@/lib/utils/
 import { getMonthTotals, normalizeMealQuantity } from "@/lib/utils/meal-money";
 import type { AdminProfile, Chart, CostEntry, DepositEntry, Member, MealEntry } from "@/types/domain";
 import { sendMoneyReceiptEmail } from "@/lib/email/actions";
+import { getFriendlyEmailError } from "@/lib/utils/email-error";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
@@ -206,7 +207,12 @@ export function AddMoneyManager() {
           memberTotal,
         );
         if (!emailResult.success) {
-          setError(`Money added, but receipt email failed: ${emailResult.error}`);
+          const friendlyError = getFriendlyEmailError(emailResult.error || "");
+          setError(
+            typeof friendlyError === "string" 
+              ? t("errors.emailReceiptFailed", { error: friendlyError })
+              : tx(friendlyError)
+          );
         }
       }
 

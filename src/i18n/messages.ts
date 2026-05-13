@@ -531,6 +531,12 @@ export const en = {
   "errors.genericLoad": "Failed to load.",
   "errors.adminInMemberLogin": "You are an admin. Please sign in via the Admin Login page.",
   "errors.permissionDenied": "Missing or insufficient permissions.",
+  "errors.emailAuthFailed": "Member added but email failed: Gmail is blocking access. Please check your App Password or security settings.",
+  "errors.emailWelcomeFailed": "Member saved, but welcome email failed: {error}",
+  "errors.emailApprovalFailed": "Member approved, but welcome email failed: {error}",
+  "errors.emailReceiptFailed": "Money added, but receipt email failed: {error}",
+  "errors.emailAdminWelcomeFailed": "Group created, but admin welcome email failed: {error}",
+  "errors.emailSummaryFailed": "Month locked, but summary emails failed: {error}",
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -1039,6 +1045,12 @@ export const bn: Record<MessageKey, string> = {
   "errors.genericLoad": "লোড করতে ব্যর্থ হয়েছে।",
   "errors.adminInMemberLogin": "আপনি একজন অ্যাডমিন। অনুগ্রহ করে অ্যাডমিন লগইন পেজ ব্যবহার করে সাইন ইন করুন।",
   "errors.permissionDenied": "প্রবেশাধিকার নেই বা অপর্যাপ্ত অনুমতি।",
+  "errors.emailAuthFailed": "সদস্য যোগ করা হয়েছে কিন্তু ইমেল পাঠাতে ব্যর্থ: আপনার জিমেইল অ্যাকাউন্টটি নিরাপত্তা জনিত কারণে লগইন ব্লক করেছে। দয়া করে আপনার জিমেইল অ্যাকাউন্টে 'App Password' ব্যবহার করুন এবং পুনরায় চেষ্টা করুন।",
+  "errors.emailWelcomeFailed": "সদস্য সংরক্ষিত, কিন্তু স্বাগত ইমেল পাঠানো যায়নি: {error}",
+  "errors.emailApprovalFailed": "সদস্য অনুমোদিত, কিন্তু স্বাগত ইমেল পাঠানো যায়নি: {error}",
+  "errors.emailReceiptFailed": "টাকা জমা হয়েছে, কিন্তু রশিদ ইমেল পাঠানো যায়নি: {error}",
+  "errors.emailAdminWelcomeFailed": "গ্রুপ তৈরি হয়েছে, কিন্তু অ্যাডমিন ইমেল পাঠানো যায়নি: {error}",
+  "errors.emailSummaryFailed": "মাস লক করা হয়েছে, কিন্তু সারাংশ ইমেল পাঠানো যায়নি: {error}",
 };
 
 export const messages: Record<Language, Record<MessageKey, string>> = {

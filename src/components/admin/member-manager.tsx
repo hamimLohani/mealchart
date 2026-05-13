@@ -8,6 +8,7 @@ import { createMember, deleteMember, listMembers, updateMember, listJoinRequests
 import { toDateInputValue } from "@/lib/utils/date";
 import type { AdminProfile, Member, JoinRequest } from "@/types/domain";
 import { sendWelcomeEmail, sendRemovalEmail } from "@/lib/email/actions";
+import { getFriendlyEmailError } from "@/lib/utils/email-error";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
@@ -161,7 +162,12 @@ export function MemberManager() {
           groupName || activeAdminProfile.groupId,
         );
         if (!emailResult.success) {
-          setError(`Member saved, but welcome email failed: ${emailResult.error}`);
+          const friendlyError = getFriendlyEmailError(emailResult.error || "");
+          setError(
+            typeof friendlyError === "string" 
+              ? t("errors.emailWelcomeFailed", { error: friendlyError })
+              : tx(friendlyError)
+          );
         }
       }
       resetForm();
@@ -220,7 +226,12 @@ export function MemberManager() {
         groupName || activeAdminProfile.groupId,
       );
       if (!emailResult.success) {
-        setError(`Member approved, but welcome email failed: ${emailResult.error}`);
+        const friendlyError = getFriendlyEmailError(emailResult.error || "");
+        setError(
+          typeof friendlyError === "string" 
+            ? t("errors.emailApprovalFailed", { error: friendlyError })
+            : tx(friendlyError)
+        );
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to approve request.");

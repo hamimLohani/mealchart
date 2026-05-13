@@ -23,6 +23,7 @@ import { getMonthTotals, getMemberTotals } from "@/lib/utils/meal-money";
 import { saveChartReportPdf } from "@/lib/utils/pdf-report";
 import type { AdminProfile, Chart } from "@/types/domain";
 import { sendMonthSummaryEmails } from "@/lib/email/actions";
+import { getFriendlyEmailError } from "@/lib/utils/email-error";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
@@ -163,7 +164,12 @@ export function CreateChartManager() {
           deposits,
         });
         if (!emailResult.success) {
-          setError(`Month locked, but summary emails failed: ${emailResult.error}`);
+          const friendlyError = getFriendlyEmailError(emailResult.error || "");
+          setError(
+            typeof friendlyError === "string" 
+              ? t("errors.emailSummaryFailed", { error: friendlyError })
+              : tx(friendlyError)
+          );
         } else if ((emailResult as any).failedCount > 0) {
           setError(
             `Month locked. Summary emails: ${(emailResult as any).sentCount} sent, ${(emailResult as any).failedCount} failed. Check server logs for details.`
