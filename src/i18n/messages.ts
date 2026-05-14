@@ -171,6 +171,7 @@ export const en = {
   // Group dashboard
   "groupDash.loading": "Loading group…",
   "groupDash.selectMonth": "Select Month",
+  "groupDash.changeMonth": "Months",
   "groupDash.selectMonthHelp": "Choose a chart created by the admin to continue.",
   "groupDash.availableMonths": "Available Months",
   "groupDash.noCharts": "No charts created yet. Ask your admin to create a chart.",
@@ -699,6 +700,7 @@ export const bn: Record<MessageKey, string> = {
 
   "groupDash.loading": "গ্রুপ লোড হচ্ছে…",
   "groupDash.selectMonth": "মাস বাছুন",
+  "groupDash.changeMonth": "মাসসমূহ",
   "groupDash.selectMonthHelp": "অ্যাডমিন যে চার্ট বানিয়েছে সেটি বেছে নিন।",
   "groupDash.availableMonths": "উপলব্ধ মাস",
   "groupDash.noCharts": "এখনো কোনো চার্ট নেই। অ্যাডমিনকে চার্ট বানাতে বলুন।",

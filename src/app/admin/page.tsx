@@ -13,6 +13,7 @@ import type { Group } from "@/types/domain";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
+import { AdminMonthSummary } from "@/components/admin/admin-month-summary";
 
 const navItemKeys = [
   { href: "/admin/members", labelKey: "adminNav.members" as const, hintKey: "adminNav.membersHint" as const, metric: "01" },
@@ -125,6 +126,8 @@ export default function AdminPage() {
           {t("adminDash.signOut")}
         </button>
       </section>
+
+      {visibleGroup && <AdminMonthSummary groupId={visibleGroup.id} />}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {navItemKeys.map((item) => (

@@ -114,11 +114,13 @@ export function saveChartReportPdf(options: ChartReportOptions) {
     mealMap[memberId][meal.date] = normalizeMealQuantity(meal.quantity);
   });
 
-  const nameWidth = 120;
-  const dayWidth = 18;
-  const totalWidth = 50;
-  const tableWidth = nameWidth + totalDays * dayWidth + totalWidth;
-  const tableLeft = margin;
+  const nameWidth = 100;
+  const dayWidth = 16;
+  const totalWidth = 35;
+  const paidWidth = 45;
+  const balanceWidth = 50;
+  const tableWidth = nameWidth + totalDays * dayWidth + totalWidth + paidWidth + balanceWidth;
+  const tableLeft = (pageWidth - tableWidth) / 2; // Center the table
   const tableRight = tableLeft + tableWidth;
   const headerHeight = 20;
   const bodyRowHeight = 18;
@@ -137,7 +139,11 @@ export function saveChartReportPdf(options: ChartReportOptions) {
       doc.text(label, x + dayWidth / 2, top + 13, { align: "center" });
       x += dayWidth;
     }
-    doc.text("Total", x + totalWidth / 2, top + 13, { align: "center" });
+    doc.text("Meals", x + totalWidth / 2, top + 13, { align: "center" });
+    x += totalWidth;
+    doc.text("Paid", x + paidWidth / 2, top + 13, { align: "center" });
+    x += paidWidth;
+    doc.text("Balance", x + balanceWidth / 2, top + 13, { align: "center" });
   };
 
   let currentY = tableTop;
@@ -180,6 +186,19 @@ export function saveChartReportPdf(options: ChartReportOptions) {
     }
 
     doc.text(formatMeal(memberTotals.totalMeals), x + totalWidth / 2, currentY + 13, { align: "center" });
+    x += totalWidth;
+    doc.text(memberTotals.totalPaid.toFixed(1), x + paidWidth / 2, currentY + 13, { align: "center" });
+    x += paidWidth;
+
+    const balance = memberTotals.balance;
+    if (balance < 0) {
+      doc.setTextColor(185, 28, 28); // Red
+    } else if (balance > 0) {
+      doc.setTextColor(21, 128, 61); // Green
+    }
+    doc.text(balance.toFixed(1), x + balanceWidth / 2, currentY + 13, { align: "center" });
+    doc.setTextColor(...textColor.dark); // Reset
+    
     currentY += bodyRowHeight;
   });
 
@@ -202,6 +221,10 @@ export function saveChartReportPdf(options: ChartReportOptions) {
     x += dayWidth;
   }
   doc.text(formatMeal(totals.totalMeals), x + totalWidth / 2, currentY + 13, { align: "center" });
+  x += totalWidth;
+  doc.text(totals.totalPaid.toFixed(1), x + paidWidth / 2, currentY + 13, { align: "center" });
+  x += paidWidth;
+  doc.text(totals.remainingTaka.toFixed(1), x + balanceWidth / 2, currentY + 13, { align: "center" });
 
   doc.save(fileName || `${groupName}_${chartLabel}_Report.pdf`);
 }
