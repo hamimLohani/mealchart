@@ -43,8 +43,8 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full" suppressHydrationWarning>
-        <ServiceWorkerRegister />
         <UiProvider>
+          <ServiceWorkerRegister />
           <div className="min-h-screen flex flex-col bg-[color:var(--background)]">
             <AppHeader />
             <main className="flex-1 flex flex-col">
