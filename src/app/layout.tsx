@@ -37,7 +37,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="bn"
       data-theme="light"
       className="h-full antialiased"
       suppressHydrationWarning
