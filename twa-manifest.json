@@ -12,7 +12,7 @@
   "navigationDividerColorDark": "#000000",
   "backgroundColor": "#F5F2EC",
   "enableNotifications": true,
-  "startUrl": "/",
+  "startUrl": "/?utm_source=twa",
   "iconUrl": "https://mealchart.vercel.app/logo.png",
   "maskableIconUrl": "https://mealchart.vercel.app/logo.png",
   "splashScreenFadeOutDuration": 300,

@@ -15,7 +15,14 @@ export function PWAInstallButton() {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isStandalone] = useState(() => {
     if (typeof window !== "undefined") {
-      return window.matchMedia("(display-mode: standalone)").matches;
+      // 1. Check if running as a standalone PWA (iOS or Android "Add to Home Screen")
+      const isStandaloneMode = window.matchMedia("(display-mode: standalone)").matches;
+      // 2. Check if running inside the Trusted Web Activity (TWA / Android APK)
+      const isTWA = document.referrer.includes("android-app://") || 
+                   (window as any).navigator.standalone ||
+                   window.location.search.includes("utm_source=twa");
+      
+      return isStandaloneMode || isTWA;
     }
     return false;
   });
