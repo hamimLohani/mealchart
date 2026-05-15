@@ -98,7 +98,7 @@ export const en = {
   "common.installApp": "Install",
   "common.downloadAPK": "Download Android App",
   "common.downloadIOS": "Download iOS App",
-  "common.comingSoon": "Coming Soon...",
+  "common.iosInstructions": "To install on iPhone/iPad:\n1. Open Safari\n2. Tap the Share button\n3. Select 'Add to Home Screen'",
 
   // Enter group page
   "enterPage.eyebrow": "Enter Group",
@@ -638,8 +638,8 @@ export const bn: Record<MessageKey, string> = {
   "common.or": "অথবা",
   "common.installApp": "ইন্সটল",
   "common.downloadAPK": "অ্যান্ড্রয়েড অ্যাপ ডাউনলোড",
-  "common.downloadIOS": "আইওএস অ্যাপ ডাউনলোড",
-  "common.comingSoon": "শীঘ্রই আসছে...",
+  "common.downloadIOS": "অ্যাপল/আইওএস অ্যাপ",
+  "common.iosInstructions": "আইফোন/আইপ্যাডে ইন্সটল করতে:\n১. সাফারি (Safari) ব্রাউজার খুলুন\n২. শেয়ার (Share) বাটনে ট্যাপ করুন\n৩. 'Add to Home Screen' নির্বাচন করুন",
 
   "enterPage.eyebrow": "গ্রুপে প্রবেশ",
   "enterPage.title": "আপনার মিল ড্যাশবোর্ডে প্রবেশ করুন",
