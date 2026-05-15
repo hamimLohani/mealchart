@@ -95,6 +95,8 @@ export const en = {
   "common.formerMember": "Former member",
   "common.cancel": "Cancel",
   "common.or": "or",
+  "common.installApp": "Install",
+  "common.downloadAPK": "Download Android App",
 
   // Enter group page
   "enterPage.eyebrow": "Enter Group",
@@ -632,6 +634,8 @@ export const bn: Record<MessageKey, string> = {
   "common.formerMember": "প্রাক্তন সদস্য",
   "common.cancel": "বাতিল",
   "common.or": "অথবা",
+  "common.installApp": "ইন্সটল",
+  "common.downloadAPK": "অ্যান্ড্রয়েড অ্যাপ ডাউনলোড",
 
   "enterPage.eyebrow": "গ্রুপে প্রবেশ",
   "enterPage.title": "আপনার মিল ড্যাশবোর্ডে প্রবেশ করুন",
