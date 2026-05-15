@@ -3,13 +3,20 @@ import nodemailer from "nodemailer";
 
 const user = process.env.SMTP_USER;
 const pass = process.env.SMTP_PASS;
+const service = process.env.SMTP_SERVICE || "gmail";
+const host = process.env.SMTP_HOST || "smtp.gmail.com";
+const port = parseInt(process.env.SMTP_PORT || "465");
+const secure = process.env.SMTP_SECURE !== "false"; // Default to true if not "false"
 
 if (!user || !pass) {
   console.warn("⚠️ SMTP_USER or SMTP_PASS is missing from environment variables.");
 }
 
 export const transporter = nodemailer.createTransport({
-  service: "gmail",
+  service: service as any,
+  host,
+  port,
+  secure,
   pool: true,
   maxConnections: 1,
   maxMessages: 100,

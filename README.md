@@ -108,31 +108,25 @@ Firebase:
 - `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
 - `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
 - `NEXT_PUBLIC_FIREBASE_APP_ID`
+- `NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID`
 
-SMTP:
+SMTP (Gmail):
 
-- `SMTP_HOST`
-- `SMTP_PORT`
+- `SMTP_SERVICE` (e.g., "gmail")
+- `SMTP_HOST` (e.g., "smtp.gmail.com")
+- `SMTP_PORT` (e.g., 465)
+- `SMTP_SECURE` (e.g., "true")
 - `SMTP_USER`
 - `SMTP_PASS`
 - `SMTP_FROM`
+
+Application:
+
 - `NEXT_PUBLIC_BASE_URL`
 
-## Mobile Apps
+Optional:
 
-### Android (TWA)
-The project includes an Android Trusted Web Activity wrapper in `android-twa/`. 
-- Built with `bubblewrap`.
-- Configured via `twa-manifest.json`.
-
-### iOS (WebView Wrapper)
-The project includes a lightweight iOS SwiftUI wrapper in `ios-app/`.
-- Uses `WKWebView` to load the web application.
-- To set up:
-  1. Open Xcode on your Mac.
-  2. Create a new "App" project named `MealChart`.
-  3. Copy the files from `ios-app/MealChart/Source/` into your Xcode project.
-  4. Build and run on your iPhone or Simulator.
+- `RESEND_API_KEY`
 
 ## Notes
 
