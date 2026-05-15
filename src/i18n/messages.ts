@@ -5,8 +5,8 @@ export const en = {
   // Header
   "header.brand": "Meal Chart",
   "header.tagline": "Hostel & mess accounting",
-  "header.themeDark": "🌙 Dark",
-  "header.themeLight": "☀️ Light",
+  "header.themeDark": "Dark",
+  "header.themeLight": "Light",
 
   // Home (hero)
   "home.badge": "Hostel & mess meal management",
@@ -548,8 +548,8 @@ export type MessageKey = keyof typeof en;
 export const bn: Record<MessageKey, string> = {
   "header.brand": "মিল চার্ট",
   "header.tagline": "হোস্টেল ও মেস হিসাব",
-  "header.themeDark": "🌙 ডার্ক",
-  "header.themeLight": "☀️ লাইট",
+  "header.themeDark": "ডার্ক",
+  "header.themeLight": "লাইট",
 
   "home.badge": "হোস্টেল ও মেসের মিল ম্যানেজমেন্ট",
   "home.title": "একটি অ্যাপেই একাধিক গ্রুপ, পরিষ্কার মাসিক হিসাবসহ।",
