@@ -86,7 +86,11 @@ uploads/
 public/uploads/
 
 # =========================
-# Security / Secrets
+# Android Builds 📱
 # =========================
-*.pem
-secrets.json
+*.apk
+*.aab
+*.keystore
+android-app/build/
+.gradle/
+!android.keystore
