@@ -97,6 +97,8 @@ export const en = {
   "common.or": "or",
   "common.installApp": "Install",
   "common.downloadAPK": "Download Android App",
+  "common.downloadIOS": "Download iOS App",
+  "common.comingSoon": "Coming Soon...",
 
   // Enter group page
   "enterPage.eyebrow": "Enter Group",
@@ -636,6 +638,8 @@ export const bn: Record<MessageKey, string> = {
   "common.or": "অথবা",
   "common.installApp": "ইন্সটল",
   "common.downloadAPK": "অ্যান্ড্রয়েড অ্যাপ ডাউনলোড",
+  "common.downloadIOS": "আইওএস অ্যাপ ডাউনলোড",
+  "common.comingSoon": "শীঘ্রই আসছে...",
 
   "enterPage.eyebrow": "গ্রুপে প্রবেশ",
   "enterPage.title": "আপনার মিল ড্যাশবোর্ডে প্রবেশ করুন",
