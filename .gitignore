@@ -88,14 +88,14 @@ public/uploads/
 # =========================
 # Android Builds 📱
 # =========================
+app/
+android-twa/
+android.keystore
 *.apk
 *.aab
-*.keystore
 *.idsig
 *.jks
 build/
-app/build/
-android-twa/build/
 .gradle/
 local.properties
 manifest-checksum.txt
