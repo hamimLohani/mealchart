@@ -115,14 +115,14 @@ export function GroupMoneyView({ groupId }: { groupId: string }) {
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { label: t("groupMoney.statTotalCost"), value: `${totalCost.toFixed(2)} ${tk}` },
-          { label: t("groupMoney.statTotalPaid"), value: `${totalPaid.toFixed(2)} ${tk}` },
+          { label: t("groupMoney.statTotalCost"), value: `${totalCost.toFixed(2)} ${tk}`, color: "var(--success-text)" },
+          { label: t("groupMoney.statTotalPaid"), value: `${totalPaid.toFixed(2)} ${tk}`, color: "var(--success-text)" },
           { label: t("groupMoney.statTotalMeals"), value: formatMeal(grandTotal) },
-          { label: t("groupMoney.statMealRate"), value: `${mealRate.toFixed(2)} ${tk}` },
+          { label: t("groupMoney.statMealRate"), value: `${mealRate.toFixed(2)} ${tk}`, color: "var(--success-text)" },
         ].map((s) => (
           <div key={s.label} className="group-stat-card">
             <p className="group-stat-label">{s.label}</p>
-            <p className="group-stat-value">{s.value}</p>
+            <p className="group-stat-value" style={s.color ? { color: s.color } : {}}>{s.value}</p>
           </div>
         ))}
       </div>
@@ -166,14 +166,14 @@ export function GroupMoneyView({ groupId }: { groupId: string }) {
                   <p className="font-semibold">{memberDisplayName(memberId, members, former)}</p>
                   <p 
                     className="group-stat-label"
-                    style={{ color: remaining >= 0 ? "var(--accent)" : "var(--danger)", opacity: 0.8 }}
+                    style={{ color: remaining >= 0 ? "var(--success-text)" : "var(--danger)", opacity: 0.8 }}
                   >
                     {detail}
                   </p>
                 </div>
                 <p
                   className="shrink-0 font-bold"
-                  style={{ color: remaining >= 0 ? "var(--accent)" : "var(--danger)" }}
+                  style={{ color: remaining >= 0 ? "var(--success-text)" : "var(--danger)" }}
                 >
                   {remaining >= 0 ? "+" : ""}
                   {remaining.toFixed(2)} ${tk}
@@ -203,7 +203,7 @@ export function GroupMoneyView({ groupId }: { groupId: string }) {
                 </div>
                 <p 
                   className="font-bold"
-                  style={{ color: d.amount >= 0 ? "var(--accent)" : "var(--danger)" }}
+                  style={{ color: d.amount >= 0 ? "var(--success-text)" : "var(--danger)" }}
                 >
                   {d.amount >= 0 ? "+" : ""}{d.amount.toFixed(2)} ${tk}
                 </p>
@@ -230,7 +230,7 @@ export function GroupMoneyView({ groupId }: { groupId: string }) {
               </div>
               <p 
                 className="font-bold"
-                style={{ color: c.amount >= 0 ? "var(--accent)" : "var(--danger)" }}
+                style={{ color: c.amount >= 0 ? "var(--success-text)" : "var(--danger)" }}
               >
                 {c.amount.toFixed(2)} ${tk}
               </p>

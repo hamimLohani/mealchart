@@ -50,7 +50,15 @@ export function AdminMonthSummary({ groupId }: { groupId: string }) {
     return activeChart.monthKey === currentMonthKey;
   }, [activeChart]);
 
-  if (!activeChart && !isLoading) return null;
+  if (!activeChart && !isLoading) {
+    return (
+      <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]">
+        <p className="text-center text-sm font-bold text-[color:var(--danger)]">
+          {t("admin.noChartsMeals")}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="grid gap-3">
@@ -80,11 +88,16 @@ export function AdminMonthSummary({ groupId }: { groupId: string }) {
             { label: t("groupDash.statRemaining"), value: `${remainingTaka.toFixed(2)} ${t("common.tk")}` },
             { label: t("groupDash.statMembers"), value: String(members.length) },
           ].map((s) => {
+            const isMoney = s.label.includes(t("common.tk")) || s.value.includes(t("common.tk"));
             const isNegative = s.value.includes("-");
+            const color = isMoney 
+              ? (isNegative ? "var(--danger)" : "var(--success-text)")
+              : undefined;
+
             return (
               <div key={s.label} className="group-stat-card">
                 <p className="group-stat-label">{s.label}</p>
-                <p className="group-stat-value" style={isNegative ? { color: "var(--danger)" } : {}}>{s.value}</p>
+                <p className="group-stat-value" style={color ? { color } : {}}>{s.value}</p>
               </div>
             );
           })}

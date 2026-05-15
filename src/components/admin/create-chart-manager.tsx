@@ -6,6 +6,7 @@ import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { useT } from "@/i18n/use-t";
 import {
   backfillMealMonthKeys,
+  backfillSystemNotices,
   createChart,
   deleteChart,
   listCharts,
@@ -48,6 +49,8 @@ export function CreateChartManager() {
   const [error, setError] = useState<string | null>(configurationError);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [lockingAction, setLockingAction] = useState<{ id: string; type: "lock" | "unlock" } | null>(null);
   const [exportingChartId, setExportingChartId] = useState<string | null>(null);
   const [isRepairingData, setIsRepairingData] = useState(false);
   const { adminProfile: currentAdminProfile, isLoading: profileLoading, error: profileError } = useCurrentAdminProfile();
@@ -66,13 +69,19 @@ export function CreateChartManager() {
 
   useGlobalLoading(
     "create-chart-manager",
-    isLoading || profileLoading || isSubmitting || exportingChartId !== null || isRepairingData,
+    isLoading || profileLoading || isSubmitting || isDeleting || lockingAction !== null || exportingChartId !== null || isRepairingData,
     isLoading
       ? t("createChart.loadingCharts")
       : isRepairingData
         ? "Repairing older chart data…"
       : isSubmitting
         ? t("createChart.createBtnBusy")
+      : isDeleting
+        ? t("createChart.deleting")
+      : lockingAction !== null
+        ? lockingAction.type === "unlock" ? t("createChart.unlocking") : t("createChart.locking")
+      : exportingChartId !== null
+        ? t("createChart.exporting")
         : t("common.loading"),
   );
 
@@ -133,6 +142,7 @@ export function CreateChartManager() {
   async function handleToggleLock(chart: Chart) {
     if (!activeAdminProfile) return;
     setError(null);
+    setLockingAction({ id: chart.id, type: chart.locked ? "unlock" : "lock" });
     try {
       await updateChartLock({
         groupId: activeAdminProfile.groupId,
@@ -164,19 +174,23 @@ export function CreateChartManager() {
         });
         if (!emailResult.success) {
           const friendlyError = getFriendlyEmailError(emailResult.error || "");
-          setError(
-            typeof friendlyError === "string" 
-              ? t("errors.emailSummaryFailed", { error: friendlyError })
-              : tx(friendlyError)
-          );
+          setError(`ERR_TRANS:${JSON.stringify({ 
+            key: "errors.emailSummaryFailed", 
+            vars: { error: friendlyError } 
+          })}`);
         } else if (emailResult.failedCount && emailResult.failedCount > 0) {
           setError(
-            `Month locked. Summary emails: ${emailResult.sentCount} sent, ${emailResult.failedCount} failed. Check server logs for details.`
+            t("errors.emailSummaryStatus", {
+              sent: String(emailResult.sentCount),
+              failed: String(emailResult.failedCount),
+            })
           );
         }
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to update chart lock.");
+    } finally {
+      setLockingAction(null);
     }
   }
 
@@ -185,11 +199,14 @@ export function CreateChartManager() {
     const confirmed = window.confirm(t("createChart.deleteConfirm"));
     if (!confirmed) return;
     setError(null);
+    setIsDeleting(true);
     try {
       await deleteChart(activeAdminProfile.groupId, chart.id);
       setCharts((prev) => prev.filter((c) => c.id !== chart.id));
     } catch (e) {
       setError(e instanceof Error ? e.message : t("createChart.deleteFailed"));
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -199,6 +216,7 @@ export function CreateChartManager() {
     setIsRepairingData(true);
     try {
       await backfillMealMonthKeys(activeAdminProfile.groupId);
+      await backfillSystemNotices(activeAdminProfile.groupId);
       await syncLockedMonthDocsFromCharts(activeAdminProfile.groupId);
       const currentCharts = await listCharts(activeAdminProfile.groupId);
       setCharts(currentCharts);
@@ -382,8 +400,8 @@ export function CreateChartManager() {
               </article>
             ))
           ) : (
-            <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">
-              {t("createChart.noneYet")}
+            <p className="py-4 text-center text-sm font-bold text-[color:var(--danger)]">
+              {t("admin.noChartsMeals")}
             </p>
           )}
         </div>

@@ -208,11 +208,10 @@ export function AddMoneyManager() {
         );
         if (!emailResult.success) {
           const friendlyError = getFriendlyEmailError(emailResult.error || "");
-          setError(
-            typeof friendlyError === "string" 
-              ? t("errors.emailReceiptFailed", { error: friendlyError })
-              : tx(friendlyError)
-          );
+          setError(`ERR_TRANS:${JSON.stringify({ 
+            key: "errors.emailReceiptFailed", 
+            vars: { error: friendlyError } 
+          })}`);
         }
       }
 
@@ -241,7 +240,7 @@ export function AddMoneyManager() {
             {t("addMoney.selectHelp")}
           </p>
           {visibleCharts.length === 0 ? (
-            <p className="mt-4 py-6 text-center text-sm text-[color:var(--soft-foreground)]">
+            <p className="mt-4 py-6 text-center text-sm font-bold text-[color:var(--danger)]">
               {t("admin.noChartsMeals")}
             </p>
           ) : (
@@ -296,17 +295,17 @@ export function AddMoneyManager() {
       <div className="grid gap-3 sm:grid-cols-4">
         {[
           { label: t("addMoney.statMonth"), value: selectedChart.label },
-          { label: t("groupMoney.statTotalPaid"), value: `${totalPaid.toFixed(2)} ${tk}` },
+          { label: t("groupMoney.statTotalPaid"), value: `${totalPaid.toFixed(2)} ${tk}`, color: "var(--success-text)" },
           { label: t("addMoney.statMembers"), value: String(visibleMembers.length) },
           { 
             label: t("groupChart.statRemaining"), 
             value: `${balance >= 0 ? "+" : ""}${balance.toFixed(2)} ${tk}`,
-            className: balance >= 0 ? "text-[color:var(--success-text)]" : "text-[color:var(--danger)]"
+            color: balance >= 0 ? "var(--success-text)" : "var(--danger)"
           },
         ].map((s) => (
           <div key={s.label} className="group-stat-card">
             <p className="group-stat-label">{s.label}</p>
-            <p className={`group-stat-value ${s.className || ""}`}>{s.value}</p>
+            <p className="group-stat-value" style={s.color ? { color: s.color } : {}}>{s.value}</p>
           </div>
         ))}
       </div>
@@ -400,7 +399,7 @@ export function AddMoneyManager() {
                     <p className="text-[10px] font-bold uppercase tracking-wider text-[color:var(--muted)]">
                       {t("groupMoney.statTotalPaid")}
                     </p>
-                    <p className="font-semibold text-[color:var(--foreground)]">
+                    <p className="font-semibold text-[color:var(--success-text)]">
                       {memberPaid.toFixed(2)} {tk}
                     </p>
                   </div>
@@ -408,13 +407,13 @@ export function AddMoneyManager() {
                   <div className="text-right">
                     <p 
                       className="text-[10px] font-bold uppercase tracking-wider"
-                      style={{ color: memberRemaining >= 0 ? "var(--accent)" : "var(--danger)" }}
+                      style={{ color: memberRemaining >= 0 ? "var(--success-text)" : "var(--danger)" }}
                     >
                       {t("groupChart.statRemaining")}
                     </p>
                     <p 
                       className="font-bold"
-                      style={{ color: memberRemaining >= 0 ? "var(--accent)" : "var(--danger)" }}
+                      style={{ color: memberRemaining >= 0 ? "var(--success-text)" : "var(--danger)" }}
                     >
                       {memberRemaining >= 0 ? "+" : ""}{memberRemaining.toFixed(2)} {tk}
                     </p>
@@ -450,7 +449,7 @@ export function AddMoneyManager() {
                 </div>
                 <p 
                   className="text-base font-bold"
-                  style={{ color: deposit.amount >= 0 ? "var(--accent)" : "var(--danger)" }}
+                  style={{ color: deposit.amount >= 0 ? "var(--success-text)" : "var(--danger)" }}
                 >
                   {deposit.amount >= 0 ? "+" : ""}{deposit.amount.toFixed(2)} {tk}
                 </p>

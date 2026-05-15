@@ -129,7 +129,7 @@ export function GroupDashboard({ groupId }: { groupId: string }) {
           <div className="min-w-0">
             <p className="group-kicker">{group.name}</p>
             <p className="group-title">{t("groupDash.selectMonth")}</p>
-            <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">
+            <p className="mt-2 inline-block rounded-lg bg-[color:var(--accent-dim)] px-2.5 py-1 text-sm font-medium text-[color:var(--accent)]">
               {t("groupDash.selectMonthHelp")}
             </p>
           </div>
@@ -207,11 +207,16 @@ export function GroupDashboard({ groupId }: { groupId: string }) {
             { label: t("groupDash.statRemaining"), value: `${remainingTaka.toFixed(2)} ${t("common.tk")}` },
             { label: t("groupDash.statMembers"), value: String(members.length) },
           ].map((s) => {
+            const isMoney = s.label.includes(t("common.tk")) || s.value.includes(t("common.tk"));
             const isNegative = s.value.includes("-");
+            const color = isMoney 
+              ? (isNegative ? "var(--danger)" : "var(--success-text)")
+              : undefined;
+
             return (
               <div key={s.label} className="group-stat-card">
                 <p className="group-stat-label">{s.label}</p>
-                <p className="group-stat-value" style={isNegative ? { color: "var(--danger)" } : {}}>{s.value}</p>
+                <p className="group-stat-value" style={color ? { color } : {}}>{s.value}</p>
               </div>
             );
           })}

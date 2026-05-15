@@ -14,7 +14,7 @@ export const en = {
   "home.description":
     "Admins register their group and manage members, meals, costs, deposits, notices, and monthly charts. Members sign in to join groups, add their meals, and the app will calculate the monthly costs and deposits — all from one place.",
   "home.ctaRegister": "Register Group",
-  "home.ctaEnter": "Login / Enter Group",
+  "home.ctaEnter": "Enter a Group",
   "home.ctaAdmin": "Admin Login",
   "home.statBackend": "Backend",
   "home.statMode": "Mode",
@@ -86,7 +86,7 @@ export const en = {
 
   // Common
   "common.loading": "Loading…",
-  "common.back": "← Back",
+  "common.back": " Back",
   "common.tk": "tk",
   "common.active": "active",
   "common.auto": "auto",
@@ -167,7 +167,7 @@ export const en = {
 
   // Group nav
   "groupNav.home": "Home",
-  "groupNav.chart": "Chart",
+  "groupNav.chart": "Meal Chart",
   "groupNav.notices": "Notices",
 
   // Group dashboard
@@ -236,6 +236,12 @@ export const en = {
     "When your admin posts updates, they will appear here.",
   "groupNotices.caughtUp": "You're all caught up",
   "groupNotices.timestampFallback": "",
+  "groupNotices.depositAddedTitle": "Money added",
+  "groupNotices.depositAddedBody": "A deposit of {amount} tk was added for {member}.",
+  "groupNotices.depositDeductedTitle": "Money deducted",
+  "groupNotices.depositDeductedBody": "An amount of {amount} tk was deducted/returned for {member}.",
+  "groupNotices.costAddedTitle": "Cost added",
+  "groupNotices.costAddedBody": "{item} — {amount} tk on {date}.",
 
   // Group members list / dashboard
   "groupMembers.title": "Members",
@@ -360,6 +366,9 @@ export const en = {
   "memberMgr.searchPlaceholder": "Search name or email…",
   "memberMgr.listSummary": "{shown} shown / {total} total",
   "memberMgr.noSearchMatch": "No members matched your search.",
+  "memberMgr.pendingRequests": "Pending Join Requests",
+  "memberMgr.approve": "Approve",
+  "memberMgr.reject": "Reject",
 
   // Notices manager (admin)
   "noticeMgr.addFormTitle": "Add Notice",
@@ -435,6 +444,9 @@ export const en = {
   "createChart.deleteBtn": "Delete",
   "createChart.deleteConfirm": "Are you sure you want to delete this chart? All deposits, costs, and notices for this month will be permanently deleted. This cannot be undone.",
   "createChart.deleting": "Deleting…",
+  "createChart.locking": "Locking…",
+  "createChart.unlocking": "Unlocking…",
+  "createChart.exporting": "Exporting PDF…",
   "createChart.deleteFailed": "Failed to delete chart.",
   "createChart.previewLine": "{label} · {days} {unit}",
 
@@ -465,6 +477,8 @@ export const en = {
   "addMoney.adding": "Adding…",
   "addMoney.submit": "Add money",
   "addMoney.memberTotals": "Member Totals",
+
+  "notices.selectHelp": "Select a month to manage notices for that period.",
   "addMoney.depositHistory": "Deposit History",
 
   // Errors (user-facing / mapped from throws)
@@ -534,12 +548,15 @@ export const en = {
   "errors.genericLoad": "Failed to load.",
   "errors.adminInMemberLogin": "You are an admin. Please sign in via the Admin Login page.",
   "errors.permissionDenied": "Missing or insufficient permissions.",
-  "errors.emailAuthFailed": "Member added but email failed: Gmail is blocking access. Please check your App Password or security settings.",
-  "errors.emailWelcomeFailed": "Member saved, but welcome email failed: {error}",
-  "errors.emailApprovalFailed": "Member approved, but welcome email failed: {error}",
-  "errors.emailReceiptFailed": "Money added, but receipt email failed: {error}",
-  "errors.emailAdminWelcomeFailed": "Group created, but admin welcome email failed: {error}",
-  "errors.emailSummaryFailed": "Month locked, but summary emails failed: {error}",
+  "errors.emailAuthFailed": "Group created , but welcome email failed.",
+  "errors.emailWelcomeFailed": "Member saved, but welcome email failed.",
+  "errors.emailApprovalFailed": "Member approved, but welcome email failed.",
+  "errors.emailReceiptFailed": "Money added, but receipt email failed.",
+  "errors.emailAdminWelcomeFailed": "Group created, but admin welcome email failed.",
+  "errors.emailSummaryFailed": "Month locked, but summary emails failed.",
+  "errors.emailSummaryStatus": "Month locked. Summary emails: {sent} sent, {failed} failed.",
+  "errors.emailRemovalFailed": "Member removed, but removal email failed.",
+  "errors.emailFailed": "Failed to send email.",
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -556,7 +573,7 @@ export const bn: Record<MessageKey, string> = {
   "home.description":
     "অ্যাডমিন গ্রুপ রেজিস্টার করবে এবং সদস্য, মিল, খরচ, জমা, নোটিশ ও মাসিক চার্ট এক জায়গা থেকে পরিচালনা করবে। সদস্য সাইন ইন করে গ্রুপে যোগদানের অনুরোধ করবে এবং অ্যাপটি মাসিক খরচ ও জমা হিসাব করবে — সবকিছু এক জায়গা থেকে।",
   "home.ctaRegister": "গ্রুপ রেজিস্টার",
-  "home.ctaEnter": "লগইন / গ্রুপে প্রবেশ",
+  "home.ctaEnter": "গ্রুপে প্রবেশ",
   "home.ctaAdmin": "অ্যাডমিন লগইন",
   "home.statBackend": "ব্যাকএন্ড",
   "home.statMode": "মোড",
@@ -625,7 +642,7 @@ export const bn: Record<MessageKey, string> = {
   "features.loadingDesc": "গ্লোবাল লোডিং ওভারলে এবং স্কেলেটন লোডার ডাটা ফেচিংয়ের সময় মসৃণ ইউজার এক্সপেরিয়েন্স প্রদান করে।",
 
   "common.loading": "লোড হচ্ছে…",
-  "common.back": "← পিছনে",
+  "common.back": " পিছনে",
   "common.tk": "টাকা",
   "common.active": "সক্রিয়",
   "common.auto": "স্বয়ংক্রিয়",
@@ -699,7 +716,7 @@ export const bn: Record<MessageKey, string> = {
 
 
   "groupNav.home": "হোম",
-  "groupNav.chart": "চার্ট",
+  "groupNav.chart": "মিল চার্ট",
   "groupNav.notices": "নোটিশ",
 
   "groupDash.loading": "গ্রুপ লোড হচ্ছে…",
@@ -763,6 +780,12 @@ export const bn: Record<MessageKey, string> = {
   "groupNotices.noneBody": "অ্যাডমিন আপডেট দিলে এখানে দেখাবে।",
   "groupNotices.caughtUp": "সব আপডেট দেখে ফেলেছেন",
   "groupNotices.timestampFallback": "",
+  "groupNotices.depositAddedTitle": "টাকা জমা করা হয়েছে",
+  "groupNotices.depositAddedBody": "{member}-এর জন্য {amount} টাকা জমা করা হয়েছে।",
+  "groupNotices.depositDeductedTitle": "টাকা কাটা হয়েছে",
+  "groupNotices.depositDeductedBody": "{member}-এর জন্য {amount} টাকা কাটা বা ফেরত দেওয়া হয়েছে।",
+  "groupNotices.costAddedTitle": "খরচ যোগ করা হয়েছে",
+  "groupNotices.costAddedBody": "{item} — {date} তারিখে {amount} টাকা খরচ হয়েছে।",
 
   "groupMembers.title": "সদস্য",
   "groupMembers.allMembers": "সব সদস্য",
@@ -880,6 +903,9 @@ export const bn: Record<MessageKey, string> = {
   "memberMgr.searchPlaceholder": "নাম বা ইমেইল দিয়ে খুঁজুন…",
   "memberMgr.listSummary": "{shown}টি দেখাচ্ছে / মোট {total}",
   "memberMgr.noSearchMatch": "খুঁজে কোনো সদস্য মেলেনি।",
+  "memberMgr.pendingRequests": "অপেক্ষমান যোগদানের অনুরোধ",
+  "memberMgr.approve": "অনুমোদন করুন",
+  "memberMgr.reject": "প্রত্যাখ্যান করুন",
 
   "noticeMgr.addFormTitle": "নোটিশ যোগ",
   "noticeMgr.editFormTitle": "নোটিশ সম্পাদনা",
@@ -953,6 +979,9 @@ export const bn: Record<MessageKey, string> = {
   "createChart.deleteBtn": "মুছুন",
   "createChart.deleteConfirm": "আপনি কি নিশ্চিত এই চার্ট মুছতে চান? এই মাসের সব জমা, খরচ ও নোটিশ স্থায়ীভাবে মুছে যাবে। এটি পূর্ববত করা যাবে না।",
   "createChart.deleting": "মুছা হচ্ছে…",
+  "createChart.locking": "লক করা হচ্ছে…",
+  "createChart.unlocking": "আনলক করা হচ্ছে…",
+  "createChart.exporting": "পিডিএফ তৈরি হচ্ছে…",
   "createChart.deleteFailed": "চার্ট মুছতে ব্যর্থ।",
   "createChart.previewLine": "{label} · {days} {unit}",
 
@@ -983,6 +1012,8 @@ export const bn: Record<MessageKey, string> = {
   "addMoney.adding": "যোগ হচ্ছে…",
   "addMoney.submit": "টাকা যোগ",
   "addMoney.memberTotals": "সদস্য মোট",
+
+  "notices.selectHelp": "ওই সময়ের নোটিশ পরিচালনা করতে একটি মাস নির্বাচন করুন।",
   "addMoney.depositHistory": "জমার ইতিহাস",
 
   "errors.firebaseNotConfigured": "Firebase এখনো কনফিগার হয়নি।",
@@ -1051,12 +1082,15 @@ export const bn: Record<MessageKey, string> = {
   "errors.genericLoad": "লোড করতে ব্যর্থ হয়েছে।",
   "errors.adminInMemberLogin": "আপনি একজন অ্যাডমিন। অনুগ্রহ করে অ্যাডমিন লগইন পেজ ব্যবহার করে সাইন ইন করুন।",
   "errors.permissionDenied": "প্রবেশাধিকার নেই বা অপর্যাপ্ত অনুমতি।",
-  "errors.emailAuthFailed": "সদস্য যোগ করা হয়েছে কিন্তু ইমেল পাঠাতে ব্যর্থ: আপনার জিমেইল অ্যাকাউন্টটি নিরাপত্তা জনিত কারণে লগইন ব্লক করেছে। দয়া করে আপনার জিমেইল অ্যাকাউন্টে 'App Password' ব্যবহার করুন এবং পুনরায় চেষ্টা করুন।",
-  "errors.emailWelcomeFailed": "সদস্য সংরক্ষিত, কিন্তু স্বাগত ইমেল পাঠানো যায়নি: {error}",
-  "errors.emailApprovalFailed": "সদস্য অনুমোদিত, কিন্তু স্বাগত ইমেল পাঠানো যায়নি: {error}",
-  "errors.emailReceiptFailed": "টাকা জমা হয়েছে, কিন্তু রশিদ ইমেল পাঠানো যায়নি: {error}",
-  "errors.emailAdminWelcomeFailed": "গ্রুপ তৈরি হয়েছে, কিন্তু অ্যাডমিন ইমেল পাঠানো যায়নি: {error}",
-  "errors.emailSummaryFailed": "মাস লক করা হয়েছে, কিন্তু সারাংশ ইমেল পাঠানো যায়নি: {error}",
+  "errors.emailAuthFailed": "গ্রুপ তৈরি হয়েছে, কিন্তু স্বাগত ইমেল পাঠানো যায়নি।",
+  "errors.emailWelcomeFailed": "সদস্য সংরক্ষিত, কিন্তু স্বাগত ইমেল পাঠানো যায়নি।",
+  "errors.emailApprovalFailed": "সদস্য অনুমোদিত, কিন্তু স্বাগত ইমেল পাঠানো যায়নি।",
+  "errors.emailReceiptFailed": "টাকা জমা হয়েছে, কিন্তু রশিদ ইমেল পাঠানো যায়নি।",
+  "errors.emailAdminWelcomeFailed": "গ্রুপ তৈরি হয়েছে, কিন্তু অ্যাডমিন ইমেল পাঠানো যায়নি।",
+  "errors.emailSummaryFailed": "মাস লক করা হয়েছে, কিন্তু সারাংশ ইমেল পাঠানো যায়নি।",
+  "errors.emailSummaryStatus": "মাস লক করা হয়েছে। সারাংশ ইমেল: {sent}টি পাঠানো হয়েছে, {failed}টি ব্যর্থ হয়েছে।",
+  "errors.emailRemovalFailed": "সদস্যকে সরানো হয়েছে, কিন্তু রিমুভাল ইমেল পাঠানো যায়নি।",
+  "errors.emailFailed": "ইমেইল পাঠাতে ব্যর্থ হয়েছে।",
 };
 
 export const messages: Record<Language, Record<MessageKey, string>> = {

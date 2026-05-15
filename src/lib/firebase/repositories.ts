@@ -463,6 +463,74 @@ export async function syncLockedMonthDocsFromCharts(groupId: string) {
   if (ops > 0) await batch.commit();
 }
 
+/** Converts old plain-text system notices to the new translatable JSON format. */
+export async function backfillSystemNotices(groupId: string) {
+  const database = ensureDb();
+  const charts = await listCharts(groupId);
+  let batch = writeBatch(database);
+  let ops = 0;
+
+  for (const chart of charts) {
+    const noticesRef = collection(database, chartNoticesCollection(groupId, chart.id));
+    const snap = await getDocs(query(noticesRef, where("systemGenerated", "==", true)));
+    
+    for (const d of snap.docs) {
+      const data = d.data();
+      const title = String(data.title || "");
+      const body = String(data.body || "");
+
+      // Already in the new format
+      if (title.startsWith("ERR_TRANS:")) continue;
+
+      let newTitle = title;
+      let newBody = body;
+
+      // Identify deposit notices
+      if (title === "Money added") {
+        newTitle = `ERR_TRANS:${JSON.stringify({ key: "groupNotices.depositAddedTitle" })}`;
+        // Extract amount and member from old body: "A deposit of 500.00 tk was added for Member Name."
+        const match = body.match(/deposit of ([\d.]+) tk was added for (.*)\./);
+        if (match) {
+          newBody = `ERR_TRANS:${JSON.stringify({
+            key: "groupNotices.depositAddedBody",
+            vars: { amount: match[1], member: match[2] }
+          })}`;
+        }
+      } else if (title === "Money deducted") {
+        newTitle = `ERR_TRANS:${JSON.stringify({ key: "groupNotices.depositDeductedTitle" })}`;
+        const match = body.match(/amount of ([\d.]+) tk was deducted\/returned for (.*)\./);
+        if (match) {
+          newBody = `ERR_TRANS:${JSON.stringify({
+            key: "groupNotices.depositDeductedBody",
+            vars: { amount: match[1], member: match[2] }
+          })}`;
+        }
+      } else if (title === "Cost added") {
+        newTitle = `ERR_TRANS:${JSON.stringify({ key: "groupNotices.costAddedTitle" })}`;
+        // "Item Name — 250.00 tk on 2024-05-15."
+        const match = body.match(/(.*) — ([\d.]+) tk on ([\d-]+)\./);
+        if (match) {
+          newBody = `ERR_TRANS:${JSON.stringify({
+            key: "groupNotices.costAddedBody",
+            vars: { item: match[1], amount: match[2], date: match[3] }
+          })}`;
+        }
+      }
+
+      if (newTitle !== title) {
+        batch.update(d.ref, { title: newTitle, body: newBody });
+        ops++;
+        if (ops >= 400) {
+          await batch.commit();
+          batch = writeBatch(database);
+          ops = 0;
+        }
+      }
+    }
+  }
+  if (ops > 0) await batch.commit();
+}
+
 /** Adds monthKey to older meal docs (YYYY-MM from date) so lock rules and deletes work. */
 export async function backfillMealMonthKeys(groupId: string) {
   const database = ensureDb();
@@ -529,10 +597,16 @@ export async function createDeposit(input: {
 
   await addDoc(collection(database, chartNoticesCollection(input.groupId, input.chartId)), {
     ...buildNoticeRecord({
-      title: input.amount < 0 ? "Money deducted" : "Money added",
-      body: input.amount < 0 
-        ? `An amount of ${Math.abs(input.amount).toFixed(2)} tk was deducted/returned for ${input.memberName || 'a member'}.` 
-        : `A deposit of ${input.amount.toFixed(2)} tk was added for ${input.memberName || 'a member'}.`,
+      title: `ERR_TRANS:${JSON.stringify({ 
+        key: input.amount < 0 ? "groupNotices.depositDeductedTitle" : "groupNotices.depositAddedTitle" 
+      })}`,
+      body: `ERR_TRANS:${JSON.stringify({ 
+        key: input.amount < 0 ? "groupNotices.depositDeductedBody" : "groupNotices.depositAddedBody",
+        vars: { 
+          amount: Math.abs(input.amount).toFixed(2), 
+          member: input.memberName || 'a member' 
+        }
+      })}`,
       systemGenerated: true,
     }),
     createdAt: serverTimestamp(),
@@ -687,8 +761,15 @@ export async function createCost(input: {
 
   await addDoc(collection(database, chartNoticesCollection(input.groupId, input.chartId)), {
     ...buildNoticeRecord({
-      title: "Cost added",
-      body: `${input.itemName} — ${input.amount.toFixed(2)} tk on ${input.date}.`,
+      title: `ERR_TRANS:${JSON.stringify({ key: "groupNotices.costAddedTitle" })}`,
+      body: `ERR_TRANS:${JSON.stringify({ 
+        key: "groupNotices.costAddedBody",
+        vars: { 
+          item: input.itemName, 
+          amount: input.amount.toFixed(2),
+          date: input.date 
+        }
+      })}`,
       systemGenerated: true,
     }),
     createdAt: serverTimestamp(),

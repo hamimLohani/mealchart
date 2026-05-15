@@ -169,7 +169,7 @@ export function CostsManager() {
             {t("costs.selectHelp")}
           </p>
           {charts.length === 0 ? (
-            <p className="mt-4 py-6 text-center text-sm text-[color:var(--soft-foreground)]">
+            <p className="mt-4 py-6 text-center text-sm font-bold text-[color:var(--danger)]">
               {t("admin.noChartsMeals")}
             </p>
           ) : (
@@ -224,17 +224,17 @@ export function CostsManager() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="group-stat-card">
           <p className="group-stat-label">{t("groupMoney.statTotalPaid")}</p>
-          <p className="group-stat-value">{totalPaid.toFixed(2)} {tk}</p>
+          <p className="group-stat-value" style={{ color: "var(--success-text)" }}>{totalPaid.toFixed(2)} {tk}</p>
         </div>
         <div className="group-stat-card">
           <p className="group-stat-label">{t("costs.totalCost")}</p>
-          <p className="group-stat-value">{totalCost.toFixed(2)} {tk}</p>
+          <p className="group-stat-value" style={{ color: "var(--success-text)" }}>{totalCost.toFixed(2)} {tk}</p>
         </div>
         <div className="group-stat-card">
           <p className="group-stat-label">{t("groupChart.statRemaining")}</p>
           <p 
             className="group-stat-value"
-            style={{ color: balance >= 0 ? "var(--accent)" : "var(--danger)" }}
+            style={{ color: balance >= 0 ? "var(--success-text)" : "var(--danger)" }}
           >
             {balance > 0 ? "+" : ""}{balance.toFixed(2)} {tk}
           </p>
@@ -306,7 +306,7 @@ export function CostsManager() {
               <p className="mt-0.5 text-xs text-[color:var(--muted)]">{cost.date}</p>
             </div>
             <div className="flex items-center gap-3">
-              <p className="font-bold text-[color:var(--accent)]">{cost.amount.toFixed(2)} {tk}</p>
+              <p className="font-bold text-[color:var(--success-text)]">{cost.amount.toFixed(2)} {tk}</p>
               <button
                 onClick={() => void handleDelete(cost.id)}
                 type="button"

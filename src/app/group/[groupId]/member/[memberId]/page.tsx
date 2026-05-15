@@ -221,12 +221,12 @@ export default function MemberPage({
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {[
                 { label: t("memberPage.statTotalMeals"), value: formatMeal(myTotalMeals) },
-                { label: t("memberPage.statTotalCost"), value: `${myCost.toFixed(2)} ${tk}` },
-                { label: t("memberPage.statTotalPaid"), value: `${myTotalPaid.toFixed(2)} ${tk}` },
+                { label: t("memberPage.statTotalCost"), value: `${myCost.toFixed(2)} ${tk}`, color: "var(--success-text)" },
+                { label: t("memberPage.statTotalPaid"), value: `${myTotalPaid.toFixed(2)} ${tk}`, color: "var(--success-text)" },
                 { 
                   label: t("memberPage.statBalance"), 
                   value: `${myBalance >= 0 ? "+" : ""}${myBalance.toFixed(2)} ${tk}`,
-                  color: myBalance < 0 ? "var(--danger)" : "var(--accent)"
+                  color: myBalance < 0 ? "var(--danger)" : "var(--success-text)"
                 },
               ].map((s) => (
                 <div key={s.label} className="group-stat-card">
@@ -338,7 +338,7 @@ export default function MemberPage({
                       </div>
                       <p 
                         className="font-bold"
-                        style={{ color: (meal.quantity * mealRate) >= 0 ? "var(--accent)" : "var(--danger)" }}
+                        style={{ color: (meal.quantity * mealRate) >= 0 ? "var(--success-text)" : "var(--danger)" }}
                       >
                         {(meal.quantity * mealRate).toFixed(2)} ${tk}
                       </p>
@@ -361,7 +361,7 @@ export default function MemberPage({
                       </p>
                       <p 
                         className="font-bold"
-                        style={{ color: deposit.amount >= 0 ? "var(--accent)" : "var(--danger)" }}
+                        style={{ color: deposit.amount >= 0 ? "var(--success-text)" : "var(--danger)" }}
                       >
                         {deposit.amount.toFixed(2)} ${tk}
                       </p>

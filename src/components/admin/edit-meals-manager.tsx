@@ -225,7 +225,7 @@ export function EditMealsManager() {
           <p className="admin-section-label">{t("admin.selectMonth")}</p>
           <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">{t("admin.chooseMonthMeals")}</p>
           {charts.length === 0 ? (
-            <p className="mt-4 py-6 text-center text-sm text-[color:var(--soft-foreground)]">
+            <p className="mt-4 py-6 text-center text-sm font-bold text-[color:var(--danger)]">
               {t("admin.noChartsMeals")}
             </p>
           ) : (

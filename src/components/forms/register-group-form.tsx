@@ -68,11 +68,10 @@ export function RegisterGroupForm() {
       ).then(result => {
         if (!result.success) {
           const friendlyError = getFriendlyEmailError(result.error || "");
-          setError(
-            typeof friendlyError === "string" 
-              ? t("errors.emailAdminWelcomeFailed", { error: friendlyError })
-              : tx(friendlyError)
-          );
+          setError(`ERR_TRANS:${JSON.stringify({ 
+            key: "errors.emailAdminWelcomeFailed", 
+            vars: { error: friendlyError } 
+          })}`);
         }
       });
     },

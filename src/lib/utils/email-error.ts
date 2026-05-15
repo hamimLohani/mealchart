@@ -14,5 +14,16 @@ export function getFriendlyEmailError(error: string): MessageKey | string {
   ) {
     return "errors.emailAuthFailed";
   }
+  
+  if (
+    lowerError.includes("econnrefused") ||
+    lowerError.includes("etimedout") ||
+    lowerError.includes("dns") ||
+    lowerError.includes("smtp") ||
+    lowerError.includes("connection closed")
+  ) {
+    return "errors.emailFailed";
+  }
+
   return error;
 }

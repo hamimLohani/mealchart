@@ -163,11 +163,10 @@ export function MemberManager() {
         );
         if (!emailResult.success) {
           const friendlyError = getFriendlyEmailError(emailResult.error || "");
-          setError(
-            typeof friendlyError === "string" 
-              ? t("errors.emailWelcomeFailed", { error: friendlyError })
-              : tx(friendlyError)
-          );
+          setError(`ERR_TRANS:${JSON.stringify({ 
+            key: "errors.emailWelcomeFailed", 
+            vars: { error: friendlyError } 
+          })}`);
         }
       }
       resetForm();
@@ -189,15 +188,18 @@ export function MemberManager() {
       if (editingMemberId === memberId) resetForm();
 
       if (memberToRemove && memberToRemove.email) {
-        void sendRemovalEmail(
+        const emailResult = await sendRemovalEmail(
           memberToRemove.email,
           memberToRemove.fullName,
           groupName || activeAdminProfile.groupId
-        ).then(result => {
-          if (!result.success) {
-            console.error("Failed to send removal email:", result.error);
-          }
-        });
+        );
+        if (!emailResult.success) {
+           const friendlyError = getFriendlyEmailError(emailResult.error || "");
+           setError(`ERR_TRANS:${JSON.stringify({ 
+             key: "errors.emailRemovalFailed", 
+             vars: { error: friendlyError } 
+           })}`);
+         }
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to remove member.");
@@ -227,11 +229,10 @@ export function MemberManager() {
       );
       if (!emailResult.success) {
         const friendlyError = getFriendlyEmailError(emailResult.error || "");
-        setError(
-          typeof friendlyError === "string" 
-            ? t("errors.emailApprovalFailed", { error: friendlyError })
-            : tx(friendlyError)
-        );
+        setError(`ERR_TRANS:${JSON.stringify({ 
+          key: "errors.emailApprovalFailed", 
+          vars: { error: friendlyError } 
+        })}`);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to approve request.");
@@ -312,7 +313,7 @@ export function MemberManager() {
 
       {visibleJoinRequests.length > 0 && (
         <div className="rounded-[var(--radius)] border-2 border-[color:var(--accent)] bg-[color:var(--panel)] p-4 shadow-[0_0_0_4px_var(--accent-dim)]">
-          <p className="admin-section-label">Pending Join Requests</p>
+          <p className="admin-section-label">{t("memberMgr.pendingRequests")}</p>
           <div className="mt-4 grid gap-2.5">
             {visibleJoinRequests.map((req) => (
               <article
@@ -325,10 +326,10 @@ export function MemberManager() {
                 </div>
                 <div className="flex gap-2">
                   <button className="button-primary" onClick={() => void handleApproveRequest(req)} type="button">
-                    Approve
+                    {t("memberMgr.approve")}
                   </button>
                   <button className="button-danger" onClick={() => void handleRejectRequest(req)} type="button">
-                    Reject
+                    {t("memberMgr.reject")}
                   </button>
                 </div>
               </article>

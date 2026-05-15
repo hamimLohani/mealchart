@@ -111,14 +111,18 @@ export function GroupChartView({ groupId }: { groupId: string }) {
         {[
           { label: t("groupChart.statTotalMeals"), value: formatMeal(grandTotal) },
           { label: t("groupChart.statTotalMembers"), value: String(totalMembers) },
-          { label: t("groupChart.statTotalCost"), value: `${totalCost.toFixed(2)} ${tk}` },
-          { label: t("groupChart.statTotalPaid"), value: `${totalPaid.toFixed(2)} ${tk}` },
-          { label: t("groupChart.statRemaining"), value: `${remainingTaka.toFixed(2)} ${tk}` },
-          { label: t("groupChart.statMealRate"), value: `${mealRate.toFixed(2)} ${tk}` },
+          { label: t("groupChart.statTotalCost"), value: `${totalCost.toFixed(2)} ${tk}`, color: "var(--success-text)" },
+          { label: t("groupChart.statTotalPaid"), value: `${totalPaid.toFixed(2)} ${tk}`, color: "var(--success-text)" },
+          { 
+            label: t("groupChart.statRemaining"), 
+            value: `${remainingTaka.toFixed(2)} ${tk}`,
+            color: remainingTaka >= 0 ? "var(--success-text)" : "var(--danger)"
+          },
+          { label: t("groupChart.statMealRate"), value: `${mealRate.toFixed(2)} ${tk}`, color: "var(--success-text)" },
         ].map((s) => (
           <div key={s.label} className="group-stat-card">
             <p className="group-stat-label">{s.label}</p>
-            <p className="group-stat-value">{s.value}</p>
+            <p className="group-stat-value" style={s.color ? { color: s.color } : {}}>{s.value}</p>
           </div>
         ))}
       </div>
