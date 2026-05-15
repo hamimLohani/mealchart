@@ -90,3 +90,23 @@ public/uploads/
 # =========================
 *.pem
 secrets.json
+
+# =========================
+# Mobile App / Build Artifacts
+# =========================
+android-twa/
+ios-app/
+gradle/
+gradlew
+gradlew.bat
+settings.gradle
+build.gradle
+gradle.properties
+twa-manifest.json
+manifest-checksum.txt
+android.keystore
+*.apk
+*.aab
+*.idsig
+meal-chart-prompt.docx
+store_icon.png
