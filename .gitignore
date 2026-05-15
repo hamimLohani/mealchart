@@ -110,3 +110,10 @@ android.keystore
 *.idsig
 meal-chart-prompt.docx
 store_icon.png
+public/assetlinks.json
+public/.well-known/
+public/file.svg
+public/globe.svg
+public/next.svg
+public/vercel.svg
+public/window.svg
