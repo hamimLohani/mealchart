@@ -15,8 +15,6 @@ interface BeforeInstallPromptEvent extends Event {
 export function PWAInstallButton() {
   const { t } = useT();
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [showOptions, setShowOptions] = useState(false);
-  const [isAndroid, setIsAndroid] = useState(false);
   const [isStandalone] = useState(() => {
     if (typeof window !== "undefined") {
       const isStandaloneMode = window.matchMedia("(display-mode: standalone)").matches;
@@ -30,10 +28,6 @@ export function PWAInstallButton() {
   });
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      setIsAndroid(/Android/i.test(navigator.userAgent));
-    }
-
     const handler = (e: Event) => {
       e.preventDefault();
       setInstallPrompt(e as BeforeInstallPromptEvent);
@@ -44,9 +38,8 @@ export function PWAInstallButton() {
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
-  const handlePWAInstall = async () => {
+  const handleInstall = async () => {
     if (installPrompt) {
-      setShowOptions(false);
       await installPrompt.prompt();
       const { outcome } = await installPrompt.userChoice;
       if (outcome === "accepted") {
@@ -55,77 +48,27 @@ export function PWAInstallButton() {
       return;
     }
 
-    // If automatic install fails or is not supported (common on iOS)
+    // Fallback for iOS Safari which doesn't support beforeinstallprompt
     if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-      setShowOptions(false);
       alert(t("common.iosInstructions"));
     }
   };
 
-  const handleAPKDownload = () => {
-    setShowOptions(false);
-    if (!confirm(t("common.confirmAPK"))) return;
-    
-    const link = document.createElement("a");
-    link.href = "/meal-chart.apk";
-    link.download = "meal-chart.apk";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   if (isStandalone) return null;
 
-  // Case 1: Android - Show dropdown for both PWA and APK
-  if (isAndroid) {
-    return (
-      <div className="relative">
-        <button
-          onClick={() => setShowOptions(!showOptions)}
-          className="inline-flex items-center gap-1.5 rounded-full bg-[color:var(--accent)] px-3.5 py-1.5 text-xs font-bold text-white shadow-lg transition-transform hover:scale-105 active:scale-95"
-          type="button"
-        >
-          {t("common.installApp")}
-          <svg className={`h-3 w-3 transition-transform ${showOptions ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path d="M19 9l-7 7-7-7" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-          </svg>
-        </button>
+  // Show button if we have a prompt OR if it's an iOS device (to show instructions)
+  const isIOS = typeof navigator !== "undefined" && /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-        {showOptions && (
-          <div className="absolute right-0 mt-2 w-52 origin-top-right rounded-xl border border-[color:var(--border)] bg-[color:var(--panel)] p-1 shadow-xl ring-1 ring-black/5 focus:outline-none z-50">
-            <button
-              onClick={handleAPKDownload}
-               className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-[color:var(--foreground)] transition hover:bg-[color:var(--accent-dim)] hover:text-[color:var(--accent)]"
-             >
-               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                 <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-               </svg>
-               {t("common.downloadAPK")}
-             </button>
-
-             <button
-               onClick={handlePWAInstall}
-               className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-[color:var(--foreground)] transition hover:bg-[color:var(--accent-dim)] hover:text-[color:var(--accent)]"
-             >
-               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                 <path d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-               </svg>
-               {t("common.downloadIOS")}
-             </button>
-           </div>
-         )}
-      </div>
-    );
-  }
-
-  // Case 2: Desktop / Others with PWA support - Show simple install button
-  if (installPrompt) {
+  if (installPrompt || isIOS) {
     return (
       <button
-        onClick={handlePWAInstall}
+        onClick={handleInstall}
         className="inline-flex items-center gap-1.5 rounded-full bg-[color:var(--accent)] px-3.5 py-1.5 text-xs font-bold text-white shadow-lg transition-transform hover:scale-105 active:scale-95"
         type="button"
       >
+        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+        </svg>
         {t("common.installApp")}
       </button>
     );
