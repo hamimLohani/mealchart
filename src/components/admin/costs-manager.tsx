@@ -236,7 +236,7 @@ export function CostsManager() {
             className="group-stat-value"
             style={{ color: balance >= 0 ? "var(--accent)" : "var(--danger)" }}
           >
-            {balance >= 0 ? "+" : ""}{balance.toFixed(2)} {tk}
+            {balance > 0 ? "+" : ""}{balance.toFixed(2)} {tk}
           </p>
         </div>
         <div className="group-stat-card">

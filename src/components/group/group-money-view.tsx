@@ -137,7 +137,7 @@ export function GroupMoneyView({ groupId }: { groupId: string }) {
           className={`mt-1 text-xl font-bold ${balance >= 0 ? "text-[color:var(--success-text)]" : "text-[color:var(--danger)]"}`}
         >
           {balance >= 0 ? "+" : ""}
-          {balance.toFixed(2)} {tk}
+          {balance.toFixed(2)} ${tk}
         </p>
         <p className="mt-0.5 text-xs text-[color:var(--muted)]">
           {balance >= 0 ? t("groupMoney.surplus") : t("groupMoney.deficit")}
@@ -176,7 +176,7 @@ export function GroupMoneyView({ groupId }: { groupId: string }) {
                   style={{ color: remaining >= 0 ? "var(--accent)" : "var(--danger)" }}
                 >
                   {remaining >= 0 ? "+" : ""}
-                  {remaining.toFixed(2)} {tk}
+                  {remaining.toFixed(2)} ${tk}
                 </p>
               </div>
             );
@@ -205,7 +205,7 @@ export function GroupMoneyView({ groupId }: { groupId: string }) {
                   className="font-bold"
                   style={{ color: d.amount >= 0 ? "var(--accent)" : "var(--danger)" }}
                 >
-                  {d.amount >= 0 ? "+" : ""}{d.amount.toFixed(2)} {tk}
+                  {d.amount >= 0 ? "+" : ""}{d.amount.toFixed(2)} ${tk}
                 </p>
               </div>
             );
@@ -229,7 +229,7 @@ export function GroupMoneyView({ groupId }: { groupId: string }) {
                 <p className="group-stat-label">{c.date}</p>
               </div>
               <p className="font-bold text-[color:var(--accent)]">
-                {c.amount.toFixed(2)} {tk}
+                {c.amount.toFixed(2)} ${tk}
               </p>
             </div>
           ))}

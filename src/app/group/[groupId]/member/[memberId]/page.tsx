@@ -225,7 +225,7 @@ export default function MemberPage({
                 { label: t("memberPage.statTotalPaid"), value: `${myTotalPaid.toFixed(2)} ${tk}` },
                 { 
                   label: t("memberPage.statBalance"), 
-                  value: `${myBalance >= 0 ? "+" : ""}${myBalance.toFixed(2)} {tk}`,
+                  value: `${myBalance >= 0 ? "+" : ""}${myBalance.toFixed(2)} ${tk}`,
                   color: myBalance < 0 ? "var(--danger)" : "var(--accent)"
                 },
               ].map((s) => (
@@ -242,16 +242,34 @@ export default function MemberPage({
                 <p className="mt-1 text-xs font-semibold text-[color:var(--danger)]">{t("memberPage.monthLocked")}</p>
               )}
               <div className="mt-3 grid gap-3 sm:grid-cols-[220px_1fr] sm:items-center">
-                <input
-                  type="date"
-                  className="input"
-                  min={monthStart}
-                  max={monthEnd}
-                  placeholder={toDateInputValue(new Date())}
-                  value={selectedDate}
-                  onChange={(event) => setSelectedDate(event.target.value)}
-                  disabled={isLocked}
-                />
+                {isAdmin ? (
+                  <input
+                    type="date"
+                    className="input"
+                    min={monthStart}
+                    max={monthEnd}
+                    placeholder={toDateInputValue(new Date())}
+                    value={selectedDate}
+                    onChange={(event) => setSelectedDate(event.target.value)}
+                    disabled={isLocked}
+                  />
+                ) : (
+                   <motion.div 
+                     initial={{ opacity: 0, x: -10 }}
+                     animate={{ opacity: 1, x: 0 }}
+                     className="input flex items-center justify-center gap-2.5 border-2 border-[color:var(--accent)] bg-[color:var(--accent-dim)] px-4 font-bold text-[color:var(--accent)] shadow-[0_0_0_2px_var(--accent-dim)]"
+                   >
+                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                       <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                       <line x1="16" y1="2" x2="16" y2="6"></line>
+                       <line x1="8" y1="2" x2="8" y2="6"></line>
+                       <line x1="3" y1="10" x2="21" y2="10"></line>
+                     </svg>
+                     <span>
+                       {new Date(selectedDate).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })}
+                     </span>
+                   </motion.div>
+                 )}
                 {dateMealLoading ? (
                   <p className="text-sm text-[color:var(--soft-foreground)]">{t("memberPage.loadingMeal")}</p>
                 ) : (
@@ -272,23 +290,35 @@ export default function MemberPage({
             <div className="group-card">
               <p className="group-kicker">{t("memberPage.dailyMeals")} — {chart.label}</p>
               <div className="mt-4 grid gap-1.5">
-                {days.map(({ day, date, qty }) => (
-                  <div key={date} className="flex items-center gap-3">
-                    <span className="w-6 shrink-0 text-right text-xs text-[color:var(--muted)]">{day}</span>
-                    <div className="flex-1 overflow-hidden rounded-full bg-[color:var(--background)]">
-                      {qty > 0 ? (
-                        <div
-                          className="flex h-6 items-center justify-end rounded-full bg-[color:var(--accent)] pr-2 text-xs font-bold text-white"
-                          style={{ width: `${Math.max(6, (qty / maxQty) * 100)}%` }}
-                        >
+                {days.map(({ day, date, qty }) => {
+                  const isToday = date === selectedDate;
+                  return (
+                    <div 
+                      key={date} 
+                      className={`flex items-center gap-3 rounded-lg px-2 py-1 transition-colors ${
+                        isToday 
+                          ? "bg-[color:var(--accent-dim)] ring-1 ring-[color:var(--accent)]" 
+                          : "hover:bg-[color:var(--background-alt)]"
+                      }`}
+                    >
+                      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-xs font-bold ${
+                        isToday 
+                          ? "bg-[color:var(--accent)] text-white" 
+                          : "bg-[color:var(--panel)] text-[color:var(--muted)] border border-[color:var(--border)]"
+                      }`}>
+                        {day}
+                      </div>
+                      <div className="flex flex-1 items-center justify-between">
+                        <p className={`text-sm ${isToday ? "font-bold text-[color:var(--accent)]" : "text-[color:var(--soft-foreground)]"}`}>
+                          {new Date(date).toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' })}
+                        </p>
+                        <span className={`text-sm font-bold tabular-nums ${isToday ? "text-[color:var(--accent)]" : "text-[color:var(--foreground)]"}`}>
                           {formatMeal(qty)}
-                        </div>
-                      ) : (
-                        <div className="h-6 rounded-full" />
-                      )}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -306,7 +336,7 @@ export default function MemberPage({
                           {formatMeal(meal.quantity)} {meal.quantity !== 1 ? t("memberPage.mealsWord") : t("memberPage.mealWord")}
                         </p>
                       </div>
-                      <p className="font-bold text-[color:var(--accent)]">{(meal.quantity * mealRate).toFixed(2)} {tk}</p>
+                      <p className="font-bold text-[color:var(--accent)]">{(meal.quantity * mealRate).toFixed(2)} ${tk}</p>
                     </div>
                   ))
                 )}
@@ -324,7 +354,7 @@ export default function MemberPage({
                       <p className="text-sm font-semibold">
                         {new Date(deposit.date + "T12:00:00").toLocaleDateString(locale, { year: "numeric", month: "short", day: "numeric" })}
                       </p>
-                      <p className="font-bold text-[color:var(--accent)]">{deposit.amount.toFixed(2)} {tk}</p>
+                      <p className="font-bold text-[color:var(--accent)]">{deposit.amount.toFixed(2)} ${tk}</p>
                     </div>
                   ))
                 )}
