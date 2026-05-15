@@ -45,26 +45,27 @@ export function PWAInstallButton() {
   }, []);
 
   const handlePWAInstall = async () => {
-    if (!installPrompt) {
-      // If it's an iOS device, we must show manual instructions because Safari doesn't support the prompt API
-      if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-        alert(t("common.iosInstructions"));
-        setShowOptions(false);
+    if (installPrompt) {
+      setShowOptions(false);
+      await installPrompt.prompt();
+      const { outcome } = await installPrompt.userChoice;
+      if (outcome === "accepted") {
+        setInstallPrompt(null);
       }
       return;
     }
-    
-    setShowOptions(false);
-    await installPrompt.prompt();
-    const { outcome } = await installPrompt.userChoice;
-    
-    if (outcome === "accepted") {
-      setInstallPrompt(null);
+
+    // If automatic install fails or is not supported (common on iOS)
+    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+      setShowOptions(false);
+      alert(t("common.iosInstructions"));
     }
   };
 
   const handleAPKDownload = () => {
     setShowOptions(false);
+    if (!confirm(t("common.confirmAPK"))) return;
+    
     const link = document.createElement("a");
     link.href = "/meal-chart.apk";
     link.download = "meal-chart.apk";
@@ -92,19 +93,8 @@ export function PWAInstallButton() {
 
         {showOptions && (
           <div className="absolute right-0 mt-2 w-52 origin-top-right rounded-xl border border-[color:var(--border)] bg-[color:var(--panel)] p-1 shadow-xl ring-1 ring-black/5 focus:outline-none z-50">
-            {installPrompt && (
-              <button
-                onClick={handlePWAInstall}
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-[color:var(--foreground)] transition hover:bg-[color:var(--accent-dim)] hover:text-[color:var(--accent)]"
-              >
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-                </svg>
-                {t("common.installApp")}
-              </button>
-            )}
             <button
-               onClick={handleAPKDownload}
+              onClick={handleAPKDownload}
                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-[color:var(--foreground)] transition hover:bg-[color:var(--accent-dim)] hover:text-[color:var(--accent)]"
              >
                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

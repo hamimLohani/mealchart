@@ -97,6 +97,7 @@ export const en = {
   "common.or": "or",
   "common.installApp": "Install",
   "common.downloadAPK": "Download Android App",
+  "common.confirmAPK": "Do you want to download the Android App (APK)?",
   "common.downloadIOS": "Download iOS App",
   "common.iosInstructions": "To install on iPhone/iPad:\n1. Open Safari\n2. Tap the Share button\n3. Select 'Add to Home Screen'",
 
@@ -638,6 +639,7 @@ export const bn: Record<MessageKey, string> = {
   "common.or": "অথবা",
   "common.installApp": "ইন্সটল",
   "common.downloadAPK": "অ্যান্ড্রয়েড অ্যাপ ডাউনলোড",
+  "common.confirmAPK": "আপনি কি অ্যান্ড্রয়েড অ্যাপ (APK) ডাউনলোড করতে চান?",
   "common.downloadIOS": "অ্যাপল/আইওএস অ্যাপ",
   "common.iosInstructions": "আইফোন/আইপ্যাডে ইন্সটল করতে:\n১. সাফারি (Safari) ব্রাউজার খুলুন\n২. শেয়ার (Share) বাটনে ট্যাপ করুন\n৩. 'Add to Home Screen' নির্বাচন করুন",
 
