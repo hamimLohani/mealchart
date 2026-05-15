@@ -1,14 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  async rewrites() {
-    return [
-      {
-        source: "/.well-known/assetlinks.json",
-        destination: "/assetlinks.json",
-      },
-    ];
-  },
+  /* No rewrites, let public folder handle it */
 };
 
 export default nextConfig;

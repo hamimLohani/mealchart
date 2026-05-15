@@ -1,18 +1,3 @@
 {
-  "cleanUrls": true,
-  "headers": [
-    {
-      "source": "/.well-known/(.*)",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
-        }
-      ]
-    }
-  ]
+  "cleanUrls": true
 }
