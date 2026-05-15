@@ -88,9 +88,9 @@ public/uploads/
 # =========================
 # Android Builds 📱
 # =========================
-*.apk
-*.aab
-*.keystore
-android-app/build/
-.gradle/
-!android.keystore
+# *.apk
+# *.aab
+# *.keystore
+# android-app/build/
+# .gradle/
+# !android.keystore
