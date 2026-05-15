@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { AppHeader } from "@/components/layout/app-header";
 import { AppFooter } from "@/components/layout/app-footer";
 import { UiProvider } from "@/components/providers/ui-provider";
+import { ServiceWorkerRegister } from "@/components/providers/sw-register";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -42,6 +43,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full" suppressHydrationWarning>
+        <ServiceWorkerRegister />
         <UiProvider>
           <div className="min-h-screen flex flex-col bg-[color:var(--background)]">
             <AppHeader />
