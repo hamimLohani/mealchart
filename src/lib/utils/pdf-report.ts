@@ -121,7 +121,6 @@ export function saveChartReportPdf(options: ChartReportOptions) {
   const balanceWidth = 50;
   const tableWidth = nameWidth + totalDays * dayWidth + totalWidth + paidWidth + balanceWidth;
   const tableLeft = (pageWidth - tableWidth) / 2; // Center the table
-  const tableRight = tableLeft + tableWidth;
   const headerHeight = 20;
   const bodyRowHeight = 18;
   const bottomLimit = pageHeight - margin;

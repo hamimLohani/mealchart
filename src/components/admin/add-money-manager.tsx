@@ -145,7 +145,7 @@ export function AddMoneyManager() {
     }, 0);
   }, [selectedChart]);
 
-  const { totalCost, totalPaid, remainingTaka: balance, mealRate } = useMemo(() => {
+  const { totalPaid, remainingTaka: balance, mealRate } = useMemo(() => {
     return getMonthTotals(meals, costs, deposits);
   }, [meals, costs, deposits]);
 

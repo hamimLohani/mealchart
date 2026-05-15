@@ -19,7 +19,6 @@ import {
 } from "@/lib/firebase/repositories";
 import { formatChartLabel } from "@/lib/utils/date";
 import { daysInMonth } from "@/lib/utils/date";
-import { getMonthTotals, getMemberTotals } from "@/lib/utils/meal-money";
 import { saveChartReportPdf } from "@/lib/utils/pdf-report";
 import type { AdminProfile, Chart } from "@/types/domain";
 import { sendMonthSummaryEmails } from "@/lib/email/actions";
@@ -170,9 +169,9 @@ export function CreateChartManager() {
               ? t("errors.emailSummaryFailed", { error: friendlyError })
               : tx(friendlyError)
           );
-        } else if ((emailResult as any).failedCount > 0) {
+        } else if (emailResult.failedCount && emailResult.failedCount > 0) {
           setError(
-            `Month locked. Summary emails: ${(emailResult as any).sentCount} sent, ${(emailResult as any).failedCount} failed. Check server logs for details.`
+            `Month locked. Summary emails: ${emailResult.sentCount} sent, ${emailResult.failedCount} failed. Check server logs for details.`
           );
         }
       }

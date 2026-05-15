@@ -15,7 +15,6 @@ import {
   where,
   writeBatch,
   collectionGroup,
-  Firestore,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import {
@@ -250,9 +249,7 @@ export async function deleteMember(groupId: string, memberId: string) {
 
   if (!snapshot.exists()) throw new Error("Member was not found.");
 
-  const data = snapshot.data();
   await deleteDoc(memberRef);
-
 }
 
 export async function findMemberGroupByEmail(email: string): Promise<string | null> {

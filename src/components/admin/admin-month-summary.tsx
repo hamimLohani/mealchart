@@ -13,7 +13,6 @@ import {
   useGroup
 } from "@/lib/hooks/use-data";
 import { useMemo } from "react";
-import type { Chart } from "@/types/domain";
 
 export function AdminMonthSummary({ groupId }: { groupId: string }) {
   const { t } = useT();
@@ -25,12 +24,13 @@ export function AdminMonthSummary({ groupId }: { groupId: string }) {
   // Auto-detect active chart: group.currentChartId or the first from list
   const activeChart = useMemo(() => {
     if (!charts.length) return null;
-    if (group?.currentChartId) {
-      const found = charts.find((c) => c.id === group.currentChartId);
+    const currentChartId = group?.currentChartId;
+    if (currentChartId) {
+      const found = charts.find((c) => c.id === currentChartId);
       if (found) return found;
     }
     return charts[0]; // Most recent by monthKey desc
-  }, [charts, group?.currentChartId]);
+  }, [charts, group]);
 
   const { data: monthMeals = [], isLoading: mealsLoading } = useMealsForMonth(groupId, activeChart?.monthKey);
   const { data: monthCosts = [], isLoading: costsLoading } = useCosts(groupId, activeChart?.id);

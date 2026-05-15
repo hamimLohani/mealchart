@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useT } from "@/i18n/use-t";
 import { useUiStore } from "@/store/ui-store";
+import { PWAInstallButton } from "./pwa-install-button";
 
 export function AppHeader() {
   const { language, setLanguage, theme, setTheme } = useUiStore();
@@ -27,6 +28,7 @@ export function AppHeader() {
         </Link>
 
         <div className="flex items-center gap-1.5">
+          <PWAInstallButton />
           <button
             className="rounded-full border border-[color:var(--border)] bg-[color:var(--background)] px-3 py-1.5 text-xs font-semibold text-[color:var(--soft-foreground)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]"
             onClick={() => setLanguage(language === "en" ? "bn" : "en")}

@@ -355,7 +355,11 @@ export async function sendMonthSummaryEmails(input: {
       deposits,
     );
 
-    const results: any[] = [];
+    type EmailResult = 
+      | { status: 'fulfilled'; value: { email: string; success: true } }
+      | { status: 'rejected'; reason: unknown };
+
+    const results: EmailResult[] = [];
 
     for (const member of members) {
       try {

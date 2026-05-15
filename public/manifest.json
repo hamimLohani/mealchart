@@ -1,0 +1,18 @@
+{
+  "name": "Meal Chart",
+  "short_name": "MealChart",
+  "description": "Realtime hostel and mess meal management app",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f2ec",
+  "theme_color": "#08503e",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

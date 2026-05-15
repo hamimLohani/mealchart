@@ -5,11 +5,28 @@ import { UiProvider } from "@/components/providers/ui-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Meat Chart",
+  title: "Meal Chart",
   description: "Realtime hostel and mess meal management app",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Meal Chart",
+  },
+  formatDetection: {
+    telephone: false,
+  },
   icons: {
     icon: "/logo.png",
+    apple: "/logo.png",
   },
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({

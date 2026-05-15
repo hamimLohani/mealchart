@@ -8,7 +8,7 @@ import { useT } from "@/i18n/use-t";
 
 import { readStoredChartFromSession } from "@/lib/utils/group-chart-session";
 import { saveChartReportPdf } from "@/lib/utils/pdf-report";
-import { formatMeal, getMonthTotals, getMemberTotals } from "@/lib/utils/meal-money";
+import { formatMeal, getMonthTotals } from "@/lib/utils/meal-money";
 import { motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGroup, useMembers, useCharts, useMealsForMonth, useCosts, useDeposits } from "@/lib/hooks/use-data";
