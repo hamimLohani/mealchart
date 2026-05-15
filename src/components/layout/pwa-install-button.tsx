@@ -15,27 +15,38 @@ interface BeforeInstallPromptEvent extends Event {
 export function PWAInstallButton() {
   const { t } = useT();
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isStandalone] = useState(() => {
-    if (typeof window !== "undefined") {
-      const isStandaloneMode = window.matchMedia("(display-mode: standalone)").matches;
-      const isTWA = document.referrer.includes("android-app://") || 
-                   (window as any).navigator.standalone ||
-                   window.location.search.includes("utm_source=twa");
-      
-      return isStandaloneMode || isTWA;
-    }
-    return false;
-  });
+  const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
-    const handler = (e: Event) => {
+    if (typeof window === "undefined") return;
+
+    // Check initial installation status
+    const isStandaloneMode = window.matchMedia("(display-mode: standalone)").matches;
+    const isTWA = document.referrer.includes("android-app://") || 
+                 (window as any).navigator.standalone ||
+                 window.location.search.includes("utm_source=twa");
+    
+    if (isStandaloneMode || isTWA) {
+      setIsInstalled(true);
+    }
+
+    const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setInstallPrompt(e as BeforeInstallPromptEvent);
     };
 
-    window.addEventListener("beforeinstallprompt", handler);
+    const handleAppInstalled = () => {
+      setIsInstalled(true);
+      setInstallPrompt(null);
+    };
 
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener("appinstalled", handleAppInstalled);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener("appinstalled", handleAppInstalled);
+    };
   }, []);
 
   const handleInstall = async () => {
@@ -44,22 +55,30 @@ export function PWAInstallButton() {
       const { outcome } = await installPrompt.userChoice;
       if (outcome === "accepted") {
         setInstallPrompt(null);
+        setIsInstalled(true);
       }
       return;
     }
 
-    // Fallback for iOS Safari which doesn't support beforeinstallprompt
-    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+    // Fallback for Safari (iOS or macOS)
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    
+    if (isIOS || isSafari) {
       alert(t("common.iosInstructions"));
     }
   };
 
-  if (isStandalone) return null;
+  if (isInstalled) return null;
 
-  // Show button if we have a prompt OR if it's an iOS device (to show instructions)
   const isIOS = typeof navigator !== "undefined" && /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const isSafari = typeof navigator !== "undefined" && /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
-  if (installPrompt || isIOS) {
+  // Show button on:
+  // 1. Browsers with PWA prompt support (Chrome/Edge/Android)
+  // 2. iOS devices (to show Safari instructions)
+  // 3. Desktop Safari (to show instructions for "Add to Dock")
+  if (installPrompt || isIOS || isSafari) {
     return (
       <button
         onClick={handleInstall}
