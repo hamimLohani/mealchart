@@ -57,7 +57,12 @@ export function PWAInstallButton() {
 
   const handleAPKDownload = () => {
     setShowOptions(false);
-    window.location.href = "/meal-chart.apk";
+    const link = document.createElement("a");
+    link.href = "/meal-chart.apk";
+    link.download = "meal-chart.apk";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleIOSInfo = () => {

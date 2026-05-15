@@ -118,6 +118,22 @@ SMTP:
 - `SMTP_FROM`
 - `NEXT_PUBLIC_BASE_URL`
 
+## Mobile Apps
+
+### Android (TWA)
+The project includes an Android Trusted Web Activity wrapper in `android-twa/`. 
+- Built with `bubblewrap`.
+- Configured via `twa-manifest.json`.
+
+### iOS (WebView Wrapper)
+The project includes a lightweight iOS SwiftUI wrapper in `ios-app/`.
+- Uses `WKWebView` to load the web application.
+- To set up:
+  1. Open Xcode on your Mac.
+  2. Create a new "App" project named `MealChart`.
+  3. Copy the files from `ios-app/MealChart/Source/` into your Xcode project.
+  4. Build and run on your iPhone or Simulator.
+
 ## Notes
 
 - Member id is the normalized member email.
