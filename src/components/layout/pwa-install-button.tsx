@@ -50,7 +50,6 @@ export function PWAInstallButton() {
       className="inline-flex items-center gap-1.5 rounded-full bg-[color:var(--accent)] px-3.5 py-1.5 text-xs font-bold text-white shadow-lg transition-transform hover:scale-105 active:scale-95"
       type="button"
     >
-      <span className="text-sm">📥</span>
       Install App
     </button>
   );
