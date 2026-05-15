@@ -82,6 +82,9 @@ function mapMealEntryDoc(id: string, data: Record<string, unknown>): MealEntry {
 
 function serializeDate(value: unknown) {
   if (value instanceof Timestamp) return value.toDate().toISOString();
+  if (typeof value === "object" && value !== null && "seconds" in value) {
+    return new Date((value as any).seconds * 1000).toISOString();
+  }
   return typeof value === "string" ? value : new Date().toISOString();
 }
 
@@ -796,7 +799,13 @@ export async function listNoticesForChart(groupId: string, chartId: string) {
       orderBy("createdAt", "desc"),
     ),
   );
-  return snapshot.docs.map((entry) => normalizeDoc<Notice>(entry.id, entry.data()));
+  return snapshot.docs.map((entry) => {
+    const data = entry.data();
+    return {
+      ...normalizeDoc<Notice>(entry.id, data),
+      createdAt: serializeDate(data.createdAt),
+    };
+  });
 }
 
 export async function createNotice(input: { groupId: string; chartId: string; title: string; body: string }) {

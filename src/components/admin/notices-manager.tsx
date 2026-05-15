@@ -44,6 +44,24 @@ export function NoticesManager() {
         ? "Log in as admin to manage notices."
         : null);
 
+  function formatNoticeDate(createdAt: any) {
+    if (!createdAt) return "";
+    try {
+      // Handle Firebase Timestamp
+      if (typeof createdAt === "object" && "toDate" in createdAt && typeof createdAt.toDate === "function") {
+        return createdAt.toDate().toLocaleString(locale);
+      }
+      // Handle numeric timestamp (seconds/ms)
+      if (typeof createdAt === "number") {
+        return new Date(createdAt).toLocaleString(locale);
+      }
+      // Handle ISO string or date object
+      return new Date(createdAt).toLocaleString(locale);
+    } catch (e) {
+      return "";
+    }
+  }
+
   useGlobalLoading(
     "notices-manager",
     isLoading || profileLoading || noticesLoading || isSubmitting,
@@ -260,7 +278,7 @@ export function NoticesManager() {
                 </div>
                 <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">{notice.body}</p>
                 <p className="mt-1.5 text-xs text-[color:var(--muted)]">
-                  {new Date(notice.createdAt).toLocaleString(locale)}
+                  {formatNoticeDate(notice.createdAt)}
                 </p>
               </div>
               {!notice.systemGenerated && (

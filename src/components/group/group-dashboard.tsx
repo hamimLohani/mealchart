@@ -206,12 +206,15 @@ export function GroupDashboard({ groupId }: { groupId: string }) {
             { label: t("groupDash.statMealRate"), value: `${mealRate.toFixed(2)} ${t("common.tk")}` },
             { label: t("groupDash.statRemaining"), value: `${remainingTaka.toFixed(2)} ${t("common.tk")}` },
             { label: t("groupDash.statMembers"), value: String(members.length) },
-          ].map((s) => (
-            <div key={s.label} className="group-stat-card">
-              <p className="group-stat-label">{s.label}</p>
-              <p className="group-stat-value">{s.value}</p>
-            </div>
-          ))}
+          ].map((s) => {
+            const isNegative = s.value.includes("-");
+            return (
+              <div key={s.label} className="group-stat-card">
+                <p className="group-stat-label">{s.label}</p>
+                <p className="group-stat-value" style={isNegative ? { color: "var(--danger)" } : {}}>{s.value}</p>
+              </div>
+            );
+          })}
         </div>
       )}
 

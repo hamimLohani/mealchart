@@ -336,7 +336,12 @@ export default function MemberPage({
                           {formatMeal(meal.quantity)} {meal.quantity !== 1 ? t("memberPage.mealsWord") : t("memberPage.mealWord")}
                         </p>
                       </div>
-                      <p className="font-bold text-[color:var(--accent)]">{(meal.quantity * mealRate).toFixed(2)} ${tk}</p>
+                      <p 
+                        className="font-bold"
+                        style={{ color: (meal.quantity * mealRate) >= 0 ? "var(--accent)" : "var(--danger)" }}
+                      >
+                        {(meal.quantity * mealRate).toFixed(2)} ${tk}
+                      </p>
                     </div>
                   ))
                 )}
@@ -354,7 +359,12 @@ export default function MemberPage({
                       <p className="text-sm font-semibold">
                         {new Date(deposit.date + "T12:00:00").toLocaleDateString(locale, { year: "numeric", month: "short", day: "numeric" })}
                       </p>
-                      <p className="font-bold text-[color:var(--accent)]">{deposit.amount.toFixed(2)} ${tk}</p>
+                      <p 
+                        className="font-bold"
+                        style={{ color: deposit.amount >= 0 ? "var(--accent)" : "var(--danger)" }}
+                      >
+                        {deposit.amount.toFixed(2)} ${tk}
+                      </p>
                     </div>
                   ))
                 )}

@@ -228,7 +228,10 @@ export function GroupMoneyView({ groupId }: { groupId: string }) {
                 <p className="text-sm font-semibold">{c.itemName}</p>
                 <p className="group-stat-label">{c.date}</p>
               </div>
-              <p className="font-bold text-[color:var(--accent)]">
+              <p 
+                className="font-bold"
+                style={{ color: c.amount >= 0 ? "var(--accent)" : "var(--danger)" }}
+              >
                 {c.amount.toFixed(2)} ${tk}
               </p>
             </div>

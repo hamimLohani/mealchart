@@ -16,8 +16,10 @@ export function PWAInstallButton() {
   const { t } = useT();
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     if (typeof window === "undefined") return;
 
     // Check initial installation status
@@ -69,7 +71,7 @@ export function PWAInstallButton() {
     }
   };
 
-  if (isInstalled) return null;
+  if (!mounted || isInstalled) return null;
 
   const isIOS = typeof navigator !== "undefined" && /iPhone|iPad|iPod/i.test(navigator.userAgent);
   const isSafari = typeof navigator !== "undefined" && /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
