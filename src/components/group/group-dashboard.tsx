@@ -1,17 +1,16 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import type { Chart, Member } from "@/types/domain";
 import { useT } from "@/i18n/use-t";
 
 import { readStoredChartFromSession } from "@/lib/utils/group-chart-session";
 import { saveChartReportPdf } from "@/lib/utils/pdf-report";
-import { formatMeal, getMonthTotals, getMemberTotals } from "@/lib/utils/meal-money";
+import { formatMeal, getMonthTotals } from "@/lib/utils/meal-money";
 import { motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { useGroup, useMembers, useCharts, useMealsForMonth, useCosts, useDeposits } from "@/lib/hooks/use-data";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 
@@ -26,6 +25,18 @@ export function GroupDashboard({ groupId }: { groupId: string }) {
   const { data: group, error: groupError, isLoading: groupLoading } = useGroup(isFirebaseConfigured ? groupId : undefined);
   const { data: members = [] } = useMembers(group?.id);
   const { data: charts = [] } = useCharts(group?.id);
+
+  // Auto-select most recent chart on first arrival
+  useEffect(() => {
+    if (!groupLoading && charts.length > 0 && !activeChart) {
+      const hasManuallyExited = sessionStorage.getItem("mc_manual_exit");
+      const hasStoredChart = sessionStorage.getItem("mc_chart_id");
+      
+      if (!hasStoredChart && !hasManuallyExited) {
+        handleChartSelect(charts[0]);
+      }
+    }
+  }, [groupLoading, charts, activeChart]);
   const { data: monthMeals = [], isLoading: mealsLoading } = useMealsForMonth(group?.id, activeChart?.monthKey);
   const { data: monthCosts = [], isLoading: costsLoading } = useCosts(group?.id, activeChart?.id);
   const { data: monthDeposits = [], isLoading: depositsLoading } = useDeposits(group?.id, activeChart?.id);
@@ -48,6 +59,7 @@ export function GroupDashboard({ groupId }: { groupId: string }) {
     sessionStorage.setItem("mc_chart_year", String(chart.year));
     sessionStorage.setItem("mc_chart_month", String(chart.month));
     sessionStorage.setItem("mc_chart_locked", String(chart.locked));
+    sessionStorage.removeItem("mc_manual_exit");
     setActiveChart(chart);
   }
 
@@ -58,6 +70,8 @@ export function GroupDashboard({ groupId }: { groupId: string }) {
     sessionStorage.removeItem("mc_chart_year");
     sessionStorage.removeItem("mc_chart_month");
     sessionStorage.removeItem("mc_chart_locked");
+    // Set a flag so the auto-select effect doesn't immediately put them back in
+    sessionStorage.setItem("mc_manual_exit", "true");
     setActiveChart(null);
   }
 
@@ -115,7 +129,7 @@ export function GroupDashboard({ groupId }: { groupId: string }) {
           <div className="min-w-0">
             <p className="group-kicker">{group.name}</p>
             <p className="group-title">{t("groupDash.selectMonth")}</p>
-            <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">
+            <p className="mt-2 inline-block rounded-lg bg-[color:var(--accent-dim)] px-2.5 py-1 text-sm font-medium text-[color:var(--accent)]">
               {t("groupDash.selectMonthHelp")}
             </p>
           </div>
@@ -152,10 +166,6 @@ export function GroupDashboard({ groupId }: { groupId: string }) {
     );
   }
 
-  const chartData = [
-    { name: t("groupDash.statTotalPaid"), amount: monthTotalPaid, fill: "var(--accent)" },
-    { name: t("groupDash.statTotalCost"), amount: monthTotalCost, fill: "var(--danger)" },
-  ];
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="group-page-grid">
@@ -170,12 +180,12 @@ export function GroupDashboard({ groupId }: { groupId: string }) {
             </p>
           )}
         </div>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex flex-col gap-2 shrink-0 sm:flex-row">
           <button type="button" onClick={handleDownloadPDF} className="button-secondary">
             {t("groupDash.exportCSV", { defaultValue: "Export PDF" })}
           </button>
           <button type="button" onClick={handleChangeChart} className="button-secondary">
-            {t("common.back")}
+            {t("groupDash.changeMonth")}
           </button>
         </div>
       </div>
@@ -196,33 +206,23 @@ export function GroupDashboard({ groupId }: { groupId: string }) {
             { label: t("groupDash.statMealRate"), value: `${mealRate.toFixed(2)} ${t("common.tk")}` },
             { label: t("groupDash.statRemaining"), value: `${remainingTaka.toFixed(2)} ${t("common.tk")}` },
             { label: t("groupDash.statMembers"), value: String(members.length) },
-          ].map((s) => (
-            <div key={s.label} className="group-stat-card">
-              <p className="group-stat-label">{s.label}</p>
-              <p className="group-stat-value">{s.value}</p>
-            </div>
-          ))}
+          ].map((s) => {
+            const isMoney = s.label.includes(t("common.tk")) || s.value.includes(t("common.tk"));
+            const isNegative = s.value.includes("-");
+            const color = isMoney 
+              ? (isNegative ? "var(--danger)" : "var(--success-text)")
+              : undefined;
+
+            return (
+              <div key={s.label} className="group-stat-card">
+                <p className="group-stat-label">{s.label}</p>
+                <p className="group-stat-value" style={color ? { color } : {}}>{s.value}</p>
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {!isMonthLoading && monthTotalPaid > 0 && (
-        <div className="group-card h-72">
-          <p className="group-kicker mb-4">{t("groupDash.financialOverview", { defaultValue: "Financial Overview" })}</p>
-          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-            <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-              <XAxis dataKey="name" stroke="var(--muted)" fontSize={12} tickLine={false} axisLine={false} />
-              <YAxis stroke="var(--muted)" fontSize={12} tickLine={false} axisLine={false} />
-              <Tooltip cursor={{ fill: 'var(--accent-dim)' }} contentStyle={{ borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--background)' }} />
-              <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
 
       <div className="group-card">
         <p className="group-kicker">{t("groupDash.selectMember")}</p>

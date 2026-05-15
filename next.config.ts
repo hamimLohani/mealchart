@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  /* No rewrites, let public folder handle it */
 };
 
 export default nextConfig;

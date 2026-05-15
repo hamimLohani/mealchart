@@ -19,7 +19,7 @@ type UiState = {
 export const useUiStore = create<UiState>()(
   persist(
     (set) => ({
-      language: "en",
+      language: "bn",
       theme: "light",
       loadingEntries: {},
       setLanguage: (language) => set({ language }),

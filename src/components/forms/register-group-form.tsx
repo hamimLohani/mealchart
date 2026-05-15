@@ -12,6 +12,8 @@ import { groupsCollection, adminsCollection } from "@/lib/firebase/paths";
 import { getAdminProfileForUser, normalizeEmail } from "@/lib/auth/sign-in-routing";
 import { getAuthErrorMessage } from "@/lib/auth/errors";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
+import { sendAdminWelcomeEmail } from "@/lib/email/actions";
+import { getFriendlyEmailError } from "@/lib/utils/email-error";
 
 type FormState = { groupName: string };
 const initialState: FormState = { groupName: "" };
@@ -58,6 +60,20 @@ export function RegisterGroupForm() {
       });
 
       await batch.commit();
+
+      void sendAdminWelcomeEmail(
+        normalizeEmail(user.email),
+        user.displayName || "Admin",
+        nameTrim
+      ).then(result => {
+        if (!result.success) {
+          const friendlyError = getFriendlyEmailError(result.error || "");
+          setError(`ERR_TRANS:${JSON.stringify({ 
+            key: "errors.emailAdminWelcomeFailed", 
+            vars: { error: friendlyError } 
+          })}`);
+        }
+      });
     },
     [t],
   );

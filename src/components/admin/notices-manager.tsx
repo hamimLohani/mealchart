@@ -44,6 +44,24 @@ export function NoticesManager() {
         ? "Log in as admin to manage notices."
         : null);
 
+  function formatNoticeDate(createdAt: any) {
+    if (!createdAt) return "";
+    try {
+      // Handle Firebase Timestamp
+      if (typeof createdAt === "object" && "toDate" in createdAt && typeof createdAt.toDate === "function") {
+        return createdAt.toDate().toLocaleString(locale);
+      }
+      // Handle numeric timestamp (seconds/ms)
+      if (typeof createdAt === "number") {
+        return new Date(createdAt).toLocaleString(locale);
+      }
+      // Handle ISO string or date object
+      return new Date(createdAt).toLocaleString(locale);
+    } catch (e) {
+      return "";
+    }
+  }
+
   useGlobalLoading(
     "notices-manager",
     isLoading || profileLoading || noticesLoading || isSubmitting,
@@ -109,7 +127,7 @@ export function NoticesManager() {
     e.preventDefault();
     if (!adminProfile || !selectedChart) return;
     if (selectedChart.locked) { setError(t("noticeMgr.monthLocked")); return; }
-    if (!title.trim() || !body.trim()) { setError("Title and body are required."); return; }
+    if (!title.trim() || !body.trim()) { setError(t("errors.noticeFieldsRequired")); return; }
     setError(null); setIsSubmitting(true);
     try {
       if (editingId) {
@@ -136,7 +154,7 @@ export function NoticesManager() {
         setTitle(""); setBody("");
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save notice.");
+      setError(e instanceof Error ? e.message : t("errors.saveNoticeFailed"));
     } finally { setIsSubmitting(false); }
   }
 
@@ -148,7 +166,7 @@ export function NoticesManager() {
       setNotices((prev) => prev.filter((n) => n.id !== noticeId));
       if (editingId === noticeId) cancelEdit();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete notice.");
+      setError(e instanceof Error ? e.message : t("errors.deleteNoticeFailed"));
     }
   }
 
@@ -162,10 +180,10 @@ export function NoticesManager() {
         <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]">
           <p className="admin-section-label">{t("admin.selectMonth")}</p>
           <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">
-            Select a month to manage notices for that period.
+            {t("notices.selectHelp")}
           </p>
           {charts.length === 0 ? (
-            <p className="mt-4 py-6 text-center text-sm text-[color:var(--soft-foreground)]">
+            <p className="mt-4 py-6 text-center text-sm font-bold text-[color:var(--danger)]">
               {t("admin.noChartsMeals")}
             </p>
           ) : (
@@ -200,7 +218,7 @@ export function NoticesManager() {
 
       <div className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--panel)] px-4 py-3">
         <div>
-          <p className="admin-section-label">Notices</p>
+          <p className="admin-section-label">{t("adminNav.notices")}</p>
           <p className="mt-0.5 font-semibold">{selectedChart.label}</p>
           {selectedChart.locked && (
             <p className="mt-1 text-xs font-semibold text-[color:var(--danger)]">{t("noticeMgr.monthLocked")}</p>
@@ -250,17 +268,19 @@ export function NoticesManager() {
             key={notice.id}
             className="rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--panel)] p-4"
           >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <p className="font-semibold">{notice.title}</p>
+                  <p className="font-bold text-[color:var(--foreground)]">{tx(notice.title)}</p>
                   {notice.systemGenerated && (
                     <span className="badge-accent">{t("common.auto")}</span>
                   )}
                 </div>
-                <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">{notice.body}</p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-[color:var(--soft-foreground)]">
+                  {tx(notice.body)}
+                </p>
                 <p className="mt-1.5 text-xs text-[color:var(--muted)]">
-                  {new Date(notice.createdAt).toLocaleString(locale)}
+                  {formatNoticeDate(notice.createdAt)}
                 </p>
               </div>
               {!notice.systemGenerated && (

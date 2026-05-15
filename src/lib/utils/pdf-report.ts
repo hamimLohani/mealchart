@@ -79,33 +79,7 @@ export function saveChartReportPdf(options: ChartReportOptions) {
   doc.text(`Members`, summaryLabelX + 280, summaryTop + 24 + summaryLineHeight * 2);
   doc.text(String(memberIdsForChartRows(members, meals, monthKey).length), summaryValueX + 280, summaryTop + 24 + summaryLineHeight * 2);
 
-  const chartSectionTop = summaryTop + summaryHeight + 24;
-  const chartSectionHeight = 108;
-  doc.setDrawColor(226, 232, 240);
-  doc.setFillColor(255, 255, 255);
-  doc.rect(margin, chartSectionTop, contentWidth, chartSectionHeight);
-
-  const chartBarBase = chartSectionTop + chartSectionHeight - 24;
-  const barWidth = 56;
-  const barSpacing = 88;
-  const barMaxValue = Math.max(totals.totalPaid, totals.totalCost, totals.totalMeals, 1);
-  const drawBar = (x: number, value: number, color: [number, number, number]) => {
-    const height = Math.max(12, Math.min(chartSectionHeight - 40, (value / barMaxValue) * (chartSectionHeight - 40)));
-    doc.setFillColor(...color);
-    doc.roundedRect(x, chartBarBase - height, barWidth, height, 6, 6, "F");
-  };
-
-  drawBar(margin + 30, totals.totalPaid, [59, 130, 246]);
-  drawBar(margin + 30 + barSpacing, totals.totalCost, [220, 38, 38]);
-  drawBar(margin + 30 + barSpacing * 2, totals.totalMeals, [16, 185, 129]);
-
-  doc.setFontSize(10);
-  doc.setTextColor(...textColor.dark);
-  doc.text("Paid", margin + 30, chartBarBase + 16);
-  doc.text("Cost", margin + 30 + barSpacing, chartBarBase + 16);
-  doc.text("Meals", margin + 30 + barSpacing * 2, chartBarBase + 16);
-
-  const tableTop = chartSectionTop + chartSectionHeight + 30;
+  const tableTop = summaryTop + summaryHeight + 30;
   const rowMemberIds = memberIdsForChartRows(members, meals, monthKey);
   const mealMap: Record<string, Record<string, number>> = {};
   meals.forEach((meal) => {
@@ -114,12 +88,13 @@ export function saveChartReportPdf(options: ChartReportOptions) {
     mealMap[memberId][meal.date] = normalizeMealQuantity(meal.quantity);
   });
 
-  const nameWidth = 120;
-  const dayWidth = 18;
-  const totalWidth = 50;
-  const tableWidth = nameWidth + totalDays * dayWidth + totalWidth;
-  const tableLeft = margin;
-  const tableRight = tableLeft + tableWidth;
+  const nameWidth = 100;
+  const dayWidth = 16;
+  const totalWidth = 35;
+  const paidWidth = 45;
+  const balanceWidth = 50;
+  const tableWidth = nameWidth + totalDays * dayWidth + totalWidth + paidWidth + balanceWidth;
+  const tableLeft = (pageWidth - tableWidth) / 2; // Center the table
   const headerHeight = 20;
   const bodyRowHeight = 18;
   const bottomLimit = pageHeight - margin;
@@ -137,7 +112,11 @@ export function saveChartReportPdf(options: ChartReportOptions) {
       doc.text(label, x + dayWidth / 2, top + 13, { align: "center" });
       x += dayWidth;
     }
-    doc.text("Total", x + totalWidth / 2, top + 13, { align: "center" });
+    doc.text("Meals", x + totalWidth / 2, top + 13, { align: "center" });
+    x += totalWidth;
+    doc.text("Paid", x + paidWidth / 2, top + 13, { align: "center" });
+    x += paidWidth;
+    doc.text("Balance", x + balanceWidth / 2, top + 13, { align: "center" });
   };
 
   let currentY = tableTop;
@@ -180,6 +159,19 @@ export function saveChartReportPdf(options: ChartReportOptions) {
     }
 
     doc.text(formatMeal(memberTotals.totalMeals), x + totalWidth / 2, currentY + 13, { align: "center" });
+    x += totalWidth;
+    doc.text(memberTotals.totalPaid.toFixed(1), x + paidWidth / 2, currentY + 13, { align: "center" });
+    x += paidWidth;
+
+    const balance = memberTotals.balance;
+    if (balance < 0) {
+      doc.setTextColor(185, 28, 28); // Red
+    } else if (balance > 0) {
+      doc.setTextColor(21, 128, 61); // Green
+    }
+    doc.text(balance.toFixed(1), x + balanceWidth / 2, currentY + 13, { align: "center" });
+    doc.setTextColor(...textColor.dark); // Reset
+    
     currentY += bodyRowHeight;
   });
 
@@ -202,6 +194,70 @@ export function saveChartReportPdf(options: ChartReportOptions) {
     x += dayWidth;
   }
   doc.text(formatMeal(totals.totalMeals), x + totalWidth / 2, currentY + 13, { align: "center" });
+  x += totalWidth;
+  doc.text(totals.totalPaid.toFixed(1), x + paidWidth / 2, currentY + 13, { align: "center" });
+  x += paidWidth;
+  doc.text(totals.remainingTaka.toFixed(1), x + balanceWidth / 2, currentY + 13, { align: "center" });
+
+  // Detailed Cost History Section
+  currentY += bodyRowHeight + 40;
+
+  if (costs.length > 0) {
+    if (currentY + 60 > bottomLimit) {
+      doc.addPage();
+      currentY = margin;
+    }
+
+    doc.setFontSize(14);
+    doc.setTextColor(...textColor.dark);
+    doc.text("Cost History", margin, currentY);
+    currentY += 15;
+
+    const costTableWidth = 400;
+    const costTableLeft = margin;
+    const colDateWidth = 100;
+    const colItemWidth = 220;
+    const colAmountWidth = 80;
+
+    // Header
+    doc.setFillColor(15, 23, 42);
+    doc.rect(costTableLeft, currentY, costTableWidth, headerHeight, "F");
+    doc.setFontSize(9);
+    doc.setTextColor(255, 255, 255);
+    doc.text("Date", costTableLeft + 8, currentY + 13);
+    doc.text("Item Name", costTableLeft + colDateWidth + 8, currentY + 13);
+    doc.text("Amount", costTableLeft + colDateWidth + colItemWidth + colAmountWidth - 8, currentY + 13, { align: "right" });
+    
+    currentY += headerHeight;
+
+    costs.sort((a, b) => a.date.localeCompare(b.date)).forEach((cost, index) => {
+      if (currentY + bodyRowHeight > bottomLimit) {
+        doc.addPage();
+        currentY = margin;
+        // Repeat Header on new page
+        doc.setFillColor(15, 23, 42);
+        doc.rect(costTableLeft, currentY, costTableWidth, headerHeight, "F");
+        doc.setFontSize(9);
+        doc.setTextColor(255, 255, 255);
+        doc.text("Date", costTableLeft + 8, currentY + 13);
+        doc.text("Item Name", costTableLeft + colDateWidth + 8, currentY + 13);
+        doc.text("Amount", costTableLeft + colDateWidth + colItemWidth + colAmountWidth - 8, currentY + 13, { align: "right" });
+        currentY += headerHeight;
+      }
+
+      if (index % 2 === 0) {
+        doc.setFillColor(249, 250, 251);
+        doc.rect(costTableLeft, currentY, costTableWidth, bodyRowHeight, "F");
+      }
+
+      doc.setTextColor(...textColor.dark);
+      doc.text(cost.date, costTableLeft + 8, currentY + 13);
+      doc.text(cost.itemName, costTableLeft + colDateWidth + 8, currentY + 13);
+      doc.text(`${cost.amount.toFixed(2)} Tk`, costTableLeft + colDateWidth + colItemWidth + colAmountWidth - 8, currentY + 13, { align: "right" });
+      
+      currentY += bodyRowHeight;
+    });
+  }
 
   doc.save(fileName || `${groupName}_${chartLabel}_Report.pdf`);
 }

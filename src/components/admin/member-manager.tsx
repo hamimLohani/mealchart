@@ -7,7 +7,8 @@ import { useT } from "@/i18n/use-t";
 import { createMember, deleteMember, listMembers, updateMember, listJoinRequests, approveJoinRequest, rejectJoinRequest, getGroupById } from "@/lib/firebase/repositories";
 import { toDateInputValue } from "@/lib/utils/date";
 import type { AdminProfile, Member, JoinRequest } from "@/types/domain";
-import { sendWelcomeEmail } from "@/lib/email/actions";
+import { sendWelcomeEmail, sendRemovalEmail } from "@/lib/email/actions";
+import { getFriendlyEmailError } from "@/lib/utils/email-error";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
@@ -161,7 +162,11 @@ export function MemberManager() {
           groupName || activeAdminProfile.groupId,
         );
         if (!emailResult.success) {
-          setError(`Member saved, but welcome email failed: ${emailResult.error}`);
+          const friendlyError = getFriendlyEmailError(emailResult.error || "");
+          setError(`ERR_TRANS:${JSON.stringify({ 
+            key: "errors.emailWelcomeFailed", 
+            vars: { error: friendlyError } 
+          })}`);
         }
       }
       resetForm();
@@ -177,9 +182,25 @@ export function MemberManager() {
     setError(null);
     setIsRemoving(true);
     try {
+      const memberToRemove = members.find(m => m.id === memberId);
       await deleteMember(activeAdminProfile.groupId, memberId);
       setMembers((c) => c.filter((m) => m.id !== memberId));
       if (editingMemberId === memberId) resetForm();
+
+      if (memberToRemove && memberToRemove.email) {
+        const emailResult = await sendRemovalEmail(
+          memberToRemove.email,
+          memberToRemove.fullName,
+          groupName || activeAdminProfile.groupId
+        );
+        if (!emailResult.success) {
+           const friendlyError = getFriendlyEmailError(emailResult.error || "");
+           setError(`ERR_TRANS:${JSON.stringify({ 
+             key: "errors.emailRemovalFailed", 
+             vars: { error: friendlyError } 
+           })}`);
+         }
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to remove member.");
     } finally {
@@ -207,7 +228,11 @@ export function MemberManager() {
         groupName || activeAdminProfile.groupId,
       );
       if (!emailResult.success) {
-        setError(`Member approved, but welcome email failed: ${emailResult.error}`);
+        const friendlyError = getFriendlyEmailError(emailResult.error || "");
+        setError(`ERR_TRANS:${JSON.stringify({ 
+          key: "errors.emailApprovalFailed", 
+          vars: { error: friendlyError } 
+        })}`);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to approve request.");
@@ -288,7 +313,7 @@ export function MemberManager() {
 
       {visibleJoinRequests.length > 0 && (
         <div className="rounded-[var(--radius)] border-2 border-[color:var(--accent)] bg-[color:var(--panel)] p-4 shadow-[0_0_0_4px_var(--accent-dim)]">
-          <p className="admin-section-label">Pending Join Requests</p>
+          <p className="admin-section-label">{t("memberMgr.pendingRequests")}</p>
           <div className="mt-4 grid gap-2.5">
             {visibleJoinRequests.map((req) => (
               <article
@@ -301,10 +326,10 @@ export function MemberManager() {
                 </div>
                 <div className="flex gap-2">
                   <button className="button-primary" onClick={() => void handleApproveRequest(req)} type="button">
-                    Approve
+                    {t("memberMgr.approve")}
                   </button>
                   <button className="button-danger" onClick={() => void handleRejectRequest(req)} type="button">
-                    Reject
+                    {t("memberMgr.reject")}
                   </button>
                 </div>
               </article>

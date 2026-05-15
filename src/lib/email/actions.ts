@@ -143,9 +143,127 @@ export async function sendWelcomeEmail(memberEmail: string, fullName: string, gr
       subject: `Welcome to ${groupName}!`,
       html,
     });
+
     return { success: true };
   } catch (error) {
     console.error("Failed to send welcome email:", error);
+    return { success: false, error: getErrorMessage(error) };
+  }
+}
+
+export async function sendRemovalEmail(memberEmail: string, fullName: string, groupName: string) {
+  try {
+    const html = `
+      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333; background-color: #f9f9f9; border-radius: 12px; border: 1px solid #eee;">
+        <h1 style="color: #ef4444; font-size: 24px; text-align: center; margin-bottom: 20px;">Account Removed</h1>
+        <p style="font-size: 16px; line-height: 1.6;">Hello <strong>${escapeHtml(fullName)}</strong>,</p>
+        <p style="font-size: 16px; line-height: 1.6;">Your member account for <strong>${escapeHtml(groupName)}</strong> has been removed by the administrator.</p>
+        <div style="background-color: #fff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ef4444; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+          <p style="margin: 0; font-size: 14px; color: #666;">Group Name:  </p>
+          <p style="margin: 5px 0 0 0; font-size: 18px; font-weight: bold; color: #333;">${escapeHtml(groupName)}</p>
+        </div>
+        <p style="font-size: 16px; line-height: 1.6;">If you believe this was a mistake, please contact your group administrator.</p>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;">
+        <p style="font-size: 12px; color: #999; text-align: center;">This is an automated email from Meal Chart. Please do not reply.</p>
+      </div>
+    `;
+
+    await transporter.sendMail({
+      from: fromEmail,
+      to: memberEmail,
+      subject: `Account Removed - ${groupName}`,
+      html,
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to send removal email:", error);
+    return { success: false, error: getErrorMessage(error) };
+  }
+}
+
+export async function sendAdminWelcomeEmail(adminEmail: string, adminName: string, groupName: string) {
+  try {
+    const html = `
+      <div style="font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #0f172a; color: #f8fafc;">
+        <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid #334155; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+          <!-- Header -->
+          <div style="padding: 40px 40px 20px 40px; text-align: center;">
+            <div style="display: inline-block; padding: 12px; background: rgba(99, 102, 241, 0.1); border-radius: 16px; margin-bottom: 20px;">
+              <span style="font-size: 32px;">🚀</span>
+            </div>
+            <h1 style="margin: 0; font-size: 28px; font-weight: 800; background: linear-gradient(to right, #818cf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Welcome, Chief!</h1>
+            <p style="margin-top: 10px; color: #94a3b8; font-size: 16px;">Your workspace for <strong>${escapeHtml(groupName)}</strong> is ready.</p>
+          </div>
+
+          <!-- Content -->
+          <div style="padding: 0 40px 40px 40px;">
+            <p style="font-size: 16px; line-height: 1.6; color: #cbd5e1;">Hello ${escapeHtml(adminName)},</p>
+            <p style="font-size: 16px; line-height: 1.6; color: #cbd5e1;">Congratulations on setting up your group. You now have full control over the meal management for your team. Here is your quick-start guide to mastering the platform:</p>
+
+            <div style="margin: 30px 0; background: rgba(30, 41, 59, 0.5); border-radius: 16px; padding: 25px; border: 1px solid #334155;">
+              <h3 style="margin: 0 0 15px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; color: #818cf8;">Group Management Checklist</h3>
+              
+              <div style="margin-bottom: 15px; display: flex; align-items: flex-start;">
+                <span style="margin-right: 12px;">👥</span>
+                <div style="flex: 1;">
+                  <strong style="display: block; color: #f8fafc; font-size: 15px;">Add Your Members</strong>
+                  <span style="font-size: 13px; color: #94a3b8;">Head to "Admin Members" to manually add users or share your group link for them to join.</span>
+                </div>
+              </div>
+
+              <div style="margin-bottom: 15px; display: flex; align-items: flex-start;">
+                <span style="margin-right: 12px;">📊</span>
+                <div style="flex: 1;">
+                  <strong style="display: block; color: #f8fafc; font-size: 15px;">Create a Monthly Chart</strong>
+                  <span style="font-size: 13px; color: #94a3b8;">Every month starts with a fresh chart. Create one to begin tracking meals and deposits.</span>
+                </div>
+              </div>
+
+              <div style="margin-bottom: 15px; display: flex; align-items: flex-start;">
+                <span style="margin-right: 12px;">💸</span>
+                <div style="flex: 1;">
+                  <strong style="display: block; color: #f8fafc; font-size: 15px;">Manage Costs & Receipts</strong>
+                  <span style="font-size: 13px; color: #94a3b8;">Log group expenses and deposits. Members receive instant email receipts for every payment.</span>
+                </div>
+              </div>
+
+              <div style="display: flex; align-items: flex-start;">
+                <span style="margin-right: 12px;">🔒</span>
+                <div style="flex: 1;">
+                  <strong style="display: block; color: #f8fafc; font-size: 15px;">Lock & Finalize</strong>
+                  <span style="font-size: 13px; color: #94a3b8;">At the end of the month, lock the chart. We'll automatically calculate balances and email full reports to everyone.</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 40px;">
+              <a href="${process.env.NEXT_PUBLIC_BASE_URL || "https://mealchart.vercel.app"}" 
+                 style="background: linear-gradient(to right, #6366f1, #a855f7); color: white; padding: 16px 32px; text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.4);">
+                Enter Admin Panel
+              </a>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div style="padding: 20px 40px; background: rgba(15, 23, 42, 0.5); border-top: 1px solid #334155; text-align: center;">
+            <p style="margin: 0; font-size: 12px; color: #64748b;">Need help? Reply to this email or visit our documentation.</p>
+            <p style="margin: 10px 0 0 0; font-size: 11px; color: #475569;">&copy; ${new Date().getFullYear()} Meal Chart. Empowering group finances.</p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    await transporter.sendMail({
+      from: fromEmail,
+      to: adminEmail,
+      subject: `Your Admin Dashboard is Ready - ${groupName}`,
+      html,
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to send admin welcome email:", error);
     return { success: false, error: getErrorMessage(error) };
   }
 }
@@ -211,6 +329,7 @@ export async function sendMoneyReceiptEmail(
       subject: `Receipt: ${amount.toFixed(2)} TK - ${groupName}`,
       html,
     });
+
     return { success: true };
   } catch (error) {
     console.error("Failed to send receipt email:", error);
@@ -236,8 +355,14 @@ export async function sendMonthSummaryEmails(input: {
       deposits,
     );
 
-    const results = await Promise.allSettled(
-      members.map(async (member) => {
+    type EmailResult = 
+      | { status: 'fulfilled'; value: { email: string; success: true } }
+      | { status: 'rejected'; reason: unknown };
+
+    const results: EmailResult[] = [];
+
+    for (const member of members) {
+      try {
         if (!member.email || !member.email.includes("@")) {
           throw new Error(`Invalid email for member ${member.fullName}`);
         }
@@ -338,12 +463,15 @@ export async function sendMonthSummaryEmails(input: {
         });
 
         console.log(`[Email] Successfully sent report to ${member.email}`);
-        return { email: member.email, success: true };
-      }),
-    );
+        results.push({ status: 'fulfilled', value: { email: member.email, success: true } });
+      } catch (err) {
+        console.error(`[Email] Failed to send to ${member.email}:`, err);
+        results.push({ status: 'rejected', reason: err });
+      }
+    }
 
-    const successful = results.filter((r) => r.status === "fulfilled" && (r.value as any).success).length;
-    const failed = results.filter((r) => r.status === "rejected" || !(r.value as any).success);
+    const successful = results.filter((r) => r.status === "fulfilled" && r.value.success).length;
+    const failed = results.filter((r) => r.status === "rejected" || !r.value.success);
 
     if (failed.length > 0) {
       console.error(`[Email] Batch completed with ${failed.length} failures out of ${members.length}.`);

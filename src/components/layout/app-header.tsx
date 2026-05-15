@@ -2,12 +2,19 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useEffect, useState } from "react";
 import { useT } from "@/i18n/use-t";
 import { useUiStore } from "@/store/ui-store";
+import { PWAInstallButton } from "./pwa-install-button";
 
 export function AppHeader() {
   const { language, setLanguage, theme, setTheme } = useUiStore();
   const { t } = useT();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <header className="sticky top-0 z-30 border-b border-[color:var(--border)] bg-[color:var(--panel)] backdrop-blur-md">
@@ -27,19 +34,22 @@ export function AppHeader() {
         </Link>
 
         <div className="flex items-center gap-1.5">
+          <PWAInstallButton />
           <button
             className="rounded-full border border-[color:var(--border)] bg-[color:var(--background)] px-3 py-1.5 text-xs font-semibold text-[color:var(--soft-foreground)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]"
             onClick={() => setLanguage(language === "en" ? "bn" : "en")}
             type="button"
           >
-            {language === "en" ? "বাংলা" : "English"}
+            {mounted ? (language === "en" ? "বাংলা" : "English") : "English"}
           </button>
           <button
             className="rounded-full border border-[color:var(--border)] bg-[color:var(--background)] px-3 py-1.5 text-xs font-semibold text-[color:var(--soft-foreground)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]"
             onClick={() => setTheme(theme === "light" ? "dark" : "light")}
             type="button"
           >
-            {theme === "light" ? t("header.themeDark") : t("header.themeLight")}
+            {mounted 
+              ? (theme === "light" ? t("header.themeDark") : t("header.themeLight"))
+              : t("header.themeDark")}
           </button>
         </div>
       </div>

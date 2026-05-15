@@ -71,7 +71,27 @@ export const errorMessageToKey: Partial<Record<string, MessageKey>> = {
   "Firebase: Error (auth/permission-denied).": "errors.permissionDenied",
 };
 
-export function translateErrorMessage(raw: string, t: (k: MessageKey) => string): string {
+export function translateErrorMessage(
+  raw: string,
+  t: (k: MessageKey, vars?: Record<string, string>) => string,
+): string {
+  // Handle complex reactive translations (e.g. email failures with dynamic reasons)
+  if (raw.startsWith("ERR_TRANS:")) {
+    try {
+      const data = JSON.parse(raw.slice(10)) as { key: MessageKey; vars?: Record<string, string> };
+      
+      // If the nested 'error' variable is itself a translation key, translate it first
+      const vars = { ...data.vars };
+      if (vars.error && vars.error.startsWith("errors.")) {
+        vars.error = t(vars.error as MessageKey);
+      }
+      
+      return t(data.key, vars);
+    } catch {
+      return raw;
+    }
+  }
+
   const key = errorMessageToKey[raw];
   return key ? t(key) : raw;
 }

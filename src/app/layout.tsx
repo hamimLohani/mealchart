@@ -2,14 +2,32 @@ import type { Metadata } from "next";
 import { AppHeader } from "@/components/layout/app-header";
 import { AppFooter } from "@/components/layout/app-footer";
 import { UiProvider } from "@/components/providers/ui-provider";
+import { ServiceWorkerRegister } from "@/components/providers/sw-register";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Meat Chart",
+  title: "Meal Chart",
   description: "Realtime hostel and mess meal management app",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Meal Chart",
+  },
+  formatDetection: {
+    telephone: false,
+  },
   icons: {
     icon: "/logo.png",
+    apple: "/logo.png",
   },
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
@@ -19,12 +37,14 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="bn"
       data-theme="light"
       className="h-full antialiased"
+      suppressHydrationWarning
     >
-      <body className="min-h-full">
+      <body className="min-h-full" suppressHydrationWarning>
         <UiProvider>
+          <ServiceWorkerRegister />
           <div className="min-h-screen flex flex-col bg-[color:var(--background)]">
             <AppHeader />
             <main className="flex-1 flex flex-col">
