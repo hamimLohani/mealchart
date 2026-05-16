@@ -128,8 +128,8 @@ export const en = {
   "enterForm.selectGroup": "Select Group",
   "enterForm.loadingGroups": "Loading groups...",
   "enterForm.noGroups": "No groups available.",
-  "enterForm.groupSelectionHelp": "Select your group from the list below to send a join request.",
-  "enterForm.footerHint": "Your Google account is only used for secure sign-in. We never access your personal data.",
+  "enterForm.groupSelectionHelp": "নিচের তালিকা থেকে আপনার গ্রুপটি নির্বাচন করে যোগদানের অনুরোধ পাঠান।",
+  "enterForm.footerHint": "আপনার গুগল অ্যাকাউন্ট শুধুমাত্র নিরাপদ সাইন-ইনের জন্য ব্যবহৃত হয়। আমরা কখনোই আপনার ব্যক্তিগত তথ্য দেখি না।",
 
   // Register page
   "registerPage.eyebrow": "Register Group",
@@ -149,7 +149,7 @@ export const en = {
   "registerForm.submitting": "Creating group…",
   "registerForm.goAdminLogin": "Go to admin login",
   "registerForm.postSignupNote":
-    "You are already signed in after registration — you can open the dashboard directly or use admin login on another device.",
+    "নিবন্ধনের পর আপনি ইতিমধ্যে সাইন ইন হয়েছেন — সরাসরি ড্যাশবোর্ড খুলতে পারেন বা অন্য ডিভাইসে অ্যাডমিন লগইন ব্যবহার করতে পারেন।",
   "registerForm.openDashboard": "Open admin dashboard →",
   "registerForm.noticeTitle": "Group created",
   "registerForm.noticeBody": "{name} was registered and is ready to use.",
@@ -366,7 +366,7 @@ export const en = {
   "memberMgr.joinedLine": "Joined",
   "memberMgr.loadingList": "Loading members…",
   "memberMgr.searchPlaceholder": "Search name or email…",
-  "memberMgr.listSummary": "{shown} shown / {total} total",
+  "memberMgr.listSummary": "{shown} জন দেখানো হচ্ছে / মোট {total} জন",
   "memberMgr.noSearchMatch": "No members matched your search.",
   "memberMgr.pendingRequests": "Pending Join Requests",
   "memberMgr.approve": "Approve",
@@ -550,15 +550,15 @@ export const en = {
   "errors.genericLoad": "Failed to load.",
   "errors.adminInMemberLogin": "You are an admin. Please sign in via the Admin Login page.",
   "errors.permissionDenied": "Missing or insufficient permissions.",
-  "errors.emailAuthFailed": "Group created , but welcome email failed.",
-  "errors.emailWelcomeFailed": "Member saved, but welcome email failed.",
-  "errors.emailApprovalFailed": "Member approved, but welcome email failed.",
-  "errors.emailReceiptFailed": "Money added, but receipt email failed.",
-  "errors.emailAdminWelcomeFailed": "Group created, but admin welcome email failed.",
-  "errors.emailSummaryFailed": "Month locked, but summary emails failed.",
-  "errors.emailSummaryStatus": "Month locked. Summary emails: {sent} sent, {failed} failed.",
-  "errors.emailRemovalFailed": "Member removed, but removal email failed.",
-  "errors.emailFailed": "Failed to send email.",
+  "errors.emailAuthFailed": "Group created , but welcome email failed for unstable connection.",
+  "errors.emailWelcomeFailed": "Member saved, but welcome email failed for unstable connection.",
+  "errors.emailApprovalFailed": "Member approved, but welcome email failed for unstable connection.",
+  "errors.emailReceiptFailed": "Money added, but receipt email failed for unstable connection.",
+  "errors.emailAdminWelcomeFailed": "Group created, but admin welcome email failed for unstable connection.",
+  "errors.emailSummaryFailed": "Month locked, but summary emails failed for unstable connection.",
+  "errors.emailSummaryStatus": "Month locked. Summary emails: {sent} sent, {failed} failed for unstable connection.",
+  "errors.emailRemovalFailed": "Member removed, but removal email failed for unstable connection.",
+  "errors.emailFailed": "Failed to send email for unstable connection.",
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -571,10 +571,10 @@ export const bn: Record<MessageKey, string> = {
   "header.themeLight": "লাইট",
 
   "home.badge": "হোস্টেল ও মেসের মিল ম্যানেজমেন্ট",
-  "home.title": "একটি অ্যাপেই একাধিক গ্রুপ, পরিষ্কার মাসিক হিসাবসহ।",
+  "home.title": "একটি অ্যাপেই প্রতিটি গ্রুপের জন্য পরিষ্কার মাসিক হিসাব।",
   "home.description":
-    "অ্যাডমিন গ্রুপ রেজিস্টার করবে এবং সদস্য, মিল, খরচ, জমা, নোটিশ ও মাসিক চার্ট এক জায়গা থেকে পরিচালনা করবে। সদস্য সাইন ইন করে গ্রুপে যোগদানের অনুরোধ করবে এবং অ্যাপটি মাসিক খরচ ও জমা হিসাব করবে — সবকিছু এক জায়গা থেকে।",
-  "home.ctaRegister": "গ্রুপ রেজিস্টার",
+    "অ্যাডমিনরা গ্রুপ নিবন্ধন করবে এবং সদস্য, মিল, খরচ, জমা, নোটিশ ও মাসিক চার্ট এক জায়গা থেকে পরিচালনা করবে। সদস্যরা সাইন ইন করে গ্রুপে যোগদানের অনুরোধ করবে এবং অ্যাপটি মাসিক খরচ ও জমা হিসাব করবে — সবকিছু এক জায়গা থেকে।",
+  "home.ctaRegister": "গ্রুপ নিবন্ধন করুন",
   "home.ctaEnter": "গ্রুপে প্রবেশ",
   "home.ctaAdmin": "অ্যাডমিন লগইন",
   "home.statBackend": "ব্যাকএন্ড",
@@ -590,7 +590,7 @@ export const bn: Record<MessageKey, string> = {
   "about.sectionTitle": "কিভাবে কাজ করে",
   "about.sectionSubtitle": "আপনার হোস্টেল বা মেসের মিল, টাকা ও সদস্য ব্যবস্থাপনার সবকিছু — ধাপে ধাপে বোঝানো হলো।",
 
-  "about.step1Title": "১. গ্রুপ রেজিস্টার করুন",
+  "about.step1Title": "১. আপনার গ্রুপ নিবন্ধন করুন",
   "about.step1Body": "অ্যাডমিন গ্রুপের নাম দিয়ে গুগল দিয়ে সাইন ইন করে গ্রুপ তৈরি করবে। মেসের সদস্যদের গুগল দিয়ে সাইন ইন করে গ্রুপে যোগদানের অনুরোধ পাঠাতে বলুন।",
 
   "about.step2Title": "২. সদস্যদের যোগদান",
@@ -603,7 +603,7 @@ export const bn: Record<MessageKey, string> = {
   "about.step4Body": "অ্যাডমিন: মিল সম্পাদনা → মাস বাছুন → গ্রিডে মিল সংখ্যা লিখুন (সারি = সদস্য, কলাম = দিন)। সদস্য: গুগল অ্যাকাউন্ট দিয়ে গ্রুপে ঢুকুন → মাস বাছুন → নাম ট্যাপ করুন → আজকের মিল যোগ করুন।",
 
   "about.step5Title": "৫. টাকা ও খরচ রেকর্ড করুন",
-  "about.step5Body": "অ্যাডমিন সদস্যদের থেকে টাকা নিয়েছে? টাকা জমা → মাস বাছুন → সদস্য বাছুন → পরিমাণ দিন। বাজার করেছে? খরচ → মাস বাছুন → আইটেমের নাম, পরিমাণ ও তারিখ দিন। অ্যাপ স্বয়ংক্রিয়ভাবে মিল রেট, ব্যালান্স ও কার কত পাওনা হিসাব করবে।",
+  "about.step5Body": "অ্যাডমিন সদস্যদের থেকে টাকা সংগ্রহ করছেন? টাকা জমা → মাস বাছুন → সদস্য বাছুন → পরিমাণ দিন। বাজার করেছেন? খরচ → মাস বাছুন → আইটেমের নাম, পরিমাণ ও তারিখ দিন। অ্যাপ স্বয়ংক্রিয়ভাবে মিল রেট, ব্যালান্স ও কার কত পাওনা হিসাব করবে।",
 
   "about.step6Title": "৬. রিপোর্ট দেখুন",
   "about.step6Body": "সদস্যরা গুগল দিয়ে সাইন ইন করে সব বিবরণ দেখতে পারবে: চার্ট (মিল গ্রিড), টাকা (জমা, খরচ, ব্যালান্স), নোটিশ (ঘোষণা), এবং নিজের মিলের ইতিহাস।",
@@ -615,7 +615,7 @@ export const bn: Record<MessageKey, string> = {
   "about.step8Body": "অ্যাডমিন যেকোনো মাসের জন্য নোটিশ দিতে পারবে। সদস্য যোগ, টাকা জমা বা খরচ রেকর্ড হলে সিস্টেম স্বয়ংক্রিয় নোটিশ তৈরি করে। সদস্যরা নোটিশ অংশে এগুলো দেখবে।",
 
   "about.adminTitle": "অ্যাডমিনদের জন্য",
-  "about.adminBody": "রেজিস্টার → সদস্য যোগ → মাসিক চার্ট তৈরি → মিল সম্পাদনা → টাকা সংগ্রহ → খরচ যোগ → নোটিশ দিন → শেষ হলে মাস লক।",
+  "about.adminBody": "নিবন্ধন → সদস্য যোগ → মাসিক চার্ট তৈরি → মিল সম্পাদনা → টাকা সংগ্রহ → খরচ যোগ → নোটিশ দিন → শেষ হলে মাস লক।",
   "about.memberTitle": "সদস্যদের জন্য",
   "about.memberBody": "গুগল দিয়ে সাইন ইন করুন → যোগদানের অনুরোধ পাঠান → অ্যাডমিন অনুমোদন করবে → আপনার গ্রুপ ড্যাশবোর্ডে যান → চার্ট, টাকার ব্যালান্স ও নোটিশ দেখুন।",
 
@@ -633,7 +633,7 @@ export const bn: Record<MessageKey, string> = {
   "features.noticesTitle": "গ্রুপ নোটিশ",
   "features.noticesDesc": "অ্যাডমিনের ঘোষণা এবং অটো সিস্টেম নোটিশের মাধ্যমে সবাইকে আপডেট রাখুন।",
   "features.bilingualTitle": "দ্বিভাষিক ইন্টারফেস",
-  "features.bilingualDesc": "যেকোনো সময় অ্যাপটিতে ইংরেজি থেকে বাংলা এবং বাংলা থেকে ইংরেজিতে পরিবর্তন করুন।",
+  "features.bilingualDesc": "অ্যাপটিতে ইংরেজি ও বাংলা উভয় ভাষায় সহজেই পরিবর্তন করুন।",
   "features.fastTitle": "অত্যন্ত দ্রুত",
   "features.fastDesc": "আধুনিক প্রযুক্তির সাহায্যে মুহূর্তের মধ্যেই ডাটা লোড ও আপডেট হয়।",
   "features.themeTitle": "থিম সাপোর্ট",
@@ -684,14 +684,14 @@ export const bn: Record<MessageKey, string> = {
   "enterForm.selectGroup": "গ্রুপ নির্বাচন করুন",
   "enterForm.loadingGroups": "গ্রুপ লোড হচ্ছে...",
   "enterForm.noGroups": "কোনো গ্রুপ পাওয়া যায়নি।",
-  "enterForm.groupSelectionHelp": "নিচের তালিকা থেকে আপনার গ্রুপটি নির্বাচন করে জয়েন রিকোয়েস্ট পাঠান।",
+  "enterForm.groupSelectionHelp": "নিচের তালিকা থেকে আপনার গ্রুপটি নির্বাচন করে যোগদানের অনুরোধ পাঠান।",
   "enterForm.footerHint": "আপনার গুগল অ্যাকাউন্ট শুধুমাত্র নিরাপদ সাইন-ইনের জন্য ব্যবহৃত হয়। আমরা কখনোই আপনার ব্যক্তিগত তথ্য দেখি না।",
 
-  "registerPage.eyebrow": "গ্রুপ রেজিস্টার",
-  "registerPage.title": "অ্যাডমিন রেজিস্ট্রেশন",
+  "registerPage.eyebrow": "গ্রুপ নিবন্ধন",
+  "registerPage.title": "অ্যাডমিন নিবন্ধন",
   "registerPage.description":
-    "আপনার গ্রুপ রেজিস্টার করুন এবং আজই আপনার হোস্টেল বা মেস মিল পরিচালনা শুরু করুন। আপনার অ্যাকাউন্ট তৈরি করতে আপনাকে গুগল দিয়ে সাইন ইন করতে হবে।",
-  "registerPage.hasAccount": "ইতিমধ্যে গ্রুপ রেজিস্টার করেছেন?",
+    "আপনার গ্রুপ নিবন্ধন করুন এবং আজই আপনার হোস্টেল বা মেস মিল পরিচালনা শুরু করুন। আপনার অ্যাকাউন্ট তৈরি করতে আপনাকে গুগল দিয়ে সাইন ইন করতে হবে।",
+  "registerPage.hasAccount": "ইতিমধ্যে গ্রুপ নিবন্ধন করেছেন?",
   "registerPage.adminLogin": "ড্যাশবোর্ডে লগইন করুন",
 
   "registerForm.groupName": "গ্রুপের নাম",
@@ -702,16 +702,16 @@ export const bn: Record<MessageKey, string> = {
   "registerForm.submitting": "তৈরি হচ্ছে…",
   "registerForm.goAdminLogin": "অ্যাডমিন লগইনে যান",
   "registerForm.postSignupNote":
-    "রেজিস্ট্রেশনের পর আপনি ইতিমধ্যে সাইন ইন — সরাসরি ড্যাশবোর্ড খুলতে পারেন বা অন্য ডিভাইসে লগইন করতে পারেন।",
+    "নিবন্ধনের পর আপনি ইতিমধ্যে সাইন ইন হয়েছেন — সরাসরি ড্যাশবোর্ড খুলতে পারেন বা অন্য ডিভাইসে লগইন করতে পারেন।",
   "registerForm.openDashboard": "অ্যাডমিন ড্যাশবোর্ড খুলুন →",
   "registerForm.noticeTitle": "গ্রুপ তৈরি",
-  "registerForm.noticeBody": "{name} রেজিস্টার হয়েছে এবং ব্যবহারের জন্য প্রস্তুত।",
+  "registerForm.noticeBody": "{name} নিবন্ধিত হয়েছে এবং ব্যবহারের জন্য প্রস্তুত।",
 
   "adminLoginPage.eyebrow": "অ্যাডমিন লগইন",
   "adminLoginPage.title": "প্যানেলে সাইন ইন করুন",
   "adminLoginPage.subtitle": "অ্যাডমিন ড্যাশবোর্ডে প্রবেশ করতে গুগল দিয়ে সাইন ইন করুন।",
   "adminLoginPage.needGroup": "এখনো কোনো গ্রুপ নেই?",
-  "adminLoginPage.registerGroup": "গ্রুপ রেজিস্টার করুন",
+  "adminLoginPage.registerGroup": "গ্রুপ নিবন্ধন করুন",
 
   "adminLoginForm.warnEnv": "Firebase কী মিসিং। লগইনের আগে .env.local এ যোগ করুন।",
   "adminLoginForm.signIn": "সাইন ইন",
@@ -778,7 +778,7 @@ export const bn: Record<MessageKey, string> = {
 
   "groupNotices.pageTitle": "নোটিশ",
   "groupNotices.wordOne": "নোটিশ",
-  "groupNotices.wordMany": "নোটিশ",
+  "groupNotices.wordMany": "নোটিশসমূহ",
   "groupNotices.suffixBn": "টি নোটিশ",
   "groupNotices.noneTitle": "এখনো নোটিশ নেই",
   "groupNotices.noneBody": "অ্যাডমিন আপডেট দিলে এখানে দেখাবে।",
@@ -866,15 +866,15 @@ export const bn: Record<MessageKey, string> = {
   "adminMembers.eyebrow": "সদস্য",
   "adminMembers.title": "সদস্য ব্যবস্থাপনা",
   "adminMembers.description":
-    "সদস্য খুঁজে যোগ, সম্পাদনা ও সরান; যোগদানের তারিখ ও ফোন। পরিবর্তনে নোটিশ হতে পারে।",
+    "সদস্য খুঁজুন, যোগ করুন, সম্পাদনা করুন এবং সরান; যোগদানের তারিখ ও ফোন নম্বরসহ। পরিবর্তনের ফলে নোটিশ তৈরি হতে পারে।",
   "adminAddMoney.eyebrow": "টাকা জমা",
-  "adminAddMoney.title": "সদস্য জমা সংগ্রহ",
+  "adminAddMoney.title": "সদস্যের জমা সংগ্রহ",
   "adminAddMoney.description":
-    "প্রত্যেকের জমার যোগফল দেখুন, নতুন টাকা রেকর্ড করুন, মাসিক ব্যালান্স আপডেট হবে।",
+    "প্রত্যেকের জমার মোট দেখুন, নতুন টাকা রেকর্ড করুন এবং মাসিক ব্যালান্স রিয়েল-টাইমে আপডেট করুন।",
   "adminCosts.eyebrow": "খরচ",
   "adminCosts.title": "বাজার ও খরচ",
   "adminCosts.description":
-    "তারিখসহ আইটেম খরচ যোগ করুন। মিল রেট হিসাবে মোট খরচে যোগ হবে।",
+    "তারিখসহ আইটেম খরচ যোগ করুন। প্রতিটি এন্ট্রি মিল রেট হিসাবের জন্য মোট খরচে যোগ হবে।",
   "adminCreateChart.eyebrow": "নতুন চার্ট",
   "adminCreateChart.title": "মাসিক চার্ট তৈরি",
   "adminCreateChart.description":
@@ -891,7 +891,7 @@ export const bn: Record<MessageKey, string> = {
   "memberMgr.loginPrompt": "সদস্য পরিচালনার জন্য অ্যাডমিন হিসেবে লগইন করুন।",
   "memberMgr.addTitle": "সদস্য যোগ",
   "memberMgr.editTitle": "সদস্য সম্পাদনা",
-  "memberMgr.fullName": "পূর্ণ নাম",
+  "memberMgr.fullName": "পুরো নাম",
   "memberMgr.joinDate": "যোগদানের তারিখ",
   "memberMgr.email": "ইমেইল এড্রেস",
   "memberMgr.submitAdd": "সদস্য যোগ",
@@ -905,7 +905,7 @@ export const bn: Record<MessageKey, string> = {
   "memberMgr.joinedLine": "যোগদান",
   "memberMgr.loadingList": "সদস্য লোড হচ্ছে…",
   "memberMgr.searchPlaceholder": "নাম বা ইমেইল দিয়ে খুঁজুন…",
-  "memberMgr.listSummary": "{shown}টি দেখাচ্ছে / মোট {total}",
+  "memberMgr.listSummary": "মোট {total} জনের মধ্যে {shown} জন দেখানো হচ্ছে",
   "memberMgr.noSearchMatch": "খুঁজে কোনো সদস্য মেলেনি।",
   "memberMgr.pendingRequests": "অপেক্ষমান যোগদানের অনুরোধ",
   "memberMgr.approve": "অনুমোদন করুন",
@@ -1039,7 +1039,7 @@ export const bn: Record<MessageKey, string> = {
   "errors.loadDataFailed": "ডেটা লোড ব্যর্থ।",
   "errors.loadSelectedMonth": "বাছাই করা মাস লোড ব্যর্থ।",
   "errors.emailInUse": "এই ইমেইলটি আগে থেকেই ব্যবহৃত হচ্ছে।",
-  "errors.registerFailed": "গ্রুপ রেজিস্টার ব্যর্থ।",
+  "errors.registerFailed": "গ্রুপ নিবন্ধন ব্যর্থ।",
   "errors.adminProfileNotFound": "এই ইউজারের জন্য অ্যাডমিন প্রোফাইল নেই।",
   "errors.adminProfileNotFoundShort": "অ্যাডমিন প্রোফাইল নেই।",
   "errors.adminProfileAccount": "এই অ্যাকাউন্টের জন্য অ্যাডমিন প্রোফাইল নেই।",
@@ -1086,15 +1086,15 @@ export const bn: Record<MessageKey, string> = {
   "errors.genericLoad": "লোড করতে ব্যর্থ হয়েছে।",
   "errors.adminInMemberLogin": "আপনি একজন অ্যাডমিন। অনুগ্রহ করে অ্যাডমিন লগইন পেজ ব্যবহার করে সাইন ইন করুন।",
   "errors.permissionDenied": "প্রবেশাধিকার নেই বা অপর্যাপ্ত অনুমতি।",
-  "errors.emailAuthFailed": "গ্রুপ তৈরি হয়েছে, কিন্তু স্বাগত ইমেল পাঠানো যায়নি।",
-  "errors.emailWelcomeFailed": "সদস্য সংরক্ষিত, কিন্তু স্বাগত ইমেল পাঠানো যায়নি।",
-  "errors.emailApprovalFailed": "সদস্য অনুমোদিত, কিন্তু স্বাগত ইমেল পাঠানো যায়নি।",
-  "errors.emailReceiptFailed": "টাকা জমা হয়েছে, কিন্তু রশিদ ইমেল পাঠানো যায়নি।",
-  "errors.emailAdminWelcomeFailed": "গ্রুপ তৈরি হয়েছে, কিন্তু অ্যাডমিন ইমেল পাঠানো যায়নি।",
-  "errors.emailSummaryFailed": "মাস লক করা হয়েছে, কিন্তু সারাংশ ইমেল পাঠানো যায়নি।",
-  "errors.emailSummaryStatus": "মাস লক করা হয়েছে। সারাংশ ইমেল: {sent}টি পাঠানো হয়েছে, {failed}টি ব্যর্থ হয়েছে।",
-  "errors.emailRemovalFailed": "সদস্যকে সরানো হয়েছে, কিন্তু রিমুভাল ইমেল পাঠানো যায়নি।",
-  "errors.emailFailed": "ইমেইল পাঠাতে ব্যর্থ হয়েছে।",
+  "errors.emailAuthFailed": "গ্রুপ তৈরি হয়েছে, কিন্তু অস্থির সংযোগের কারণে স্বাগত ইমেল পাঠানো যায়নি।",
+  "errors.emailWelcomeFailed": "সদস্য সংরক্ষিত হয়েছে, কিন্তু অস্থির সংযোগের কারণে স্বাগত ইমেল পাঠানো যায়নি।",
+  "errors.emailApprovalFailed": "সদস্য অনুমোদিত হয়েছে, কিন্তু অস্থির সংযোগের কারণে স্বাগত ইমেল পাঠানো যায়নি।",
+  "errors.emailReceiptFailed": "টাকা জমা হয়েছে, কিন্তু অস্থির সংযোগের কারণে রশিদ ইমেল পাঠানো যায়নি।",
+  "errors.emailAdminWelcomeFailed": "গ্রুপ তৈরি হয়েছে, কিন্তু অস্থির সংযোগের কারণে অ্যাডমিনের স্বাগত ইমেল পাঠানো যায়নি।",
+  "errors.emailSummaryFailed": "মাস লক করা হয়েছে, কিন্তু অস্থির সংযোগের কারণে সারাংশ ইমেল পাঠানো যায়নি।",
+  "errors.emailSummaryStatus": "মাস লক করা হয়েছে। সারাংশ ইমেল: {sent}টি পাঠানো হয়েছে, {failed}টি অস্থির সংযোগের কারণে ব্যর্থ হয়েছে।",
+  "errors.emailRemovalFailed": "সদস্যকে সরানো হয়েছে, কিন্তু অস্থির সংযোগের কারণে অপসারণ ইমেল পাঠানো যায়নি।",
+  "errors.emailFailed": "অস্থির সংযোগের কারণে ইমেইল পাঠানো ব্যর্থ হয়েছে।",
 };
 
 export const messages: Record<Language, Record<MessageKey, string>> = {
