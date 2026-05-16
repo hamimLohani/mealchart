@@ -22,7 +22,9 @@ export const en = {
   "home.statFirebase": "Firebase",
   "home.statMultiGroup": "Multi-Group",
   "home.statHostelMess": "Hostel & Mess",
-  "home.ctaAbout": "Learn More ↓",
+  "home.ctaAbout": "Watch Tutorial ↓",
+  "home.tutorialTitle": "Tutorial Video",
+  "home.tutorialDescription": "Watch a quick walkthrough of Meal Chart and learn how to manage meals, deposits, and reports.",
 
   // About section
   "about.sectionTitle": "How It Works",
@@ -581,7 +583,9 @@ export const bn: Record<MessageKey, string> = {
   "home.statFirebase": "Firebase",
   "home.statMultiGroup": "মাল্টি-গ্রুপ",
   "home.statHostelMess": "হোস্টেল ও মেস",
-  "home.ctaAbout": "বিস্তারিত জানুন ↓",
+  "home.ctaAbout": "টিউটোরিয়াল দেখুন ↓",
+  "home.tutorialTitle": "টিউটোরিয়াল ভিডিও",
+  "home.tutorialDescription": "মিল চার্ট-এর দ্রুত টিউটোরিয়াল দেখুন এবং কীভাবে মিল, জমা ও রিপোর্ট পরিচালনা করবেন শিখুন।",
 
   "about.sectionTitle": "কিভাবে কাজ করে",
   "about.sectionSubtitle": "আপনার হোস্টেল বা মেসের মিল, টাকা ও সদস্য ব্যবস্থাপনার সবকিছু — ধাপে ধাপে বোঝানো হলো।",

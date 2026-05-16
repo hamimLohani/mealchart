@@ -14,7 +14,7 @@ import {
   getMealsForMonth,
 } from "@/lib/firebase/repositories";
 import { chartMonthDateBounds, toMonthKey, toDateInputValue } from "@/lib/utils/date";
-import { getMonthTotals, normalizeMealQuantity } from "@/lib/utils/meal-money";
+import { getMemberTotals, getMonthTotals, normalizeMealQuantity } from "@/lib/utils/meal-money";
 import type { AdminProfile, Chart, CostEntry, DepositEntry, Member, MealEntry } from "@/types/domain";
 import { sendMoneyReceiptEmail } from "@/lib/email/actions";
 import { getFriendlyEmailError } from "@/lib/utils/email-error";
@@ -196,7 +196,14 @@ export function AddMoneyManager() {
         const memberTotal = deposits
           .filter(d => d.memberId.toLowerCase() === mid)
           .reduce((s, d) => s + d.amount, 0) + amount;
-        
+
+        const { balance: memberBalance } = getMemberTotals(
+          mid,
+          meals,
+          [...deposits, deposit],
+          mealRate,
+        );
+
         const emailResult = await sendMoneyReceiptEmail(
           member.email,
           member.fullName,
@@ -205,6 +212,7 @@ export function AddMoneyManager() {
           activeAdminProfile.fullName || activeAdminProfile.email,
           groupName,
           memberTotal,
+          memberBalance,
         );
         if (!emailResult.success) {
           const friendlyError = getFriendlyEmailError(emailResult.error || "");

@@ -29,6 +29,8 @@ const stepKeys = [
   { title: "about.step8Title", body: "about.step8Body", icon: "📢" },
 ] as const;
 
+const tutorialVideoId = process.env.NEXT_PUBLIC_TUTORIAL_VIDEO_ID || "REPLACE_WITH_YOUTUBE_ID";
+
 export default function Home() {
   const { t } = useT();
 
@@ -67,7 +69,7 @@ export default function Home() {
             </Link>
             <a
               className="button-ghost"
-              href="#about"
+              href="#tutorial"
               style={{ borderColor: "rgba(44,179,145,0.4)", color: "rgba(44,179,145,0.9)" }}
             >
               {t("home.ctaAbout")}
@@ -183,6 +185,30 @@ export default function Home() {
           <Link className="button-secondary" href="/enter-group">
             {t("home.ctaEnter")}
           </Link>
+        </div>
+      </section>
+
+      {/* ── Tutorial Video ──────────────────────────────── */}
+      <section id="tutorial" className="mt-20 scroll-mt-8 border-t border-[color:var(--border)] pt-16">
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("home.tutorialTitle")}</h2>
+          <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-[color:var(--soft-foreground)] sm:text-base sm:leading-8">
+            {t("home.tutorialDescription")}
+          </p>
+        </div>
+
+        <div className="mx-auto mt-10 max-w-5xl">
+          <div className="overflow-hidden rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] shadow-[var(--shadow-sm)]">
+            <div className="aspect-video bg-black">
+              <iframe
+                className="h-full w-full"
+                src={`https://www.youtube.com/embed/${tutorialVideoId}`}
+                title="Meal Chart Tutorial"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          </div>
         </div>
       </section>
     </main>

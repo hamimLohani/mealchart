@@ -276,6 +276,7 @@ export async function sendMoneyReceiptEmail(
   adminName: string,
   groupName: string,
   totalAmount: number,
+  remainingBalance: number,
 ) {
   try {
     const html = `
@@ -304,6 +305,16 @@ export async function sendMoneyReceiptEmail(
                 color: ${totalAmount < 0 ? "#ef4444" : "#10b981"};
               "
             >${totalAmount.toFixed(2)} TK</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 10px; padding-top: 10px; border-top: 1px solid #f1f5f9;">
+            <span style="color: #666;">Remaining Balance:  </span>
+            <span 
+              style="
+                font-size: 20px;
+                font-weight: bold;
+                color: ${remainingBalance < 0 ? "#ef4444" : "#10b981"};
+              "
+            >${remainingBalance >= 0 ? "+" : ""}${remainingBalance.toFixed(2)} TK</span>
           </div>
           <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
             <span style="color: #666;">Date:  </span>
