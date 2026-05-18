@@ -149,7 +149,7 @@ export const en = {
   "registerForm.submitting": "Creating group…",
   "registerForm.goAdminLogin": "Go to admin login",
   "registerForm.postSignupNote":
-    "নিবন্ধনের পর আপনি ইতিমধ্যে সাইন ইন হয়েছেন — সরাসরি ড্যাশবোর্ড খুলতে পারেন বা অন্য ডিভাইসে অ্যাডমিন লগইন ব্যবহার করতে পারেন।",
+    "You are already signed in after registration — you can open the dashboard directly or use admin login on another device.",
   "registerForm.openDashboard": "Open admin dashboard →",
   "registerForm.noticeTitle": "Group created",
   "registerForm.noticeBody": "{name} was registered and is ready to use.",
@@ -702,7 +702,7 @@ export const bn: Record<MessageKey, string> = {
   "registerForm.submitting": "তৈরি হচ্ছে…",
   "registerForm.goAdminLogin": "অ্যাডমিন লগইনে যান",
   "registerForm.postSignupNote":
-    "নিবন্ধনের পর আপনি ইতিমধ্যে সাইন ইন হয়েছেন — সরাসরি ড্যাশবোর্ড খুলতে পারেন বা অন্য ডিভাইসে লগইন করতে পারেন।",
+    "নিবন্ধনের পর আপনি ইতিমধ্যে সাইন ইন হয়েছেন — সরাসরি ড্যাশবোর্ড খুলতে পারেন বা অন্য ডিভাইসে অ্যাডমিন লগইন ব্যবহার করতে পারেন।",
   "registerForm.openDashboard": "অ্যাডমিন ড্যাশবোর্ড খুলুন →",
   "registerForm.noticeTitle": "গ্রুপ তৈরি",
   "registerForm.noticeBody": "{name} নিবন্ধিত হয়েছে এবং ব্যবহারের জন্য প্রস্তুত।",
