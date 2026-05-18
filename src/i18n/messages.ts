@@ -128,9 +128,8 @@ export const en = {
   "enterForm.selectGroup": "Select Group",
   "enterForm.loadingGroups": "Loading groups...",
   "enterForm.noGroups": "No groups available.",
-  "enterForm.groupSelectionHelp": "নিচের তালিকা থেকে আপনার গ্রুপটি নির্বাচন করে যোগদানের অনুরোধ পাঠান।",
-  "enterForm.footerHint": "আপনার গুগল অ্যাকাউন্ট শুধুমাত্র নিরাপদ সাইন-ইনের জন্য ব্যবহৃত হয়। আমরা কখনোই আপনার ব্যক্তিগত তথ্য দেখি না।",
-
+  "enterForm.groupSelectionHelp": "Select your group from the list below to send a join request.",
+  "enterForm.footerHint": "Your Google account is only used for secure sign-in. We never access or view your personal information.",
   // Register page
   "registerPage.eyebrow": "Register Group",
   "registerPage.title": "Admin registration flow",
@@ -232,7 +231,7 @@ export const en = {
   "groupNotices.pageTitle": "Notices",
   "groupNotices.wordOne": "notice",
   "groupNotices.wordMany": "notices",
-  "groupNotices.suffixBn": "টি নোটিশ",
+  "groupNotices.suffix": "notices",
   "groupNotices.noneTitle": "No notices yet",
   "groupNotices.noneBody":
     "When your admin posts updates, they will appear here.",
@@ -254,7 +253,7 @@ export const en = {
   "groupMembers.loading": "Loading members…",
   "groupMembers.subtitleOne": "{n} member in this group",
   "groupMembers.subtitleMany": "{n} members in this group",
-  "groupMembers.subtitleBn": "{n} জন সদস্য এই গ্রুপে",
+  "groupMembers.subtitleBn": "{n} members in this group",
   "groupMembers.searchNoMatch": "No members matched your search.",
   "groupMembers.groupListTitle": "Group Members",
 
@@ -779,7 +778,7 @@ export const bn: Record<MessageKey, string> = {
   "groupNotices.pageTitle": "নোটিশ",
   "groupNotices.wordOne": "নোটিশ",
   "groupNotices.wordMany": "নোটিশসমূহ",
-  "groupNotices.suffixBn": "টি নোটিশ",
+  "groupNotices.suffix": "টি নোটিশ",
   "groupNotices.noneTitle": "এখনো নোটিশ নেই",
   "groupNotices.noneBody": "অ্যাডমিন আপডেট দিলে এখানে দেখাবে।",
   "groupNotices.caughtUp": "সব আপডেট দেখে ফেলেছেন",
