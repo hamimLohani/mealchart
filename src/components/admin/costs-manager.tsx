@@ -284,7 +284,7 @@ export function CostsManager() {
           <input
             className="input w-full sm:w-64"
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("memberMgr.searchPlaceholder")}
+            placeholder={t("costs.searchPlaceholder")}
             value={search}
           />
         </div>

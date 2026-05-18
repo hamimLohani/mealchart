@@ -1,18 +1,23 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { useT } from "@/i18n/use-t";
 import { useAuthStore } from "@/store/auth-store";
+import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 
 export function AdminNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { t } = useT();
   const { admin, isLoaded } = useAuthStore();
+  const [isSignOutInProgress, setIsSignOutInProgress] = useState(false);
   const isLoggedIn = isLoaded && !!admin;
+
+  useGlobalLoading("admin-nav-sign-out", isSignOutInProgress, t("common.signingOut"));
 
   const navGroups = [
     {
@@ -55,8 +60,9 @@ export function AdminNav() {
   ];
 
   async function handleLogout() {
+    setIsSignOutInProgress(true);
     if (auth) await signOut(auth);
-    router.push("/admin/login");
+    router.push("/?noredirect=1");
   }
 
   return (

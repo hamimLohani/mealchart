@@ -152,7 +152,10 @@ export function AddMoneyManager() {
   const filteredMembers = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return visibleMembers;
-    return visibleMembers.filter(m => m.fullName.toLowerCase().includes(q));
+    return visibleMembers.filter(m => 
+      m.fullName.toLowerCase().includes(q) || 
+      m.email.toLowerCase().includes(q)
+    );
   }, [search, visibleMembers]);
 
   const filteredDeposits = useMemo(() => {
@@ -160,7 +163,10 @@ export function AddMoneyManager() {
     if (!q) return deposits;
     return deposits.filter(d => {
       const member = visibleMembers.find(m => m.id.toLowerCase() === d.memberId.toLowerCase());
-      return member?.fullName.toLowerCase().includes(q);
+      return (
+        member?.fullName.toLowerCase().includes(q) || 
+        member?.email.toLowerCase().includes(q)
+      );
     });
   }, [search, deposits, visibleMembers]);
 

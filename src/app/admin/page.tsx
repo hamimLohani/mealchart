@@ -50,6 +50,7 @@ export default function AdminPage() {
   const { t, tx } = useT();
   const [group, setGroup] = useState<Group | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isSignOutInProgress, setIsSignOutInProgress] = useState(false);
   const { adminProfile, isLoading: profileLoading, error: profileError } = useCurrentAdminProfile();
   const visibleGroup = adminProfile && group?.id === adminProfile.groupId ? group : null;
   const isPageLoading = !isLoaded || profileLoading || (!!adminProfile && !visibleGroup && !loadError);
@@ -58,6 +59,7 @@ export default function AdminPage() {
     (profileError ? tx(profileError instanceof Error ? profileError.message : t("errors.loadGroupDetails")) : null);
 
   useGlobalLoading("admin-page", isPageLoading, t("adminDash.loading"));
+  useGlobalLoading("admin-page-sign-out", isSignOutInProgress, t("common.signingOut"));
 
   useEffect(() => {
     let active = true;
@@ -84,8 +86,9 @@ export default function AdminPage() {
     };
   }, [adminProfile, t, tx]);
   async function handleLogout() {
+    setIsSignOutInProgress(true);
     if (auth) await signOut(auth);
-    router.push("/admin/login");
+    router.push("/?noredirect=1");
   }
 
   if (!isLoaded) {
