@@ -365,7 +365,7 @@ export const en = {
   "memberMgr.joinedLine": "Joined",
   "memberMgr.loadingList": "Loading members…",
   "memberMgr.searchPlaceholder": "Search name or email…",
-  "memberMgr.listSummary": "{shown} জন দেখানো হচ্ছে / মোট {total} জন",
+  "memberMgr.listSummary": "Showing {shown} of {total} members",
   "memberMgr.noSearchMatch": "No members matched your search.",
   "memberMgr.pendingRequests": "Pending Join Requests",
   "memberMgr.approve": "Approve",
