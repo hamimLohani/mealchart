@@ -86,7 +86,7 @@ export function GroupNoticesView({ groupId }: { groupId: string }) {
     notices.length === 0
       ? t("groupNotices.noneTitle")
       : language === "bn"
-        ? `${notices.length}${t("groupNotices.suffixBn")}`
+        ? `${notices.length}${t("groupNotices.suffix")}`
         : `${notices.length} ${notices.length === 1 ? t("groupNotices.wordOne") : t("groupNotices.wordMany")}`;
 
   return (
