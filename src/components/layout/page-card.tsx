@@ -13,7 +13,7 @@ export function PageCard({
 }) {
   return (
     <main className="mx-auto w-full max-w-3xl px-3 py-6 sm:px-8 sm:py-12">
-      <section className="rounded-[var(--radius-lg)] border border-[color:var(--border)] bg-[color:var(--panel)] p-4 shadow-[var(--shadow)] sm:p-10">
+      <div className="flex flex-col">
         <p className="text-[0.65rem] font-bold uppercase tracking-[0.26em] text-[color:var(--muted)]">
           {eyebrow}
         </p>
@@ -24,7 +24,7 @@ export function PageCard({
           {description}
         </p>
         {children}
-      </section>
+      </div>
     </main>
   );
 }

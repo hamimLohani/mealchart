@@ -34,10 +34,9 @@ export const en = {
   "about.step1Body": "The admin creates a group by entering a group name and signing in with Google. Tell your hostel/mess members to sign in and request to join the group.",
 
   "about.step2Title": "2. Members Join",
-  "about.step2Body": "Members sign in with Google, select the group from the list, and send a join request. The admin goes to Admin Panel → Members to approve requests. Once approved, members appear in the meal chart.",
-
+  "about.step2Body": "Members sign in with Google, select the group from the list, and send a join request. The admin goes to Admin → Members to approve requests. Once approved, members appear in the meal chart.",
   "about.step3Title": "3. Create Monthly Chart",
-  "about.step3Body": "Go to Admin Panel → Create Chart. Select the month and year. This creates a fresh monthly sheet that tracks meals, costs, deposits, and notices for that month.",
+  "about.step3Body": "Go to Admin → Chart. Select the month and year. This creates a fresh monthly sheet that tracks meals, costs, deposits, and notices for that month.",
 
   "about.step4Title": "4. Track Daily Meals",
   "about.step4Body": "Admin: Go to Edit Meals → select the month → enter meal counts in the grid (rows = members, columns = days). Members: Access group with Google account → select a month → tap your name → add your own meals for today.",
@@ -290,20 +289,20 @@ export const en = {
   "memberPage.backToHome": "← Back to Home",
 
   // Admin nav
-  "adminNav.panel": "Admin Panel",
+  "adminNav.panel": "Admin",
   "adminNav.notSignedIn": "Not signed in",
   "adminNav.people": "People",
   "adminNav.mealsCosts": "Meals & Costs",
   "adminNav.reports": "Reports",
   "adminNav.members": "Members",
   "adminNav.membersHint": "Add, edit, remove",
-  "adminNav.addMoney": "Add Money",
+  "adminNav.addMoney": "Money",
   "adminNav.addMoneyHint": "Member deposits",
-  "adminNav.editMeals": "Edit Meals",
+  "adminNav.editMeals": "Meals",
   "adminNav.editMealsHint": "Daily meal table",
   "adminNav.costs": "Costs",
   "adminNav.costsHint": "Bazar and expenses",
-  "adminNav.createChart": "Create Chart",
+  "adminNav.createChart": "Chart",
   "adminNav.createChartHint": "New monthly sheet",
   "adminNav.notices": "Notices",
   "adminNav.noticesHint": "Updates and alerts",
@@ -313,7 +312,7 @@ export const en = {
 
   // Admin mobile bar
   "adminMobile.admin": "Admin",
-  "adminMobile.panel": "Admin Panel",
+  "adminMobile.panel": "Admin",
 
   // Admin dashboard (home)
   "adminDash.loading": "Loading…",
@@ -637,7 +636,7 @@ export const bn: Record<MessageKey, string> = {
   "about.step2Body": "সদস্যরা গুগল দিয়ে সাইন ইন করে তালিকা থেকে গ্রুপটি বেছে নিয়ে যোগদানের অনুরোধ পাঠাবে। অ্যাডমিন 'সদস্য' প্যানেল থেকে অনুরোধগুলো অনুমোদন করবে। অনুমোদিত হলে সদস্যরা চার্টে যুক্ত হবে।",
 
   "about.step3Title": "3. মাসিক চার্ট তৈরি করুন",
-  "about.step3Body": "অ্যাডমিন প্যানেল → চার্ট তৈরি-তে যান। মাস ও বছর নির্বাচন করুন। এটি একটি নতুন মাসিক শীট তৈরি করবে যেখানে ওই মাসের মিল, খরচ, জমা ও নোটিশ ট্র্যাক হবে।",
+  "about.step3Body": "অ্যাডমিন → চার্ট-এ যান। মাস ও বছর নির্বাচন করুন। এটি একটি নতুন মাসিক শীট তৈরি করবে যেখানে ওই মাসের মিল, খরচ, জমা ও নোটিশ ট্র্যাক হবে।",
 
   "about.step4Title": "4. দৈনিক মিল হিসাব রাখুন",
   "about.step4Body": "অ্যাডমিন: মিল সম্পাদনা → মাস বাছুন → গ্রিডে মিল সংখ্যা লিখুন (সারি = সদস্য, কলাম = দিন)। সদস্য: গুগল অ্যাকাউন্ট দিয়ে গ্রুপে ঢুকুন → মাস বাছুন → নাম ট্যাপ করুন → আজকের মিল যোগ করুন।",
@@ -874,20 +873,20 @@ export const bn: Record<MessageKey, string> = {
   "memberPage.monthInfoSubtitle": "নির্বাচিত মাসের সব তথ্য।",
   "memberPage.backToHome": "← হোমে ফিরুন",
 
-  "adminNav.panel": "অ্যাডমিন প্যানেল",
+  "adminNav.panel": "অ্যাডমিন",
   "adminNav.notSignedIn": "সাইন ইন নেই",
   "adminNav.people": "লোকজন",
   "adminNav.mealsCosts": "মিল ও খরচ",
   "adminNav.reports": "রিপোর্ট",
   "adminNav.members": "সদস্য",
   "adminNav.membersHint": "যোগ, সম্পাদনা, বাদ",
-  "adminNav.addMoney": "টাকা জমা",
+  "adminNav.addMoney": "টাকা",
   "adminNav.addMoneyHint": "সদস্য জমা",
-  "adminNav.editMeals": "মিল সম্পাদনা",
+  "adminNav.editMeals": "মিল",
   "adminNav.editMealsHint": "দৈনিক মিল টেবিল",
   "adminNav.costs": "খরচ",
   "adminNav.costsHint": "বাজার ও খরচ",
-  "adminNav.createChart": "চার্ট তৈরি",
+  "adminNav.createChart": "চার্ট",
   "adminNav.createChartHint": "নতুন মাসিক শিট",
   "adminNav.notices": "নোটিশ",
   "adminNav.noticesHint": "আপডেট ও সতর্কতা",
@@ -896,7 +895,7 @@ export const bn: Record<MessageKey, string> = {
   "adminNav.loginHint": "অ্যাডমিন প্রবেশ",
 
   "adminMobile.admin": "অ্যাডমিন",
-  "adminMobile.panel": "অ্যাডমিন প্যানেল",
+  "adminMobile.panel": "অ্যাডমিন",
 
   "adminDash.loading": "লোড হচ্ছে…",
   "adminDash.notSignedIn": "সাইন ইন নেই",
