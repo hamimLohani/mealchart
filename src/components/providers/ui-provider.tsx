@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { SWRConfig } from "swr";
 import { useUiStore } from "@/store/ui-store";
@@ -10,10 +10,25 @@ import { useT } from "@/i18n/use-t";
 import { ToastContainer } from "@/components/ui/toast-container";
 
 export function UiProvider({ children }: { children: React.ReactNode }) {
-  const { language, theme } = useUiStore();
+  const { language, theme, startLoading, stopLoading } = useUiStore();
   const loadingEntries = useUiStore((state) => state.loadingEntries);
   const { setAdmin, setLoaded } = useAuthStore();
   const { t } = useT();
+  const [mounted, setMounted] = useState(false);
+  const [isReloadingFromSession, setIsReloadingFromSession] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    // Check if we were reloading
+    if (typeof window !== "undefined" && sessionStorage.getItem("is_reloading") === "true") {
+      setIsReloadingFromSession(true);
+      sessionStorage.removeItem("is_reloading");
+      // Optionally stop any lingering reload loading state
+      stopLoading("app-header-reload");
+      // Hide the session-based reload message after a brief delay
+      setTimeout(() => setIsReloadingFromSession(false), 500);
+    }
+  }, [stopLoading]);
 
   useEffect(() => {
     document.documentElement.lang = language;
@@ -34,9 +49,13 @@ export function UiProvider({ children }: { children: React.ReactNode }) {
     return unsubscribe;
   }, [setAdmin, setLoaded]);
 
-  const loadingMessages = Object.values(loadingEntries);
-  const loadingMessage = loadingMessages.at(-1) ?? t("common.loading");
-  const isLoading = loadingMessages.length > 0;
+  const loadingMessages = Object.entries(loadingEntries);
+  // Prioritize reloading message if it exists
+  const isReloading = isReloadingFromSession || !!loadingEntries["app-header-reload"];
+  const loadingMessage = isReloading 
+    ? (loadingEntries["app-header-reload"] || t("common.reloading"))
+    : (loadingMessages.length > 0 ? loadingMessages[loadingMessages.length - 1][1] : t("common.loading"));
+  const isLoading = mounted && (isReloading || loadingMessages.length > 0);
 
   return (
     <SWRConfig

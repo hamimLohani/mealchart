@@ -89,6 +89,7 @@ export const en = {
   // Common
   "common.loading": "Loading…",
   "common.signingOut": "Signing out…",
+  "common.reloading": "Reloading…",
   "common.back": " Back",
   "common.tk": "tk",
   "common.active": "active",
@@ -517,8 +518,8 @@ export const en = {
   "usage.memberStatus": "MEMBER USAGE STATUS",
   "usage.chartStatus": "CHART USAGE STATUS",
   "usage.paidSlots": "Paid Slots: {n}",
-  "usage.freeLimitMember": "Free Limit: 4 Members. Used: {used}/4.",
-  "usage.freeLimitChart": "Free Limit: 3 Charts. Used: {used}/3.",
+  "usage.freeLimitMember": "Free Limit: 4. Used: {used}.",
+  "usage.freeLimitChart": "Free Limit: 3. Used: {used}.",
   "usage.paidMembers": " Paid Members: {n}.",
   "usage.paidCharts": " Paid Charts: {n}.",
   "errors.loadChartFailed": "Failed to load chart.",
@@ -595,6 +596,8 @@ export const en = {
   "toast.depositAdded": "Deposit added successfully!",
   "toast.depositDeducted": "Amount deducted successfully!",
   "toast.mealSaved": "Meals updated successfully!",
+  "toast.limitReachedMember": "Fail to add member",
+  "toast.limitReachedChart": "Fail to create chart",
   "toast.genericError": "An error occurred. Please try again.",
 } as const;
 
@@ -684,6 +687,7 @@ export const bn: Record<MessageKey, string> = {
 
   "common.loading": "লোড হচ্ছে…",
   "common.signingOut": "সাইন আউট হচ্ছে…",
+  "common.reloading": "রিলোড হচ্ছে…",
   "common.back": " পিছনে",
   "common.tk": "টাকা",
   "common.active": "সক্রিয়",
@@ -1142,8 +1146,8 @@ export const bn: Record<MessageKey, string> = {
   "usage.memberStatus": "মেম্বার ব্যবহারের অবস্থা",
   "usage.chartStatus": "চার্ট ব্যবহারের অবস্থা",
   "usage.paidSlots": "পেইড স্লট: {n}",
-  "usage.freeLimitMember": "ফ্রি লিমিট: 4 জন সদস্য। ব্যবহৃত: {used}/4।",
-  "usage.freeLimitChart": "ফ্রি লিমিট: 3টি চার্ট। ব্যবহৃত: {used}/3।",
+  "usage.freeLimitMember": "ফ্রি লিমিট: 4। ব্যবহৃত: {used}।",
+  "usage.freeLimitChart": "ফ্রি লিমিট: 3। ব্যবহৃত: {used}।",
   "usage.paidMembers": " পেইড মেম্বার: {n}।",
   "usage.paidCharts": " পেইড চার্ট: {n}।",
   "errors.emailAuthFailed": "গ্রুপ তৈরি হয়েছে, কিন্তু অস্থির সংযোগের কারণে স্বাগত ইমেল পাঠানো যায়নি।",
@@ -1169,6 +1173,8 @@ export const bn: Record<MessageKey, string> = {
   "toast.depositAdded": "টাকা সফলভাবে জমা করা হয়েছে!",
   "toast.depositDeducted": "টাকা সফলভাবে কাটা হয়েছে!",
   "toast.mealSaved": "মিল সফলভাবে সেভ করা হয়েছে!",
+  "toast.limitReachedMember": "সদস্য যোগ করতে ব্যর্থ",
+  "toast.limitReachedChart": "চার্ট তৈরি করতে ব্যর্থ",
   "toast.genericError": "একটি ত্রুটি ঘটেছে। দয়া করে আবার চেষ্টা করুন।",
 };
 

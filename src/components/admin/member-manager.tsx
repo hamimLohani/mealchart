@@ -204,8 +204,11 @@ export function MemberManager() {
     } catch (e) {
       if (e instanceof Error && e.message === "LIMIT_REACHED_MEMBER") {
         setError("LIMIT_REACHED_MEMBER");
+        showError(t("toast.limitReachedMember"));
       } else {
-        setError(e instanceof Error ? e.message : "Failed to save member.");
+        const msg = e instanceof Error ? e.message : t("toast.genericError");
+        setError(msg);
+        showError(msg);
       }
     } finally {
       setIsSubmitting(false);
@@ -238,7 +241,9 @@ export function MemberManager() {
          }
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to remove member.");
+      const msg = e instanceof Error ? e.message : t("toast.genericError");
+      setError(msg);
+      showError(msg);
     } finally {
       setIsRemoving(false);
     }
@@ -306,8 +311,11 @@ export function MemberManager() {
     } catch (e) {
       if (e instanceof Error && e.message === "LIMIT_REACHED_MEMBER") {
         setError("LIMIT_REACHED_MEMBER");
+        showError(t("toast.limitReachedMember"));
       } else {
-        setError(e instanceof Error ? e.message : "Failed to approve request.");
+        const msg = e instanceof Error ? e.message : t("toast.genericError");
+        setError(msg);
+        showError(msg);
       }
     } finally {
       setIsSubmitting(false);
@@ -391,7 +399,7 @@ export function MemberManager() {
       </div>
 
       <form
-        className="grid gap-4 rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-4 shadow-[var(--shadow-sm)]"
+        className="grid gap-4 rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-3.5 sm:p-4 shadow-[var(--shadow-sm)]"
         onSubmit={handleSubmit}
       >
         <p className="admin-section-label">{editingMemberId ? t("memberMgr.editTitle") : t("memberMgr.addTitle")}</p>

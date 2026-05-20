@@ -303,15 +303,15 @@ export function EditMealsManager() {
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="bg-[color:var(--panel)]">
-                <th className="sticky left-0 z-10 min-w-[120px] bg-[color:var(--panel)] px-3 py-2.5 text-left text-xs font-bold uppercase tracking-[0.15em] text-[color:var(--muted)]">
+                <th className="sticky left-0 z-10 min-w-[120px] bg-[color:var(--panel)] px-2.5 py-2 text-left text-xs font-bold uppercase tracking-[0.15em] text-[color:var(--muted)]">
                   {t("groupChart.colMember")}
                 </th>
                 {days.map((date) => (
-                  <th key={date} className="min-w-[44px] px-1 py-2.5 text-center text-xs font-semibold text-[color:var(--muted)]">
+                  <th key={date} className="min-w-[40px] px-0.5 py-2 text-center text-xs font-semibold text-[color:var(--muted)]">
                     {date.slice(8)}
                   </th>
                 ))}
-                <th className="min-w-[56px] px-3 py-2.5 text-center text-xs font-bold uppercase tracking-[0.15em] text-[color:var(--accent)]">
+                <th className="min-w-[50px] px-2.5 py-2 text-center text-xs font-bold uppercase tracking-[0.15em] text-[color:var(--accent)]">
                   {t("groupChart.colTotal")}
                 </th>
               </tr>
@@ -339,14 +339,14 @@ export function EditMealsManager() {
               {rowMemberIds.map((memberId, ri) => (
                 <tr key={memberId} className={ri % 2 === 0 ? "bg-[color:var(--background)]" : "bg-[color:var(--panel)]"}>
                   <td
-                    className={`sticky left-0 z-10 px-3 py-2 text-sm font-medium ${ri % 2 === 0 ? "bg-[color:var(--background)]" : "bg-[color:var(--panel)]"}`}
+                    className={`sticky left-0 z-10 px-2.5 py-1.5 text-sm font-medium ${ri % 2 === 0 ? "bg-[color:var(--background)]" : "bg-[color:var(--panel)]"}`}
                   >
                     {memberDisplayName(memberId, members, former)}
                   </td>
                   {days.map((date) => {
                     const val = meals[memberId]?.[date] ?? 0;
                     return (
-                      <td key={date} className="px-1 py-1 text-center">
+                      <td key={date} className="px-0.5 py-1 text-center">
                         <input
                           className="w-10 rounded-md border border-transparent bg-transparent text-center text-sm font-medium outline-none transition focus:border-[color:var(--accent)] focus:bg-[color:var(--panel)]"
                           min="0"
@@ -360,7 +360,7 @@ export function EditMealsManager() {
                       </td>
                     );
                   })}
-                  <td className="px-3 py-2 text-center text-sm font-bold text-[color:var(--accent)]">
+                  <td className="px-2.5 py-1.5 text-center text-sm font-bold text-[color:var(--accent)]">
                     {formatMeal(memberTotal(memberId))}
                   </td>
                 </tr>

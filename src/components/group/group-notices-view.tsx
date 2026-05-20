@@ -117,7 +117,7 @@ export function GroupNoticesView({ groupId }: { groupId: string }) {
                   isSystem ? "border-l-[3px] border-l-[color:var(--accent)]" : ""
                 }`}
               >
-                <div className="px-4 py-4 sm:px-5 sm:py-5">
+                <div className="px-3 py-3.5 sm:px-5 sm:py-5">
                   <div className="flex flex-wrap items-start justify-between gap-2 gap-y-1">
                     <h2 className="min-w-0 text-base font-semibold leading-snug text-[color:var(--foreground)]">{tx(n.title)}</h2>
                     {isSystem ? <span className="badge-accent shrink-0">{t("common.auto")}</span> : null}

@@ -128,7 +128,7 @@ export function GroupMoneyView({ groupId }: { groupId: string }) {
       </div>
 
       <div
-        className={`rounded-[var(--radius-sm)] border px-4 py-3 ${balance >= 0 ? "border-[color:var(--success-border)] bg-[color:var(--success-bg)]" : "border-[color:var(--danger-border)] bg-[color:var(--danger-bg)]"}`}
+        className={`rounded-[var(--radius-sm)] border px-3 py-2.5 ${balance >= 0 ? "border-[color:var(--success-border)] bg-[color:var(--success-bg)]" : "border-[color:var(--danger-border)] bg-[color:var(--danger-bg)]"}`}
       >
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-[color:var(--muted)]">
           {t("groupMoney.groupBalance")}
@@ -160,7 +160,7 @@ export function GroupMoneyView({ groupId }: { groupId: string }) {
             return (
               <div
                 key={memberId}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-3 py-2.5"
               >
                 <div className="min-w-0">
                   <p className="font-semibold">{memberDisplayName(memberId, members, former)}</p>
@@ -195,7 +195,7 @@ export function GroupMoneyView({ groupId }: { groupId: string }) {
             return (
               <div
                 key={d.id}
-                className="flex items-center justify-between rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-2.5"
+                className="flex items-center justify-between rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-3 py-2.5"
               >
                 <div>
                   <p className="text-sm font-semibold">{member?.fullName ?? t("common.unknown")}</p>
@@ -222,7 +222,7 @@ export function GroupMoneyView({ groupId }: { groupId: string }) {
           {costs.map((c) => (
             <div
               key={c.id}
-              className="flex items-center justify-between rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-2.5"
+              className="flex items-center justify-between rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-3 py-2.5"
             >
               <div>
                 <p className="text-sm font-semibold">{c.itemName}</p>

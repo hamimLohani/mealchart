@@ -27,7 +27,7 @@ type DepositFormState = { memberId: string; amount: string; date: string };
 
 export function AddMoneyManager() {
   const { t, tx } = useT();
-  const { success: showSuccess } = useToast();
+  const { success: showSuccess, error: showError } = useToast();
   const configurationError =
     !isFirebaseConfigured || !auth
       ? "Firebase is not configured yet. Add your keys in .env.local first."
@@ -234,7 +234,9 @@ export function AddMoneyManager() {
 
       setForm((c) => ({ ...c, amount: "" }));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to add money.");
+      const msg = e instanceof Error ? e.message : t("toast.genericError");
+      setError(msg);
+      showError(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -328,7 +330,7 @@ export function AddMoneyManager() {
       </div>
 
       <form
-        className="grid gap-4 rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]"
+        className="grid gap-4 rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-3.5 sm:p-5 shadow-[var(--shadow-sm)]"
         onSubmit={handleSubmit}
       >
         <p className="admin-section-label">{t("addMoney.formTitle")}</p>
@@ -379,7 +381,7 @@ export function AddMoneyManager() {
         </button>
       </form>
 
-      <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]">
+      <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-3.5 sm:p-5 shadow-[var(--shadow-sm)]">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="admin-section-label">{t("addMoney.memberTotals")} — {selectedChart.label}</p>
           <input
@@ -404,7 +406,7 @@ export function AddMoneyManager() {
             return (
               <div
                 key={member.id}
-                className="flex flex-wrap items-center justify-between gap-4 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3.5"
+                className="flex flex-wrap items-center justify-between gap-4 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-3 py-2.5 sm:px-4 sm:py-3.5"
               >
                 <div className="min-w-[120px] flex-1">
                   <p className="font-bold text-[color:var(--foreground)]">{member.fullName}</p>
@@ -442,7 +444,7 @@ export function AddMoneyManager() {
         </div>
       </div>
 
-      <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]">
+      <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-3.5 sm:p-5 shadow-[var(--shadow-sm)]">
         <p className="admin-section-label">{t("addMoney.depositHistory")} — {selectedChart.label}</p>
         <div className="mt-3 grid gap-2.5">
           {dataLoading && (
@@ -458,7 +460,7 @@ export function AddMoneyManager() {
             return (
               <article
                 key={deposit.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-3 py-2.5 sm:px-4 sm:py-3"
               >
                 <div>
                   <p className="font-semibold">{member?.fullName ?? t("addMoney.unknownMember")}</p>

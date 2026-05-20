@@ -39,7 +39,7 @@ const initialState: ChartFormState = {
 
 export function CreateChartManager() {
   const { t, tx } = useT();
-  const { success: showSuccess } = useToast();
+  const { success: showSuccess, error: showError } = useToast();
   const configurationError =
     !isFirebaseConfigured || !auth
       ? "Firebase is not configured yet. Add your keys in .env.local first."
@@ -163,8 +163,11 @@ export function CreateChartManager() {
     } catch (e) {
       if (e instanceof Error && e.message === "LIMIT_REACHED_CHART") {
         setError("LIMIT_REACHED_CHART");
+        showError(t("toast.limitReachedChart"));
       } else {
-        setError(e instanceof Error ? e.message : "Failed to create the chart.");
+        const msg = e instanceof Error ? e.message : t("toast.genericError");
+        setError(msg);
+        showError(msg);
       }
     } finally {
       setIsSubmitting(false);
@@ -221,7 +224,9 @@ export function CreateChartManager() {
         }
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update chart lock.");
+      const msg = e instanceof Error ? e.message : t("toast.genericError");
+      setError(msg);
+      showError(msg);
     } finally {
       setLockingAction(null);
     }
@@ -238,7 +243,9 @@ export function CreateChartManager() {
       setCharts((prev) => prev.filter((c) => c.id !== chart.id));
       showSuccess(t("toast.chartDeleted"));
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("createChart.deleteFailed"));
+      const msg = e instanceof Error ? e.message : t("createChart.deleteFailed");
+      setError(msg);
+      showError(msg);
     } finally {
       setIsDeleting(false);
     }
@@ -390,7 +397,7 @@ export function CreateChartManager() {
       </div>
 
       <form
-        className="grid gap-4 rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-4 shadow-[var(--shadow-sm)]"
+        className="grid gap-4 rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-3.5 sm:p-5 shadow-[var(--shadow-sm)]"
         onSubmit={handleSubmit}
       >
         <p className="admin-section-label">{t("createChart.formTitle")}</p>

@@ -147,7 +147,7 @@ export function GroupDashboard({ groupId }: { groupId: string }) {
                   key={chart.id}
                   type="button"
                   onClick={() => handleChartSelect(chart)}
-                  className="flex items-center justify-between rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3.5 text-left transition hover:border-[color:var(--accent)] hover:bg-[color:var(--accent-dim)]"
+                  className="flex items-center justify-between rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-3 py-2.5 text-left transition hover:border-[color:var(--accent)] hover:bg-[color:var(--accent-dim)]"
                 >
                   <div>
                     <div className="flex items-center gap-2">

@@ -191,7 +191,7 @@ export default function MemberPage({
             : t("memberPage.tapUpdate");
 
   return (
-    <motion.main initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="mx-auto w-full max-w-7xl px-4 pb-16 sm:px-8">
+    <motion.main initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="mx-auto w-full max-w-7xl px-2.5 pb-16 sm:px-8">
       <div className="py-6 grid gap-4">
         <div className="group-hero">
           <div className="min-w-0">

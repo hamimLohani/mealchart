@@ -21,7 +21,7 @@ import { useToast } from "@/lib/hooks/use-toast";
 
 export function CostsManager() {
   const { t, tx } = useT();
-  const { success: showSuccess } = useToast();
+  const { success: showSuccess, error: showError } = useToast();
   const configError = !isFirebaseConfigured || !auth ? "Firebase is not configured yet." : null;
 
   const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null);
@@ -144,7 +144,9 @@ export function CostsManager() {
       showSuccess(t("toast.costAdded"));
       setItemName(""); setAmount("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to add cost.");
+      const msg = e instanceof Error ? e.message : t("toast.genericError");
+      setError(msg);
+      showError(msg);
     } finally { setIsSubmitting(false); }
   }
 
@@ -156,7 +158,9 @@ export function CostsManager() {
       setCosts((prev) => prev.filter((c) => c.id !== costId));
       showSuccess(t("toast.costDeleted"));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete cost.");
+      const msg = e instanceof Error ? e.message : t("toast.genericError");
+      setError(msg);
+      showError(msg);
     }
   }
 
@@ -250,8 +254,8 @@ export function CostsManager() {
       </div>
 
       <form
+        className="grid gap-4 rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-3.5 sm:p-5 shadow-[var(--shadow-sm)]"
         onSubmit={handleSubmit}
-        className="grid gap-4 rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]"
       >
         <p className="admin-section-label">{t("costs.addEntryTitle")}</p>
         <div className="grid gap-3 sm:grid-cols-3">
