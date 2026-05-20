@@ -57,6 +57,7 @@ export function CreateChartManager() {
   const [exportingChartId, setExportingChartId] = useState<string | null>(null);
   const [isRepairingData, setIsRepairingData] = useState(false);
   const [copiedGroupId, setCopiedGroupId] = useState(false);
+  const [carryOver, setCarryOver] = useState(true);
   const { adminProfile: currentAdminProfile, isLoading: profileLoading, error: profileError } = useCurrentAdminProfile();
   const activeAdminProfile =
     currentAdminProfile && adminProfile?.id === currentAdminProfile.id ? adminProfile : null;
@@ -145,7 +146,12 @@ export function CreateChartManager() {
     }
     setIsSubmitting(true);
     try {
-      const created = await createChart({ groupId: activeAdminProfile.groupId, year, month });
+      const created = await createChart({
+        groupId: activeAdminProfile.groupId,
+        year,
+        month,
+        carryOver,
+      });
       setCharts((c) => [created, ...c].sort((a, b) => b.monthKey.localeCompare(a.monthKey)));
       // Re-fetch group to update paid slots
       const group = await getGroupById(activeAdminProfile.groupId);
@@ -412,6 +418,42 @@ export function CreateChartManager() {
         <div className="rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] p-3.5">
           <p className="admin-section-label">{t("createChart.preview")}</p>
           <p className="mt-1.5 text-base font-semibold">{previewLabel}</p>
+        </div>
+
+        <div className="flex items-center justify-between rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] p-4">
+          <div className="flex flex-col gap-0.5">
+            <p className="text-sm font-bold">{t("createChart.carryOverTitle")}</p>
+            <p className="text-xs text-[color:var(--soft-foreground)]">{t("createChart.carryOverSubtitle")}</p>
+          </div>
+          <label className="relative inline-flex cursor-pointer items-center">
+            <input
+              type="checkbox"
+              className="peer sr-only"
+              checked={carryOver}
+              onChange={(e) => setCarryOver(e.target.checked)}
+            />
+            <div className="peer h-6 w-11 rounded-full bg-gray-300 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-[color:var(--accent)] peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:border-gray-600 dark:bg-gray-700 dark:peer-focus:ring-blue-800"></div>
+          </label>
+        </div>
+
+        <div className="rounded-[var(--radius-sm)] border border-[color:var(--border-strong)] bg-[color:var(--accent-dim)] p-4">
+          <div className="flex gap-3">
+            <svg className="h-5 w-5 text-[color:var(--accent)] shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
+            </svg>
+            <p className="text-xs text-[color:var(--soft-foreground)] leading-relaxed">
+              {t("createChart.carryOverNote")}
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-[var(--radius-sm)] border border-[color:var(--danger-border)] bg-[color:var(--danger-bg)] p-3">
+          <div className="flex items-center gap-3 text-[color:var(--danger)]">
+             <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.34c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+             </svg>
+             <p className="text-xs font-bold">{t("createChart.finalizeWarning")}</p>
+          </div>
         </div>
 
         <button

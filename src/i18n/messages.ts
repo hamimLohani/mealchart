@@ -88,6 +88,7 @@ export const en = {
 
   // Common
   "common.loading": "Loading…",
+  "common.signingOut": "Signing out…",
   "common.back": " Back",
   "common.tk": "tk",
   "common.active": "active",
@@ -245,6 +246,8 @@ export const en = {
   "groupNotices.depositDeductedBody": "An amount of {amount} tk was deducted/returned for {member}.",
   "groupNotices.costAddedTitle": "Cost added",
   "groupNotices.costAddedBody": "{item} — {amount} tk on {date}.",
+  "groupNotices.carryOverTitle": "Carry Over Balance",
+  "groupNotices.carryOverBody": "{member}'s previous balance of {amount} TK has been carried over to this month.",
 
   // Group members list / dashboard
   "groupMembers.title": "Members",
@@ -452,6 +455,10 @@ export const en = {
   "createChart.exporting": "Exporting PDF…",
   "createChart.deleteFailed": "Failed to delete chart.",
   "createChart.previewLine": "{label} · {days} {unit}",
+  "createChart.carryOverTitle": "Carry Over Balances?",
+  "createChart.carryOverSubtitle": "Previous balance (+/-) will be added to next month's deposit.",
+  "createChart.carryOverNote": "Note: Turning on 'Carry Over Balances' will automatically add members' current balance (+ or -) to the new month. If turned off, everyone's balance will start from zero (0) in the new month.",
+  "createChart.finalizeWarning": "Make sure all current month's bills are finalized.",
 
   "costs.selectHelp": "Choose the monthly chart to add costs to.",
   "costs.header": "Costs",
@@ -661,6 +668,7 @@ export const bn: Record<MessageKey, string> = {
   "features.loadingDesc": "গ্লোবাল লোডিং ওভারলে এবং স্কেলেটন লোডার ডাটা ফেচিংয়ের সময় মসৃণ ইউজার এক্সপেরিয়েন্স প্রদান করে।",
 
   "common.loading": "লোড হচ্ছে…",
+  "common.signingOut": "সাইন আউট হচ্ছে…",
   "common.back": " পিছনে",
   "common.tk": "টাকা",
   "common.active": "সক্রিয়",
@@ -807,6 +815,8 @@ export const bn: Record<MessageKey, string> = {
   "groupNotices.depositDeductedBody": "{member}-এর জন্য {amount} টাকা কাটা বা ফেরত দেওয়া হয়েছে।",
   "groupNotices.costAddedTitle": "খরচ যোগ করা হয়েছে",
   "groupNotices.costAddedBody": "{item} — {date} তারিখে {amount} টাকা খরচ হয়েছে।",
+  "groupNotices.carryOverTitle": "ব্যালেন্স ক্যারি ওভার",
+  "groupNotices.carryOverBody": "{member}-এর আগের মাসের {amount} টাকা ব্যালেন্স এই মাসে ক্যারি ওভার করা হয়েছে।",
 
   "groupMembers.title": "সদস্য",
   "groupMembers.allMembers": "সব সদস্য",
@@ -1005,6 +1015,10 @@ export const bn: Record<MessageKey, string> = {
   "createChart.exporting": "পিডিএফ তৈরি হচ্ছে…",
   "createChart.deleteFailed": "চার্ট মুছতে ব্যর্থ।",
   "createChart.previewLine": "{label} · {days} {unit}",
+  "createChart.carryOverTitle": "ব্যালেন্স ক্যারি ওভার করবেন?",
+  "createChart.carryOverSubtitle": "আগের মাসের ব্যালেন্স (+/-) নতুন মাসের জমার সাথে যোগ হবে।",
+  "createChart.carryOverNote": "নোট: 'Carry Over Balances' অন রাখলে সদস্যদের বর্তমান ব্যালেন্স (+ বা -) নতুন মাসে স্বয়ংক্রিয়ভাবে যুক্ত হয়ে যাবে। আর অফ রাখলে সবার ব্যালেন্স একদম শূন্য (০) থেকে নতুন মাস শুরু হবে।",
+  "createChart.finalizeWarning": "নিশ্চিত করুন যে বর্তমান মাসের সব বিল চূড়ান্ত করা হয়েছে।",
 
   "costs.selectHelp": "খরচ যোগ করতে মাসিক চার্ট বাছুন।",
   "costs.header": "খরচ",

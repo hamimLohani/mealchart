@@ -39,7 +39,11 @@ import {
   monthKeyFromDate,
   toMonthKey,
 } from "@/lib/utils/date";
-import { normalizeMealQuantity } from "@/lib/utils/meal-money";
+import {
+  getMemberTotals,
+  getMonthTotals,
+  normalizeMealQuantity,
+} from "@/lib/utils/meal-money";
 import type { AdminProfile, Chart, CostEntry, DepositEntry, Group, MealEntry, Member, Notice } from "@/types/domain";
 
 function ensureDb() {
@@ -396,6 +400,7 @@ export async function createChart(input: {
   groupId: string;
   year: number;
   month: number;
+  carryOver?: boolean;
 }) {
   const database = ensureDb();
   const monthKey = toMonthKey(input.year, input.month);
@@ -448,6 +453,61 @@ export async function createChart(input: {
     doc(database, chartsCollection(input.groupId), chartId),
     { ...record, createdAt: serverTimestamp() },
   );
+
+  // --- Carry Over Logic ---
+  if (input.carryOver) {
+    const charts = await listCharts(input.groupId);
+    // The newly created chart might be in the list, so we filter it out and take the next one
+    const previousChart = charts.find((c) => c.id !== chartId);
+
+    if (previousChart) {
+      const [members, meals, costs, deposits] = await Promise.all([
+        listMembers(input.groupId),
+        getMealsForMonth(input.groupId, previousChart.monthKey),
+        listCostsForChart(input.groupId, previousChart.id),
+        listDepositsForChart(input.groupId, previousChart.id),
+      ]);
+
+      const { mealRate } = getMonthTotals(meals, costs, deposits);
+      const firstDayOfNewMonth = `${monthKey}-01`;
+
+      for (const member of members) {
+        const { balance } = getMemberTotals(member.id, meals, deposits, mealRate);
+        if (Math.abs(balance) > 0.01) {
+          // Only carry over non-zero balances
+          const depositId = crypto.randomUUID();
+          const carryRecord = buildDepositRecord({
+            id: depositId,
+            memberId: member.id.toLowerCase(),
+            amount: balance,
+            date: firstDayOfNewMonth,
+            collectedByAdminId: "system-carryover",
+          });
+
+          await setDoc(
+            doc(database, chartDepositsCollection(input.groupId, chartId), depositId),
+            carryRecord,
+          );
+
+          await addDoc(collection(database, chartNoticesCollection(input.groupId, chartId)), {
+            ...buildNoticeRecord({
+              title: `ERR_TRANS:${JSON.stringify({ key: "groupNotices.carryOverTitle" })}`,
+              body: `ERR_TRANS:${JSON.stringify({
+                key: "groupNotices.carryOverBody",
+                vars: {
+                  member: member.fullName,
+                  amount: balance.toFixed(2),
+                },
+              })}`,
+              systemGenerated: true,
+            }),
+            createdAt: serverTimestamp(),
+          });
+        }
+      }
+    }
+  }
+  // -------------------------
 
   await updateDoc(doc(database, groupsCollection, input.groupId), {
     currentChartId: chartId,
