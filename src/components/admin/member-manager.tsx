@@ -12,6 +12,7 @@ import { getFriendlyEmailError } from "@/lib/utils/email-error";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
+import { useToast } from "@/lib/hooks/use-toast";
 
 type MemberFormState = { fullName: string; joinDate: string; email: string };
 const initialForm: MemberFormState = {
@@ -22,6 +23,7 @@ const initialForm: MemberFormState = {
 
 export function MemberManager() {
   const { t, tx } = useT();
+  const { success: showSuccess, error: showError } = useToast();
   const paymentPhone = process.env.NEXT_PUBLIC_PAYMENT_PHONE || "01xxxxxxxxx";
   const configurationError =
     !isFirebaseConfigured || !auth
@@ -169,6 +171,7 @@ export function MemberManager() {
         setMembers((c) =>
           c.map((m) => (m.id === updated.id ? updated : m)).sort((a, b) => a.fullName.localeCompare(b.fullName))
         );
+        showSuccess(t("toast.memberUpdated"));
       } else {
         const created = await createMember({
           groupId: activeAdminProfile.groupId,
@@ -177,6 +180,7 @@ export function MemberManager() {
           email: form.email.trim(),
         });
         setMembers((c) => [...c, created].sort((a, b) => a.fullName.localeCompare(b.fullName)));
+        showSuccess(t("toast.memberAdded"));
         
         // Update slots
        const group = await getGroupById(activeAdminProfile.groupId);
@@ -217,6 +221,7 @@ export function MemberManager() {
       await deleteMember(activeAdminProfile.groupId, memberId);
       setMembers((c) => c.filter((m) => m.id !== memberId));
       if (editingMemberId === memberId) resetForm();
+      showSuccess(t("toast.memberRemoved"));
 
       if (memberToRemove && memberToRemove.email) {
         const emailResult = await sendRemovalEmail(
@@ -279,6 +284,7 @@ export function MemberManager() {
       setJoinRequests(c => c.filter(r => r.id !== req.id));
       const currentMembers = await listMembers(activeAdminProfile.groupId);
       setMembers(currentMembers);
+      showSuccess(t("toast.memberAdded"));
 
       // Update slots
       const group = await getGroupById(activeAdminProfile.groupId);

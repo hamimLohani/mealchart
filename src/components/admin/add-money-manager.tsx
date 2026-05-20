@@ -21,11 +21,13 @@ import { getFriendlyEmailError } from "@/lib/utils/email-error";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
+import { useToast } from "@/lib/hooks/use-toast";
 
 type DepositFormState = { memberId: string; amount: string; date: string };
 
 export function AddMoneyManager() {
   const { t, tx } = useT();
+  const { success: showSuccess } = useToast();
   const configurationError =
     !isFirebaseConfigured || !auth
       ? "Firebase is not configured yet. Add your keys in .env.local first."
@@ -197,6 +199,7 @@ export function AddMoneyManager() {
         if (prev.some((d) => d.id === deposit.id)) return prev;
         return [deposit, ...prev];
       });
+      showSuccess(amount >= 0 ? t("toast.depositAdded") : t("toast.depositDeducted"));
 
       if (member) {
         const memberTotal = deposits

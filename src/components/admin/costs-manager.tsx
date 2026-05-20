@@ -17,9 +17,11 @@ import type { AdminProfile, Chart, CostEntry, DepositEntry } from "@/types/domai
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
+import { useToast } from "@/lib/hooks/use-toast";
 
 export function CostsManager() {
   const { t, tx } = useT();
+  const { success: showSuccess } = useToast();
   const configError = !isFirebaseConfigured || !auth ? "Firebase is not configured yet." : null;
 
   const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null);
@@ -139,6 +141,7 @@ export function CostsManager() {
         if (prev.some((c) => c.id === created.id)) return prev;
         return [created, ...prev];
       });
+      showSuccess(t("toast.costAdded"));
       setItemName(""); setAmount("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to add cost.");
@@ -151,6 +154,7 @@ export function CostsManager() {
     try {
       await deleteCost(adminProfile.groupId, selectedChart.id, costId);
       setCosts((prev) => prev.filter((c) => c.id !== costId));
+      showSuccess(t("toast.costDeleted"));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to delete cost.");
     }

@@ -7,6 +7,7 @@ import { useUiStore } from "@/store/ui-store";
 import { useAuthStore } from "@/store/auth-store";
 import { auth } from "@/lib/firebase/client";
 import { useT } from "@/i18n/use-t";
+import { ToastContainer } from "@/components/ui/toast-container";
 
 export function UiProvider({ children }: { children: React.ReactNode }) {
   const { language, theme } = useUiStore();
@@ -48,6 +49,7 @@ export function UiProvider({ children }: { children: React.ReactNode }) {
     >
       <>
         {children}
+        <ToastContainer />
         {isLoading ? (
           <div className="global-loading-overlay" aria-live="polite" aria-busy="true" role="status">
             <div className="global-loading-card">

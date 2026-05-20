@@ -27,6 +27,7 @@ import { getFriendlyEmailError } from "@/lib/utils/email-error";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
+import { useToast } from "@/lib/hooks/use-toast";
 
 type ChartFormState = { year: string; month: string };
 
@@ -38,6 +39,7 @@ const initialState: ChartFormState = {
 
 export function CreateChartManager() {
   const { t, tx } = useT();
+  const { success: showSuccess } = useToast();
   const configurationError =
     !isFirebaseConfigured || !auth
       ? "Firebase is not configured yet. Add your keys in .env.local first."
@@ -153,6 +155,7 @@ export function CreateChartManager() {
         carryOver,
       });
       setCharts((c) => [created, ...c].sort((a, b) => b.monthKey.localeCompare(a.monthKey)));
+      showSuccess(t("toast.chartCreated"));
       // Re-fetch group to update paid slots
       const group = await getGroupById(activeAdminProfile.groupId);
       setPaidChartSlots(group?.paidChartSlots ?? 0);
@@ -183,6 +186,7 @@ export function CreateChartManager() {
           current.id === chart.id ? { ...current, locked: !current.locked } : current,
         ),
       );
+      showSuccess(chart.locked ? t("toast.chartUnlocked") : t("toast.chartLocked"));
 
       if (!chart.locked) {
         const group = await getGroupById(activeAdminProfile.groupId);
@@ -232,6 +236,7 @@ export function CreateChartManager() {
     try {
       await deleteChart(activeAdminProfile.groupId, chart.id);
       setCharts((prev) => prev.filter((c) => c.id !== chart.id));
+      showSuccess(t("toast.chartDeleted"));
     } catch (e) {
       setError(e instanceof Error ? e.message : t("createChart.deleteFailed"));
     } finally {

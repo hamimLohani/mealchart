@@ -17,6 +17,7 @@ import { memberDisplayName, memberIdsForChartRows } from "@/lib/utils/chart-memb
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
+import { useToast } from "@/lib/hooks/use-toast";
 
 function daysInMonth(year: number, month: number) {
   return new Date(year, month, 0).getDate();
@@ -24,6 +25,7 @@ function daysInMonth(year: number, month: number) {
 
 export function EditMealsManager() {
   const { t, tx } = useT();
+  const { success: showSuccess } = useToast();
   const blocked = !isFirebaseConfigured || !auth;
 
   const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null);
@@ -162,6 +164,7 @@ export function EditMealsManager() {
             date,
             quantity: val,
           });
+          showSuccess(t("toast.mealSaved"));
         } catch (e) {
           setError(tx(e instanceof Error ? e.message : t("errors.saveMealFailed")));
         }
@@ -195,6 +198,7 @@ export function EditMealsManager() {
             date,
             quantity: val,
           });
+          showSuccess(t("toast.mealSaved"));
         } catch (e) {
           setError(tx(e instanceof Error ? e.message : t("errors.saveMealFailed")));
         }

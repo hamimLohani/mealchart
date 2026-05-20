@@ -581,6 +581,21 @@ export const en = {
   "errors.emailSummaryStatus": "Month locked. Summary emails: {sent} sent, {failed} failed for unstable connection.",
   "errors.emailRemovalFailed": "Member removed, but removal email failed for unstable connection.",
   "errors.emailFailed": "Failed to send email for unstable connection.",
+
+  // Toasts
+  "toast.memberAdded": "Member added successfully!",
+  "toast.memberUpdated": "Member updated successfully!",
+  "toast.memberRemoved": "Member removed successfully!",
+  "toast.chartCreated": "New chart created successfully!",
+  "toast.chartDeleted": "Chart deleted successfully!",
+  "toast.chartLocked": "Month locked successfully!",
+  "toast.chartUnlocked": "Month unlocked successfully!",
+  "toast.costAdded": "Cost entry added successfully!",
+  "toast.costDeleted": "Cost entry deleted successfully!",
+  "toast.depositAdded": "Deposit added successfully!",
+  "toast.depositDeducted": "Amount deducted successfully!",
+  "toast.mealSaved": "Meals updated successfully!",
+  "toast.genericError": "An error occurred. Please try again.",
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -1140,6 +1155,21 @@ export const bn: Record<MessageKey, string> = {
   "errors.emailSummaryStatus": "মাস লক করা হয়েছে। সারাংশ ইমেল: {sent}টি পাঠানো হয়েছে, {failed}টি অস্থির সংযোগের কারণে ব্যর্থ হয়েছে।",
   "errors.emailRemovalFailed": "সদস্যকে সরানো হয়েছে, কিন্তু অস্থির সংযোগের কারণে অপসারণ ইমেল পাঠানো যায়নি।",
   "errors.emailFailed": "অস্থির সংযোগের কারণে ইমেইল পাঠানো ব্যর্থ হয়েছে।",
+
+  // Toasts
+  "toast.memberAdded": "সদস্য সফলভাবে যোগ করা হয়েছে!",
+  "toast.memberUpdated": "সদস্যের তথ্য সফলভাবে আপডেট করা হয়েছে!",
+  "toast.memberRemoved": "সদস্য সফলভাবে সরানো হয়েছে!",
+  "toast.chartCreated": "নতুন চার্ট সফলভাবে তৈরি হয়েছে!",
+  "toast.chartDeleted": "চার্ট সফলভাবে মুছে ফেলা হয়েছে!",
+  "toast.chartLocked": "মাস সফলভাবে লক করা হয়েছে!",
+  "toast.chartUnlocked": "মাস সফলভাবে আনলক করা হয়েছে!",
+  "toast.costAdded": "খরচ সফলভাবে যোগ করা হয়েছে!",
+  "toast.costDeleted": "খরচ সফলভাবে মুছে ফেলা হয়েছে!",
+  "toast.depositAdded": "টাকা সফলভাবে জমা করা হয়েছে!",
+  "toast.depositDeducted": "টাকা সফলভাবে কাটা হয়েছে!",
+  "toast.mealSaved": "মিল সফলভাবে সেভ করা হয়েছে!",
+  "toast.genericError": "একটি ত্রুটি ঘটেছে। দয়া করে আবার চেষ্টা করুন।",
 };
 
 export const messages: Record<Language, Record<MessageKey, string>> = {
