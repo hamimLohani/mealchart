@@ -51,8 +51,8 @@ export function AddMoneyManager() {
   const { adminProfile: currentAdminProfile, isLoading: profileLoading, error: profileError } = useCurrentAdminProfile();
   const activeAdminProfile =
     currentAdminProfile && adminProfile?.id === currentAdminProfile.id ? adminProfile : null;
-  const visibleMembers = activeAdminProfile ? members : [];
-  const visibleCharts = activeAdminProfile ? charts : [];
+  const visibleMembers = useMemo(() => (activeAdminProfile ? members : []), [activeAdminProfile, members]);
+  const visibleCharts = useMemo(() => (activeAdminProfile ? charts : []), [activeAdminProfile, charts]);
   const resolvedError =
     error ??
     (profileError

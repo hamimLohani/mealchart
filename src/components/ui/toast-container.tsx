@@ -22,10 +22,10 @@ function ToastItem({ toast }: { toast: ToastType }) {
   const removeToast = useUiStore((state) => state.removeToast);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const timer = window.setTimeout(() => {
       removeToast(toast.id);
     }, 4000);
-    return () => clearTimeout(timer);
+    return () => window.clearTimeout(timer);
   }, [toast.id, removeToast]);
 
   const variants = {
@@ -41,28 +41,6 @@ function ToastItem({ toast }: { toast: ToastType }) {
       ? "bg-[color:var(--danger)] text-white shadow-[0_8px_20px_rgba(239,68,68,0.3)]"
       : "bg-[color:var(--foreground)] text-white shadow-lg";
 
-  const Icon = () => {
-    if (toast.type === "success") {
-      return (
-        <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-        </svg>
-      );
-    }
-    if (toast.type === "error") {
-      return (
-        <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.34c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
-        </svg>
-      );
-    }
-    return (
-      <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
-      </svg>
-    );
-  };
-
   return (
     <motion.div
       layout
@@ -72,7 +50,7 @@ function ToastItem({ toast }: { toast: ToastType }) {
       exit="exit"
       className={`flex items-center gap-3 rounded-[var(--radius-sm)] px-4 py-3.5 text-sm font-semibold ${bgClass} pointer-events-auto`}
     >
-      <Icon />
+      <ToastIcon type={toast.type} />
       <p className="flex-1 leading-snug">{toast.message}</p>
       <button
         onClick={() => removeToast(toast.id)}
@@ -83,5 +61,28 @@ function ToastItem({ toast }: { toast: ToastType }) {
         </svg>
       </button>
     </motion.div>
+  );
+}
+
+function ToastIcon({ type }: { type: ToastType["type"] }) {
+  if (type === "success") {
+    return (
+      <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+      </svg>
+    );
+  }
+  if (type === "error") {
+    return (
+      <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.34c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
+    </svg>
   );
 }

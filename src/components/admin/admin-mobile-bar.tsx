@@ -3,23 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useT } from "@/i18n/use-t";
-import type { MessageKey } from "@/i18n/messages";
-
-const pageLabelKeys: Record<string, MessageKey> = {
-  "/admin": "adminMobile.panel",
-  "/admin/members": "adminNav.members",
-  "/admin/add-money": "adminNav.addMoney",
-  "/admin/edit-meals": "adminNav.editMeals",
-  "/admin/costs": "adminNav.costs",
-  "/admin/create-chart": "adminNav.createChart",
-  "/admin/notices": "adminNav.notices",
-};
 
 export function AdminMobileBar() {
   const pathname = usePathname();
   const { t } = useT();
-  const labelKey = pageLabelKeys[pathname] ?? "adminMobile.admin";
-  const label = t(labelKey);
 
   const navItems = [
     { href: "/admin", icon: <HomeIcon />, labelKey: "adminMobile.panel" as const },

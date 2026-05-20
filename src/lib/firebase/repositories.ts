@@ -84,10 +84,19 @@ function mapMealEntryDoc(id: string, data: Record<string, unknown>): MealEntry {
   };
 }
 
+function isTimestampLike(value: unknown): value is { seconds: number } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "seconds" in value &&
+    typeof (value as { seconds?: unknown }).seconds === "number"
+  );
+}
+
 function serializeDate(value: unknown) {
   if (value instanceof Timestamp) return value.toDate().toISOString();
-  if (typeof value === "object" && value !== null && "seconds" in value) {
-    return new Date((value as any).seconds * 1000).toISOString();
+  if (isTimestampLike(value)) {
+    return new Date(value.seconds * 1000).toISOString();
   }
   return typeof value === "string" ? value : new Date().toISOString();
 }

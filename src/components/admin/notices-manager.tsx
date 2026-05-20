@@ -44,20 +44,28 @@ export function NoticesManager() {
         ? "Log in as admin to manage notices."
         : null);
 
-  function formatNoticeDate(createdAt: any) {
+  function formatNoticeDate(createdAt: unknown) {
     if (!createdAt) return "";
     try {
       // Handle Firebase Timestamp
-      if (typeof createdAt === "object" && "toDate" in createdAt && typeof createdAt.toDate === "function") {
-        return createdAt.toDate().toLocaleString(locale);
+      if (
+        typeof createdAt === "object" &&
+        createdAt !== null &&
+        "toDate" in createdAt &&
+        typeof (createdAt as { toDate?: unknown }).toDate === "function"
+      ) {
+        return (createdAt as { toDate: () => Date }).toDate().toLocaleString(locale);
       }
       // Handle numeric timestamp (seconds/ms)
       if (typeof createdAt === "number") {
         return new Date(createdAt).toLocaleString(locale);
       }
       // Handle ISO string or date object
-      return new Date(createdAt).toLocaleString(locale);
-    } catch (e) {
+      if (typeof createdAt === "string" || createdAt instanceof Date) {
+        return new Date(createdAt).toLocaleString(locale);
+      }
+      return "";
+    } catch {
       return "";
     }
   }

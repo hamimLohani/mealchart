@@ -36,7 +36,7 @@ export function AppFooter() {
           </div>
           <div className="mt-8 md:order-1 md:mt-0 flex flex-col items-center md:items-start gap-3">
             <p className="text-center md:text-left text-xs leading-5 text-[color:var(--muted)] font-medium">
-              &copy; {currentYear} Meat Chart. All rights reserved. <span className="hidden sm:inline">|</span> <span className="block sm:inline mt-1 sm:mt-0">Designed for optimal meal management.</span>
+              &copy; {currentYear} Meal Chart. All rights reserved. <span className="hidden sm:inline">|</span> <span className="block sm:inline mt-1 sm:mt-0">Designed for optimal meal management.</span>
             </p>
             <div className="text-center md:text-left text-xs text-[color:var(--muted)] flex flex-col gap-1">
               <span className="font-semibold text-[color:var(--soft-foreground)]">Developed by Md Inzamamul Lohani</span>

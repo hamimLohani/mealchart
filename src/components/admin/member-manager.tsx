@@ -43,6 +43,7 @@ export function MemberManager() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
+  const [requestAction, setRequestAction] = useState<"approve" | "reject" | null>(null);
   const [copiedGroupId, setCopiedGroupId] = useState(false);
   const { adminProfile: currentAdminProfile, isLoading: profileLoading, error: profileError } = useCurrentAdminProfile();
   const activeAdminProfile =
@@ -65,16 +66,20 @@ export function MemberManager() {
         ? "Log in as an admin to manage members."
         : null);
 
+  const requestLoadingMessage = requestAction
+    ? requestAction === "approve"
+      ? t("memberMgr.submittingApprove")
+      : t("memberMgr.submittingReject")
+    : isRemoving
+      ? t("memberMgr.submittingRemove")
+      : editingMemberId
+        ? t("memberMgr.submittingUpdate")
+        : t("memberMgr.submittingAdd");
+
   useGlobalLoading(
     "member-manager",
-    isLoading || profileLoading || isSubmitting || isRemoving,
-    isLoading
-      ? t("memberMgr.loadingList")
-      : isRemoving
-        ? t("memberMgr.submittingRemove")
-        : editingMemberId
-          ? t("memberMgr.submittingUpdate")
-          : t("memberMgr.submittingAdd"),
+    isLoading || profileLoading || isSubmitting || isRemoving || !!requestAction,
+    isLoading ? t("memberMgr.loadingList") : requestLoadingMessage,
   );
 
   useEffect(() => {
@@ -153,7 +158,7 @@ export function MemberManager() {
           
         setError(`ERR_TRANS:${JSON.stringify({ 
           key: "errors.emailValidationFailed", 
-          vars: { error: t(errorKey as any) } 
+          vars: { error: t(errorKey) } 
         })}`);
         setIsSubmitting(false);
         return;
@@ -267,6 +272,7 @@ export function MemberManager() {
 
   async function handleApproveRequest(req: JoinRequest) {
     if (!activeAdminProfile) return;
+    setRequestAction("approve");
     setIsSubmitting(true);
     try {
       // --- Email Existence Check (Option 3) ---
@@ -278,18 +284,18 @@ export function MemberManager() {
 
         setError(`ERR_TRANS:${JSON.stringify({ 
           key: "errors.cannotApprove", 
-          vars: { error: t(errorKey as any) } 
+          vars: { error: t(errorKey) } 
         })}`);
-        setIsSubmitting(false);
+        showError(t("errors.cannotApprove", { error: t(errorKey) }));
         return;
       }
       // ---------------------------------------
 
       await approveJoinRequest(activeAdminProfile.groupId, req.id, req.fullName, req.email);
-      setJoinRequests(c => c.filter(r => r.id !== req.id));
+      setJoinRequests((c) => c.filter((r) => r.id !== req.id));
       const currentMembers = await listMembers(activeAdminProfile.groupId);
       setMembers(currentMembers);
-      showSuccess(t("toast.memberAdded"));
+      showSuccess(t("toast.joinRequestApproved"));
 
       // Update slots
       const group = await getGroupById(activeAdminProfile.groupId);
@@ -319,16 +325,25 @@ export function MemberManager() {
       }
     } finally {
       setIsSubmitting(false);
+      setRequestAction(null);
     }
   }
 
   async function handleRejectRequest(req: JoinRequest) {
     if (!activeAdminProfile) return;
+    setRequestAction("reject");
+    setIsSubmitting(true);
     try {
       await rejectJoinRequest(activeAdminProfile.groupId, req.id);
-      setJoinRequests(c => c.filter(r => r.id !== req.id));
+      setJoinRequests((c) => c.filter((r) => r.id !== req.id));
+      showSuccess(t("toast.joinRequestRejected"));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to reject request.");
+      const msg = e instanceof Error ? e.message : t("errors.cannotReject");
+      setError(msg);
+      showError(msg);
+    } finally {
+      setIsSubmitting(false);
+      setRequestAction(null);
     }
   }
 
@@ -463,10 +478,20 @@ export function MemberManager() {
                   <p className="mt-0.5 text-xs text-[color:var(--muted)]">{req.email}</p>
                 </div>
                 <div className="flex gap-2">
-                  <button className="button-primary" onClick={() => void handleApproveRequest(req)} type="button">
+                  <button
+                    className="button-primary"
+                    disabled={isSubmitting || !!requestAction}
+                    onClick={() => void handleApproveRequest(req)}
+                    type="button"
+                  >
                     {t("memberMgr.approve")}
                   </button>
-                  <button className="button-danger" onClick={() => void handleRejectRequest(req)} type="button">
+                  <button
+                    className="button-danger"
+                    disabled={isSubmitting || !!requestAction}
+                    onClick={() => void handleRejectRequest(req)}
+                    type="button"
+                  >
                     {t("memberMgr.reject")}
                   </button>
                 </div>

@@ -12,8 +12,7 @@ if (!user || !pass) {
   console.warn("⚠️ SMTP_USER or SMTP_PASS is missing from environment variables.");
 }
 
-export const transporter = nodemailer.createTransport({
-  service: service as any,
+const transportOptions = {
   host,
   port,
   secure,
@@ -24,7 +23,10 @@ export const transporter = nodemailer.createTransport({
     user,
     pass,
   },
-});
+  service,
+};
+
+export const transporter = nodemailer.createTransport(transportOptions);
 
 /*
 // Resend setup (Commented out)

@@ -1,7 +1,7 @@
 "use client";
 
 import { useT } from "@/i18n/use-t";
-import { formatMeal, getMemberTotals, getMonthTotals, normalizeMealQuantity } from "@/lib/utils/meal-money";
+import { formatMeal, getMemberTotals, getMonthTotals } from "@/lib/utils/meal-money";
 import { toMonthKey } from "@/lib/utils/date";
 import { Skeleton } from "@/components/ui/skeleton";
 import {

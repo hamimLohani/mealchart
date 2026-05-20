@@ -274,6 +274,7 @@ export const en = {
   "memberPage.addMeal": "Add Meal",
   "memberPage.loadingMeal": "Loading meal…",
   "memberPage.monthLockedShort": "Month is locked",
+  "memberPage.cannotEditMeals": "You cannot edit this member's meals",
   "memberPage.saving": "Saving…",
   "memberPage.saved": "✓ Saved",
   "memberPage.tapUpdate": "Tap to update",
@@ -375,6 +376,8 @@ export const en = {
   "memberMgr.pendingRequests": "Pending Join Requests",
   "memberMgr.approve": "Approve",
   "memberMgr.reject": "Reject",
+  "memberMgr.submittingApprove": "Approving request…",
+  "memberMgr.submittingReject": "Rejecting request…",
 
   // Notices manager (admin)
   "noticeMgr.addFormTitle": "Add Notice",
@@ -511,8 +514,9 @@ export const en = {
   "errors.emailDomainNotExist": "The email domain does not exist.",
   "errors.emailNotExist": "The email address does not appear to exist.",
   "errors.cannotApprove": "Cannot approve: {error}",
-  "errors.limitReachedChart": "Free Limit Reached (3 Charts). To create more charts, please pay 20 taka to {phone} (bKash/Nagad). Reference: {groupId}. After payment, we will enable your next chart slot.",
-  "errors.limitReachedMember": "Member Limit Reached (4 Members). To add more members, please pay 50 taka per member to {phone} (bKash/Nagad). Reference: {groupId}. After payment, we will enable your next member slot.",
+  "errors.cannotReject": "Cannot reject: {error}",
+  "errors.limitReachedChart": "To create more charts, please 'Send Money' 20 taka per chart to '{phone}' (bKash/Nagad). Use this groupId as Reference.",
+  "errors.limitReachedMember": "To add more members, please 'Send Money' 50 taka per member to '{phone}' (bKash/Nagad). Use this groupId as Reference.",
 
   "usage.memberStatus": "MEMBER USAGE STATUS",
   "usage.chartStatus": "CHART USAGE STATUS",
@@ -597,6 +601,8 @@ export const en = {
   "toast.mealSaved": "Meals updated successfully!",
   "toast.limitReachedMember": "Fail to add member",
   "toast.limitReachedChart": "Fail to create chart",
+  "toast.joinRequestApproved": "Join request approved!",
+  "toast.joinRequestRejected": "Join request rejected.",
   "toast.genericError": "An error occurred. Please try again.",
 } as const;
 
@@ -784,7 +790,7 @@ export const bn: Record<MessageKey, string> = {
   "groupDash.selectMember": "সদস্য বাছুন",
   "groupDash.searchMembers": "নাম বা ইমেইল দিয়ে খুঁজুন…",
   "groupDash.joined": "যোগদান",
-  "groupDash.exportCSV": "পিডিএফ ডাউনলোড",
+  "groupDash.exportCSV": "PDF ডাউনলোড",
   "groupDash.financialOverview": "আর্থিক ওভারভিউ",
 
   "groupChart.loading": "লোড হচ্ছে…",
@@ -859,6 +865,7 @@ export const bn: Record<MessageKey, string> = {
   "memberPage.addMeal": "মিল যোগ করুন",
   "memberPage.loadingMeal": "মিল লোড হচ্ছে…",
   "memberPage.monthLockedShort": "মাস লক",
+  "memberPage.cannotEditMeals": "আপনি এই সদস্যের মিল সম্পাদনা করতে পারবেন না",
   "memberPage.saving": "সেভ হচ্ছে…",
   "memberPage.saved": "✓ সেভ হয়েছে",
   "memberPage.tapUpdate": "ট্যাপ করে আপডেট",
@@ -955,6 +962,8 @@ export const bn: Record<MessageKey, string> = {
   "memberMgr.pendingRequests": "অপেক্ষমান যোগদানের অনুরোধ",
   "memberMgr.approve": "অনুমোদন করুন",
   "memberMgr.reject": "প্রত্যাখ্যান করুন",
+  "memberMgr.submittingApprove": "অনুরোধ অনুমোদন করা হচ্ছে…",
+  "memberMgr.submittingReject": "অনুরোধ প্রত্যাখ্যান করা হচ্ছে…",
 
   "noticeMgr.addFormTitle": "নোটিশ যোগ",
   "noticeMgr.editFormTitle": "নোটিশ সম্পাদনা",
@@ -1139,8 +1148,9 @@ export const bn: Record<MessageKey, string> = {
   "errors.emailDomainNotExist": "ইমেল ডোমেনটির অস্তিত্ব নেই।",
   "errors.emailNotExist": "ইমেল ঠিকানাটির কোনো অস্তিত্ব নেই বলে মনে হচ্ছে।",
   "errors.cannotApprove": "অনুমোদন করা সম্ভব নয়: {error}",
-  "errors.limitReachedChart": "বিনামূল্যে চার্ট তৈরির সীমা অতিক্রম করেছেন (3টি)। আরও চার্ট তৈরি করতে দয়া করে {phone} (বিকাশ/নগদ) নম্বরে ২০ টাকা প্রদান করুন। রেফারেন্স: {groupId}। পেমেন্টের পর আমরা আপনার পরবর্তী চার্ট স্লটটি সক্রিয় করে দেব।",
-  "errors.limitReachedMember": "সদস্য যোগ করার সীমা অতিক্রম করেছেন (4 জন)। আরও সদস্য যোগ করতে দয়া করে {phone} (বিকাশ/নগদ) নম্বরে প্রতি সদস্যের জন্য ৫০ টাকা প্রদান করুন। রেফারেন্স: {groupId}। পেমেন্টের পর আমরা আপনার পরবর্তী মেম্বার স্লটটি সক্রিয় করে দেব।",
+  "errors.cannotReject": "প্রত্যাখ্যান করা সম্ভব নয়: {error}",
+  "errors.limitReachedChart": "চার্ট তৈরি করতে দয়া করে '{phone}' (বিকাশ/নগদ) নম্বরে প্রতি চার্টের জন্য ২০ টাকা 'সেন্ড মানি' করুন। নিচের রেফারেন্স যোগ করুন।",
+  "errors.limitReachedMember": "সদস্য যোগ করতে দয়া করে '{phone}' (বিকাশ/নগদ) নম্বরে প্রতি সদস্যের জন্য ৫০ টাকা 'সেন্ড মানি' করুন। নিচের রেফারেন্স যোগ করুন।",
 
   "usage.memberStatus": "মেম্বার ব্যবহারের অবস্থা",
   "usage.chartStatus": "চার্ট ব্যবহারের অবস্থা",
@@ -1174,6 +1184,8 @@ export const bn: Record<MessageKey, string> = {
   "toast.mealSaved": "মিল সফলভাবে সেভ করা হয়েছে!",
   "toast.limitReachedMember": "সদস্য যোগ করতে ব্যর্থ",
   "toast.limitReachedChart": "চার্ট তৈরি করতে ব্যর্থ",
+  "toast.joinRequestApproved": "যোগদানের অনুরোধ সফলভাবে অনুমোদিত হয়েছে!",
+  "toast.joinRequestRejected": "যোগদানের অনুরোধ প্রত্যাখ্যাত হয়েছে।",
   "toast.genericError": "একটি ত্রুটি ঘটেছে। দয়া করে আবার চেষ্টা করুন।",
 };
 

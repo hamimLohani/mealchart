@@ -10,7 +10,7 @@ import { useT } from "@/i18n/use-t";
 import { ToastContainer } from "@/components/ui/toast-container";
 
 export function UiProvider({ children }: { children: React.ReactNode }) {
-  const { language, theme, startLoading, stopLoading } = useUiStore();
+  const { language, theme } = useUiStore();
   const loadingEntries = useUiStore((state) => state.loadingEntries);
   const { setAdmin, setLoaded } = useAuthStore();
   const { t } = useT();
@@ -18,17 +18,26 @@ export function UiProvider({ children }: { children: React.ReactNode }) {
   const [isReloadingFromSession, setIsReloadingFromSession] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
-    // Check if we were reloading
-    if (typeof window !== "undefined" && sessionStorage.getItem("is_reloading") === "true") {
-      setIsReloadingFromSession(true);
-      sessionStorage.removeItem("is_reloading");
-      // Optionally stop any lingering reload loading state
-      stopLoading("app-header-reload");
-      // Hide the session-based reload message after a brief delay
-      setTimeout(() => setIsReloadingFromSession(false), 500);
-    }
-  }, [stopLoading]);
+  }, []);
+
+  useEffect(() => {
+    const wasReloading = sessionStorage.getItem("is_reloading") === "true";
+    if (!wasReloading) return;
+
+    sessionStorage.removeItem("is_reloading");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsReloadingFromSession(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isReloadingFromSession) return;
+    const timer = window.setTimeout(() => {
+      setIsReloadingFromSession(false);
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [isReloadingFromSession]);
 
   useEffect(() => {
     document.documentElement.lang = language;

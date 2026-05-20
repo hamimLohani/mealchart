@@ -179,10 +179,18 @@ export async function verifyEmailExistence(email: string) {
     }
 
     return { exists: false, error: "Domain has no mail servers (MX records) configured" };
-  } catch (error: any) {
-    if (error.code === 'ENOTFOUND' || error.code === 'ENODATA') {
+  } catch (error: unknown) {
+    const isNotFoundError =
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      ((error as { code?: unknown }).code === "ENOTFOUND" ||
+        (error as { code?: unknown }).code === "ENODATA");
+
+    if (isNotFoundError) {
       return { exists: false, error: "The email domain does not exist." };
     }
+
     console.error(`Email verification failed for ${email}:`, error);
     return { exists: false, error: "Could not verify email domain." };
   }

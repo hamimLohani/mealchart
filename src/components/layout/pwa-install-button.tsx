@@ -19,15 +19,16 @@ export function PWAInstallButton() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     if (typeof window === "undefined") return;
 
-    // Check initial installation status
     const isStandaloneMode = window.matchMedia("(display-mode: standalone)").matches;
-    const isTWA = document.referrer.includes("android-app://") || 
-                 (window as any).navigator.standalone ||
-                 window.location.search.includes("utm_source=twa");
-    
+    const navigatorWithStandalone = navigator as Navigator & { standalone?: boolean };
+    const isTWA = document.referrer.includes("android-app://") ||
+      Boolean(navigatorWithStandalone.standalone) ||
+      window.location.search.includes("utm_source=twa");
+
     if (isStandaloneMode || isTWA) {
       setIsInstalled(true);
     }
