@@ -30,6 +30,8 @@ export function MemberManager() {
   const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null);
   const [groupName, setGroupName] = useState("");
   const [members, setMembers] = useState<Member[]>([]);
+  const [paidMemberSlots, setPaidMemberSlots] = useState(0);
+  const [totalMembersCreated, setTotalMembersCreated] = useState(0);
   const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
   const [form, setForm] = useState<MemberFormState>(initialForm);
   const [search, setSearch] = useState("");
@@ -91,6 +93,8 @@ export function MemberManager() {
         setAdminProfile(currentAdminProfile);
         setGroupName(group?.name ?? "");
         setMembers(currentMembers);
+        setPaidMemberSlots(group?.paidMemberSlots ?? 0);
+        setTotalMembersCreated(group?.totalMembersCreated ?? 0);
         setJoinRequests(currentRequests);
       } catch (e) {
         if (!active) return;
@@ -155,6 +159,11 @@ export function MemberManager() {
           email: form.email.trim(),
         });
         setMembers((c) => [...c, created].sort((a, b) => a.fullName.localeCompare(b.fullName)));
+        
+        // Update slots
+       const group = await getGroupById(activeAdminProfile.groupId);
+       setPaidMemberSlots(group?.paidMemberSlots ?? 0);
+       setTotalMembersCreated(group?.totalMembersCreated ?? 0);
 
         const emailResult = await sendWelcomeEmail(
           created.email,
@@ -171,7 +180,11 @@ export function MemberManager() {
       }
       resetForm();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save member.");
+      if (e instanceof Error && e.message === "LIMIT_REACHED_MEMBER") {
+        setError("LIMIT_REACHED_MEMBER");
+      } else {
+        setError(e instanceof Error ? e.message : "Failed to save member.");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -222,6 +235,11 @@ export function MemberManager() {
       const currentMembers = await listMembers(activeAdminProfile.groupId);
       setMembers(currentMembers);
 
+      // Update slots
+      const group = await getGroupById(activeAdminProfile.groupId);
+      setPaidMemberSlots(group?.paidMemberSlots ?? 0);
+      setTotalMembersCreated(group?.totalMembersCreated ?? 0);
+
       const emailResult = await sendWelcomeEmail(
         req.email,
         req.fullName,
@@ -235,7 +253,11 @@ export function MemberManager() {
         })}`);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to approve request.");
+      if (e instanceof Error && e.message === "LIMIT_REACHED_MEMBER") {
+        setError("LIMIT_REACHED_MEMBER");
+      } else {
+        setError(e instanceof Error ? e.message : "Failed to approve request.");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -258,7 +280,35 @@ export function MemberManager() {
 
   return (
     <div className="mt-6 grid gap-4">
-      {resolvedError && <p className="alert-error">{tx(resolvedError)}</p>}
+      {resolvedError && (
+        <div className={resolvedError === "LIMIT_REACHED_MEMBER" ? "alert-warning" : "alert-error"}>
+          {resolvedError === "LIMIT_REACHED_MEMBER" ? (
+            <div className="flex flex-col gap-2">
+              <p className="font-bold">Member Limit Reached (4 Members)</p>
+              <p className="font-bold text-[color:var(--danger)]">
+                To add more members, please pay 50 taka per member to <strong>01xxxxxxxxx</strong> (bKash/Nagad).
+                <br />
+                <span className="text-xs opacity-80">After payment, we will enable your next member slot.</span>
+              </p>
+            </div>
+          ) : (
+            tx(resolvedError)
+          )}
+        </div>
+      )}
+
+      <div className="rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] p-4">
+        <div className="flex items-center justify-between">
+          <p className="admin-section-label">Member Usage Status</p>
+          <span className="text-xs font-medium bg-[color:var(--accent)] text-white px-2 py-1 rounded-full">
+            Paid Slots: {paidMemberSlots}
+          </span>
+        </div>
+        <p className="mt-2 text-sm text-[color:var(--soft-foreground)]">
+          Free Limit: 4 Members. Used: {Math.min(totalMembersCreated, 4)}/4.
+          {totalMembersCreated > 4 && ` Paid Members: ${totalMembersCreated - 4}.`}
+        </p>
+      </div>
 
       <form
         className="grid gap-4 rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-4 shadow-[var(--shadow-sm)]"

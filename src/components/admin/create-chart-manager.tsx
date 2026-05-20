@@ -45,6 +45,8 @@ export function CreateChartManager() {
 
   const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null);
   const [charts, setCharts] = useState<Chart[]>([]);
+  const [paidChartSlots, setPaidChartSlots] = useState(0);
+  const [totalChartsCreated, setTotalChartsCreated] = useState(0);
   const [form, setForm] = useState<ChartFormState>(initialState);
   const [error, setError] = useState<string | null>(configurationError);
   const [isLoading, setIsLoading] = useState(false);
@@ -95,10 +97,15 @@ export function CreateChartManager() {
         if (!active) return;
         setIsLoading(true);
         setError(null);
-        const currentCharts = await listCharts(currentAdminProfile.groupId);
+        const [currentCharts, group] = await Promise.all([
+          listCharts(currentAdminProfile.groupId),
+          getGroupById(currentAdminProfile.groupId),
+        ]);
         if (!active) return;
         setAdminProfile(currentAdminProfile);
         setCharts(currentCharts);
+        setPaidChartSlots(group?.paidChartSlots ?? 0);
+        setTotalChartsCreated(group?.totalChartsCreated ?? 0);
       } catch (e) {
         if (!active) return;
         setError(e instanceof Error ? e.message : "Failed to load charts.");
@@ -132,8 +139,16 @@ export function CreateChartManager() {
     try {
       const created = await createChart({ groupId: activeAdminProfile.groupId, year, month });
       setCharts((c) => [created, ...c].sort((a, b) => b.monthKey.localeCompare(a.monthKey)));
+      // Re-fetch group to update paid slots
+      const group = await getGroupById(activeAdminProfile.groupId);
+      setPaidChartSlots(group?.paidChartSlots ?? 0);
+      setTotalChartsCreated(group?.totalChartsCreated ?? 0);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to create the chart.");
+      if (e instanceof Error && e.message === "LIMIT_REACHED_CHART") {
+        setError("LIMIT_REACHED_CHART");
+      } else {
+        setError(e instanceof Error ? e.message : "Failed to create the chart.");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -272,12 +287,33 @@ export function CreateChartManager() {
 
   return (
     <div className="mt-6 grid gap-4">
-      {resolvedError && <p className="alert-error">{tx(resolvedError)}</p>}
+      {resolvedError && (
+        <div className={resolvedError === "LIMIT_REACHED_CHART" ? "alert-warning" : "alert-error"}>
+          {resolvedError === "LIMIT_REACHED_CHART" ? (
+            <div className="flex flex-col gap-2">
+              <p className="font-bold">Free Limit Reached (3 Charts)</p>
+              <p className="font-bold text-[color:var(--danger)]">
+                To create more charts, please pay 20 taka to <strong>01xxxxxxxxx</strong> (bKash/Nagad).
+                <br />
+                <span className="text-xs opacity-80">After payment, we will enable your next chart slot.</span>
+              </p>
+            </div>
+          ) : (
+            tx(resolvedError)
+          )}
+        </div>
+      )}
 
       <div className="rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] p-4">
-        <p className="admin-section-label">{t("createChart.aboutTitle")}</p>
-        <p className="mt-2 text-sm leading-6 text-[color:var(--soft-foreground)]">
-          {t("createChart.aboutBody")}
+        <div className="flex items-center justify-between">
+          <p className="admin-section-label">Chart Usage Status</p>
+          <span className="text-xs font-medium bg-[color:var(--accent)] text-white px-2 py-1 rounded-full">
+            Paid Slots: {paidChartSlots}
+          </span>
+        </div>
+        <p className="mt-2 text-sm text-[color:var(--soft-foreground)]">
+          Free Limit: 3 Charts. Used: {Math.min(totalChartsCreated, 3)}/3.
+          {totalChartsCreated > 3 && ` Paid Charts: ${totalChartsCreated - 3}.`}
         </p>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
           <button

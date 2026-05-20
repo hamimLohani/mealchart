@@ -99,7 +99,6 @@ export const en = {
   "common.or": "or",
   "common.installApp": "Install",
   "common.iosInstructions": "To install the app:\n1. Open Safari\n2. Tap the Share button\n3. Select 'Add to Home Screen' or 'Add to Dock'",
-  "common.signingOut": "Signing out...",
 
   // Enter group page
   "enterPage.eyebrow": "Enter Group",
@@ -464,7 +463,6 @@ export const en = {
   "costs.addCostBtn": "Add cost",
   "costs.historyTitle": "Cost History",
   "costs.empty": "No costs added yet.",
-  "costs.searchPlaceholder": "Search...",
   "costs.invalidMonth": "Invalid month",
 
   "addMoney.selectHelp": "Choose the monthly chart to add deposits to.",
@@ -658,7 +656,6 @@ export const bn: Record<MessageKey, string> = {
   "common.or": "অথবা",
   "common.installApp": "ইন্সটল",
   "common.iosInstructions": "অ্যাপটি ইন্সটল করতে:\n১. সাফারি (Safari) ব্রাউজার খুলুন\n২. শেয়ার (Share) বাটনে ট্যাপ করুন\n৩. 'Add to Home Screen' অথবা 'Add to Dock' নির্বাচন করুন",
-  "common.signingOut": "সাইন আউট হচ্ছে...",
 
   "enterPage.eyebrow": "গ্রুপে প্রবেশ",
   "enterPage.title": "আপনার মিল ড্যাশবোর্ডে প্রবেশ করুন",
@@ -1003,7 +1000,6 @@ export const bn: Record<MessageKey, string> = {
   "costs.addCostBtn": "খরচ যোগ",
   "costs.historyTitle": "খরচের ইতিহাস",
   "costs.empty": "এখনো কোনো খরচ যোগ হয়নি।",
-  "costs.searchPlaceholder": "খুঁজুন...",
   "costs.invalidMonth": "অবৈধ মাস",
 
   "addMoney.selectHelp": "জমা যোগ করতে মাসিক চার্ট বাছুন।",

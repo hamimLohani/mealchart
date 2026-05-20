@@ -15,6 +15,10 @@ export type Group = {
   currentChartMonth?: string;
   createdAt: string;
   active: boolean;
+  paidChartSlots?: number;
+  paidMemberSlots?: number;
+  totalChartsCreated?: number;
+  totalMembersCreated?: number;
 };
 
 export type Chart = {

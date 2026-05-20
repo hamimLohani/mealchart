@@ -207,6 +207,31 @@ export async function createMember(input: {
     throw new Error("A member with this email already exists.");
   }
 
+  // --- Payment/Limit Check ---
+  const groupSnap = await getDoc(doc(database, groupsCollection, input.groupId));
+  if (!groupSnap.exists()) throw new Error("Group not found.");
+  const groupData = groupSnap.data();
+  
+  const totalCreated = groupData.totalMembersCreated || 0;
+
+  if (totalCreated >= 4) {
+    const paidSlots = groupData.paidMemberSlots || 0;
+    if (paidSlots <= 0) {
+      throw new Error("LIMIT_REACHED_MEMBER");
+    }
+    // Deduct one paid slot and increment total count
+    await updateDoc(doc(database, groupsCollection, input.groupId), {
+      paidMemberSlots: paidSlots - 1,
+      totalMembersCreated: totalCreated + 1
+    });
+  } else {
+    // Increment total count for free slot
+    await updateDoc(doc(database, groupsCollection, input.groupId), {
+      totalMembersCreated: totalCreated + 1
+    });
+  }
+  // ---------------------------
+
   const record = buildMemberRecord({
     id: memberId,
     fullName: input.fullName,
@@ -384,6 +409,31 @@ export async function createChart(input: {
   );
 
   if (!existing.empty) throw new Error("A chart for that month already exists.");
+
+  // --- Payment/Limit Check ---
+  const groupSnap = await getDoc(doc(database, groupsCollection, input.groupId));
+  if (!groupSnap.exists()) throw new Error("Group not found.");
+  const groupData = groupSnap.data();
+
+  const totalCreated = groupData.totalChartsCreated || 0;
+
+  if (totalCreated >= 3) {
+    const paidSlots = groupData.paidChartSlots || 0;
+    if (paidSlots <= 0) {
+      throw new Error("LIMIT_REACHED_CHART");
+    }
+    // Deduct one paid slot and increment total count
+    await updateDoc(doc(database, groupsCollection, input.groupId), {
+      paidChartSlots: paidSlots - 1,
+      totalChartsCreated: totalCreated + 1
+    });
+  } else {
+    // Increment total count for free slot
+    await updateDoc(doc(database, groupsCollection, input.groupId), {
+      totalChartsCreated: totalCreated + 1
+    });
+  }
+  // ---------------------------
 
   const chartId = crypto.randomUUID();
   const record = buildChartRecord({
