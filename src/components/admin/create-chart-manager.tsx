@@ -44,6 +44,7 @@ export function CreateChartManager() {
       : null;
 
   const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null);
+  const [groupName, setGroupName] = useState("");
   const [charts, setCharts] = useState<Chart[]>([]);
   const [paidChartSlots, setPaidChartSlots] = useState(0);
   const [totalChartsCreated, setTotalChartsCreated] = useState(0);
@@ -55,10 +56,12 @@ export function CreateChartManager() {
   const [lockingAction, setLockingAction] = useState<{ id: string; type: "lock" | "unlock" } | null>(null);
   const [exportingChartId, setExportingChartId] = useState<string | null>(null);
   const [isRepairingData, setIsRepairingData] = useState(false);
+  const [copiedGroupId, setCopiedGroupId] = useState(false);
   const { adminProfile: currentAdminProfile, isLoading: profileLoading, error: profileError } = useCurrentAdminProfile();
   const activeAdminProfile =
     currentAdminProfile && adminProfile?.id === currentAdminProfile.id ? adminProfile : null;
   const visibleCharts = activeAdminProfile ? charts : [];
+  const paymentPhone = process.env.NEXT_PUBLIC_PAYMENT_PHONE || "01xxxxxxxxx";
   const rawResolvedError =
     error ??
     (profileError
@@ -107,6 +110,7 @@ export function CreateChartManager() {
         ]);
         if (!active) return;
         setAdminProfile(currentAdminProfile);
+        setGroupName(group?.name ?? "");
         setCharts(currentCharts);
         setPaidChartSlots(group?.paidChartSlots ?? 0);
         setTotalChartsCreated(group?.totalChartsCreated ?? 0);
@@ -246,6 +250,17 @@ export function CreateChartManager() {
     }
   }
 
+  async function handleCopyGroupId() {
+    if (!activeAdminProfile?.groupId) return;
+    try {
+      await navigator.clipboard.writeText(activeAdminProfile.groupId);
+      setCopiedGroupId(true);
+      setTimeout(() => setCopiedGroupId(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  }
+
   async function handleDownloadPDF(chart: Chart) {
     if (!activeAdminProfile) return;
     try {
@@ -297,8 +312,39 @@ export function CreateChartManager() {
             <div className="flex flex-col gap-2">
               <p className="font-bold">{t("usage.chartStatus")}</p>
               <p className="font-bold text-[color:var(--danger)]">
-                {t("errors.limitReachedChart")}
+                {t("errors.limitReachedChart", { 
+                  phone: paymentPhone, 
+                  groupId: activeAdminProfile?.groupId || "",
+                  groupName 
+                })}
               </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-2 rounded-lg border border-[color:var(--border-strong)] bg-[color:var(--panel-solid)] px-3 py-1 shadow-sm">
+                  <span className="text-[0.6rem] font-bold uppercase tracking-wider text-[color:var(--muted)]">Ref:</span>
+                  <code className="text-xs font-mono font-bold text-[color:var(--foreground)]">{activeAdminProfile?.groupId}</code>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCopyGroupId}
+                  className={`button-secondary !py-1 !px-3 text-xs transition-all duration-200 ${copiedGroupId ? '!border-[color:var(--success-border)] !bg-[color:var(--success-bg)] !text-[color:var(--success-text)]' : ''}`}
+                >
+                  {copiedGroupId ? (
+                    <>
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                      </svg>
+                      {t("common.copied")}
+                    </>
+                  ) : (
+                    <>
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0c0 .414-.336.75-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
+                      </svg>
+                      {t("common.copy")}
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           ) : (
             tx(resolvedError)

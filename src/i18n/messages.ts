@@ -97,6 +97,8 @@ export const en = {
   "common.formerMember": "Former member",
   "common.cancel": "Cancel",
   "common.or": "or",
+  "common.copy": "Copy",
+  "common.copied": "Copied!",
   "common.installApp": "Install",
   "common.iosInstructions": "To install the app:\n1. Open Safari\n2. Tap the Share button\n3. Select 'Add to Home Screen' or 'Add to Dock'",
 
@@ -500,8 +502,10 @@ export const en = {
   "errors.loadNoticesFailed": "Failed to load notices.",
   "errors.emailValidationFailed": "Email validation failed: {error}",
   "errors.emailDomainNotExist": "The email domain does not exist.",
-  "errors.limitReachedChart": "Free Limit Reached (3 Charts). To create more charts, please pay 20 taka to 01xxxxxxxxx (bKash/Nagad). After payment, we will enable your next chart slot.",
-  "errors.limitReachedMember": "Member Limit Reached (4 Members). To add more members, please pay 50 taka per member to 01xxxxxxxxx (bKash/Nagad). After payment, we will enable your next member slot.",
+  "errors.emailNotExist": "The email address does not appear to exist.",
+  "errors.cannotApprove": "Cannot approve: {error}",
+  "errors.limitReachedChart": "Free Limit Reached (3 Charts). To create more charts, please pay 20 taka to {phone} (bKash/Nagad). Reference: {groupId}. After payment, we will enable your next chart slot.",
+  "errors.limitReachedMember": "Member Limit Reached (4 Members). To add more members, please pay 50 taka per member to {phone} (bKash/Nagad). Reference: {groupId}. After payment, we will enable your next member slot.",
 
   "usage.memberStatus": "MEMBER USAGE STATUS",
   "usage.chartStatus": "CHART USAGE STATUS",
@@ -666,6 +670,8 @@ export const bn: Record<MessageKey, string> = {
   "common.formerMember": "প্রাক্তন সদস্য",
   "common.cancel": "বাতিল",
   "common.or": "অথবা",
+  "common.copy": "কপি",
+  "common.copied": "কপি হয়েছে!",
   "common.installApp": "ইন্সটল",
   "common.iosInstructions": "অ্যাপটি ইন্সটল করতে:\n১. সাফারি (Safari) ব্রাউজার খুলুন\n২. শেয়ার (Share) বাটনে ট্যাপ করুন\n3. 'Add to Home Screen' অথবা 'Add to Dock' নির্বাচন করুন",
 
@@ -1099,8 +1105,10 @@ export const bn: Record<MessageKey, string> = {
   "errors.permissionDenied": "প্রবেশাধিকার নেই বা অপর্যাপ্ত অনুমতি।",
   "errors.emailValidationFailed": "ইমেল যাচাইকরণ ব্যর্থ হয়েছে: {error}",
   "errors.emailDomainNotExist": "ইমেল ডোমেনটির অস্তিত্ব নেই।",
-  "errors.limitReachedChart": "বিনামূল্যে চার্ট তৈরির সীমা অতিক্রম করেছেন (3টি)। আরও চার্ট তৈরি করতে দয়া করে ০১xxxxxxxxx (বিকাশ/নগদ) নম্বরে ২০ টাকা প্রদান করুন। পেমেন্টের পর আমরা আপনার পরবর্তী চার্ট স্লটটি সক্রিয় করে দেব।",
-  "errors.limitReachedMember": "সদস্য যোগ করার সীমা অতিক্রম করেছেন (4 জন)। আরও সদস্য যোগ করতে দয়া করে ০১xxxxxxxxx (বিকাশ/নগদ) নম্বরে প্রতি সদস্যের জন্য ৫০ টাকা প্রদান করুন। পেমেন্টের পর আমরা আপনার পরবর্তী মেম্বার স্লটটি সক্রিয় করে দেব।",
+  "errors.emailNotExist": "ইমেল ঠিকানাটির কোনো অস্তিত্ব নেই বলে মনে হচ্ছে।",
+  "errors.cannotApprove": "অনুমোদন করা সম্ভব নয়: {error}",
+  "errors.limitReachedChart": "বিনামূল্যে চার্ট তৈরির সীমা অতিক্রম করেছেন (3টি)। আরও চার্ট তৈরি করতে দয়া করে {phone} (বিকাশ/নগদ) নম্বরে ২০ টাকা প্রদান করুন। রেফারেন্স: {groupId}। পেমেন্টের পর আমরা আপনার পরবর্তী চার্ট স্লটটি সক্রিয় করে দেব।",
+  "errors.limitReachedMember": "সদস্য যোগ করার সীমা অতিক্রম করেছেন (4 জন)। আরও সদস্য যোগ করতে দয়া করে {phone} (বিকাশ/নগদ) নম্বরে প্রতি সদস্যের জন্য ৫০ টাকা প্রদান করুন। রেফারেন্স: {groupId}। পেমেন্টের পর আমরা আপনার পরবর্তী মেম্বার স্লটটি সক্রিয় করে দেব।",
 
   "usage.memberStatus": "মেম্বার ব্যবহারের অবস্থা",
   "usage.chartStatus": "চার্ট ব্যবহারের অবস্থা",
