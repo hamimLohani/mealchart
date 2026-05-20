@@ -132,7 +132,7 @@ export default function AdminPage() {
 
       {visibleGroup && <AdminMonthSummary groupId={visibleGroup.id} />}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="hidden gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {navItemKeys.map((item) => (
           <Link key={item.href} href={item.href} className="admin-panel-card">
             <span className="admin-panel-card-index">{item.metric}</span>
