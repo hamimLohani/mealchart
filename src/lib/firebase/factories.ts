@@ -24,6 +24,10 @@ export function buildGroupRecord(input: {
     adminId: input.adminId,
     createdAt: new Date().toISOString(),
     active: true,
+    paidChartSlots: 0,
+    paidMemberSlots: 0,
+    totalChartsCreated: 0,
+    totalMembersCreated: 0,
   };
 }
 

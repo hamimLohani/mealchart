@@ -7,7 +7,7 @@ import { useT } from "@/i18n/use-t";
 import { createMember, deleteMember, listMembers, updateMember, listJoinRequests, approveJoinRequest, rejectJoinRequest, getGroupById } from "@/lib/firebase/repositories";
 import { toDateInputValue } from "@/lib/utils/date";
 import type { AdminProfile, Member, JoinRequest } from "@/types/domain";
-import { sendWelcomeEmail, sendRemovalEmail } from "@/lib/email/actions";
+import { sendWelcomeEmail, sendRemovalEmail, verifyEmailExistence } from "@/lib/email/actions";
 import { getFriendlyEmailError } from "@/lib/utils/email-error";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
@@ -140,6 +140,15 @@ export function MemberManager() {
 
     setIsSubmitting(true);
     try {
+      // --- Email Existence Check (Option 3) ---
+      const verification = await verifyEmailExistence(form.email.trim());
+      if (!verification.exists) {
+        setError(`Email validation failed: ${verification.error || "The email address does not appear to exist."}`);
+        setIsSubmitting(false);
+        return;
+      }
+      // ---------------------------------------
+
       if (editingMemberId) {
         const updated = await updateMember({
           groupId: activeAdminProfile.groupId,
@@ -230,6 +239,15 @@ export function MemberManager() {
     if (!activeAdminProfile) return;
     setIsSubmitting(true);
     try {
+      // --- Email Existence Check (Option 3) ---
+      const verification = await verifyEmailExistence(req.email.trim());
+      if (!verification.exists) {
+        setError(`Cannot approve: ${verification.error || "The email address does not appear to exist."}`);
+        setIsSubmitting(false);
+        return;
+      }
+      // ---------------------------------------
+
       await approveJoinRequest(activeAdminProfile.groupId, req.id, req.fullName, req.email);
       setJoinRequests(c => c.filter(r => r.id !== req.id));
       const currentMembers = await listMembers(activeAdminProfile.groupId);
@@ -284,11 +302,9 @@ export function MemberManager() {
         <div className={resolvedError === "LIMIT_REACHED_MEMBER" ? "alert-warning" : "alert-error"}>
           {resolvedError === "LIMIT_REACHED_MEMBER" ? (
             <div className="flex flex-col gap-2">
-              <p className="font-bold">Member Limit Reached (4 Members)</p>
+              <p className="font-bold">{t("usage.memberStatus")}</p>
               <p className="font-bold text-[color:var(--danger)]">
-                To add more members, please pay 50 taka per member to <strong>01xxxxxxxxx</strong> (bKash/Nagad).
-                <br />
-                <span className="text-xs opacity-80">After payment, we will enable your next member slot.</span>
+                {t("errors.limitReachedMember")}
               </p>
             </div>
           ) : (
@@ -299,14 +315,14 @@ export function MemberManager() {
 
       <div className="rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] p-4">
         <div className="flex items-center justify-between">
-          <p className="admin-section-label">Member Usage Status</p>
+          <p className="admin-section-label">{t("usage.memberStatus")}</p>
           <span className="text-xs font-medium bg-[color:var(--accent)] text-white px-2 py-1 rounded-full">
-            Paid Slots: {paidMemberSlots}
+            {t("usage.paidSlots", { n: String(paidMemberSlots) })}
           </span>
         </div>
         <p className="mt-2 text-sm text-[color:var(--soft-foreground)]">
-          Free Limit: 4 Members. Used: {Math.min(totalMembersCreated, 4)}/4.
-          {totalMembersCreated > 4 && ` Paid Members: ${totalMembersCreated - 4}.`}
+          {t("usage.freeLimitMember", { used: String(Math.min(totalMembersCreated, 4)) })}
+          {totalMembersCreated > 4 && t("usage.paidMembers", { n: String(totalMembersCreated - 4) })}
         </p>
       </div>
 

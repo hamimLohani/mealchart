@@ -457,6 +457,26 @@ export async function createChart(input: {
   return record;
 }
 
+/** 
+ * Utility function to manually add paid slots to a group.
+ * You can call this after receiving manual payment.
+ */
+export async function addPaidSlotsToGroup(groupId: string, charts: number, members: number) {
+  const database = ensureDb();
+  const groupRef = doc(database, groupsCollection, groupId);
+  const snap = await getDoc(groupRef);
+  if (!snap.exists()) throw new Error("Group not found.");
+  
+  const data = snap.data();
+  const currentCharts = Number(data.paidChartSlots || 0);
+  const currentMembers = Number(data.paidMemberSlots || 0);
+
+  await updateDoc(groupRef, {
+    paidChartSlots: currentCharts + charts,
+    paidMemberSlots: currentMembers + members,
+  });
+}
+
 export async function updateChartLock(input: {
   groupId: string;
   chartId: string;

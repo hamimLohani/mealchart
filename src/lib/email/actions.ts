@@ -3,6 +3,7 @@
 import { transporter, fromEmail } from "./transporter";
 import { getMonthTotals, getMemberTotals, formatMeal } from "@/lib/utils/meal-money";
 import type { CostEntry, DepositEntry, MealEntry, Member } from "@/types/domain";
+import dns from "dns";
 
 function escapeHtml(value: string) {
   return value
@@ -148,6 +149,42 @@ export async function sendWelcomeEmail(memberEmail: string, fullName: string, gr
   } catch (error) {
     console.error("Failed to send welcome email:", error);
     return { success: false, error: getErrorMessage(error) };
+  }
+}
+
+/**
+ * Verifies if an email address "exists" by checking its domain's MX records.
+ * This ensures the domain is real and configured to receive emails.
+ */
+export async function verifyEmailExistence(email: string) {
+  if (!email || !email.includes("@")) return { exists: false, error: "Invalid email format" };
+  
+  const domain = email.split("@")[1];
+  
+  try {
+    // Check if domain has MX records (mail servers)
+    const mxRecords = await dns.promises.resolveMx(domain);
+    
+    if (mxRecords && mxRecords.length > 0) {
+      // Check for "Null MX" (RFC 7505) which means the domain does not accept email
+      // A Null MX is a single record with priority 0 and exchange "."
+      const isNullMx = mxRecords.length === 1 && 
+                       (mxRecords[0].exchange === "." || mxRecords[0].exchange === "");
+      
+      if (isNullMx) {
+        return { exists: false, error: "This domain explicitly states it does not accept email." };
+      }
+      
+      return { exists: true };
+    }
+
+    return { exists: false, error: "Domain has no mail servers (MX records) configured" };
+  } catch (error: any) {
+    if (error.code === 'ENOTFOUND' || error.code === 'ENODATA') {
+      return { exists: false, error: "The email domain does not exist." };
+    }
+    console.error(`Email verification failed for ${email}:`, error);
+    return { exists: false, error: "Could not verify email domain." };
   }
 }
 

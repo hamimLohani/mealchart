@@ -59,7 +59,7 @@ export function CreateChartManager() {
   const activeAdminProfile =
     currentAdminProfile && adminProfile?.id === currentAdminProfile.id ? adminProfile : null;
   const visibleCharts = activeAdminProfile ? charts : [];
-  const resolvedError =
+  const rawResolvedError =
     error ??
     (profileError
       ? profileError instanceof Error
@@ -68,6 +68,10 @@ export function CreateChartManager() {
       : !profileLoading && !currentAdminProfile && !configurationError
         ? "Log in as an admin to create charts."
         : null);
+  const resolvedError =
+    typeof rawResolvedError === "string" && rawResolvedError.startsWith("ERR_TRANS:")
+      ? JSON.parse(rawResolvedError.split("ERR_TRANS:")[1])
+      : rawResolvedError;
 
   useGlobalLoading(
     "create-chart-manager",
@@ -291,11 +295,9 @@ export function CreateChartManager() {
         <div className={resolvedError === "LIMIT_REACHED_CHART" ? "alert-warning" : "alert-error"}>
           {resolvedError === "LIMIT_REACHED_CHART" ? (
             <div className="flex flex-col gap-2">
-              <p className="font-bold">Free Limit Reached (3 Charts)</p>
+              <p className="font-bold">{t("usage.chartStatus")}</p>
               <p className="font-bold text-[color:var(--danger)]">
-                To create more charts, please pay 20 taka to <strong>01xxxxxxxxx</strong> (bKash/Nagad).
-                <br />
-                <span className="text-xs opacity-80">After payment, we will enable your next chart slot.</span>
+                {t("errors.limitReachedChart")}
               </p>
             </div>
           ) : (
@@ -306,14 +308,14 @@ export function CreateChartManager() {
 
       <div className="rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] p-4">
         <div className="flex items-center justify-between">
-          <p className="admin-section-label">Chart Usage Status</p>
+          <p className="admin-section-label">{t("usage.chartStatus")}</p>
           <span className="text-xs font-medium bg-[color:var(--accent)] text-white px-2 py-1 rounded-full">
-            Paid Slots: {paidChartSlots}
+            {t("usage.paidSlots", { n: String(paidChartSlots) })}
           </span>
         </div>
         <p className="mt-2 text-sm text-[color:var(--soft-foreground)]">
-          Free Limit: 3 Charts. Used: {Math.min(totalChartsCreated, 3)}/3.
-          {totalChartsCreated > 3 && ` Paid Charts: ${totalChartsCreated - 3}.`}
+          {t("usage.freeLimitChart", { used: String(Math.min(totalChartsCreated, 3)) })}
+          {totalChartsCreated > 3 && t("usage.paidCharts", { n: String(totalChartsCreated - 3) })}
         </p>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
           <button
