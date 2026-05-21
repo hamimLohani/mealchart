@@ -227,7 +227,8 @@ export async function createMember(input: {
   
   const totalCreated = groupData.totalMembersCreated || 0;
 
-  if (totalCreated >= 4) {
+  // Allow up to 4 free members, then require paid slots-------------------------------------------------------------------------------------------------------------------------------------
+  if (totalCreated >= 4) {// <-----------------------------------------------------------------------------------------------------------------------------------------------------------------
     const paidSlots = groupData.paidMemberSlots || 0;
     if (paidSlots <= 0) {
       throw new Error("LIMIT_REACHED_MEMBER");
@@ -431,7 +432,8 @@ export async function createChart(input: {
 
   const totalCreated = groupData.totalChartsCreated || 0;
 
-  if (totalCreated >= 3) {
+  // Allow up to 3 free charts, then require paid slots------------------------------------------------------------------------------------------------------------------------------
+  if (totalCreated >= 3) {// <--------------------------------------------------------------------------------------------------------------------------------------------------------
     const paidSlots = groupData.paidChartSlots || 0;
     if (paidSlots <= 0) {
       throw new Error("LIMIT_REACHED_CHART");
