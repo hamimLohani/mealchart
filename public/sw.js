@@ -4,7 +4,8 @@ const ASSETS_TO_CACHE = [
   "/",
   "/manifest.json",
   "/logo.png",
-  "/favicon.ico"
+  "/favicon.ico",
+  "/offline.html"
 ];
 
 self.addEventListener("install", (event) => {
@@ -32,10 +33,15 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  // Simple network-first strategy for dynamic content
   event.respondWith(
-    fetch(event.request).catch(() => {
-      return caches.match(event.request);
-    })
+    fetch(event.request)
+      .then((response) => {
+        return response;
+      })
+      .catch(() => {
+        return caches.match(event.request).then((cachedResponse) => {
+          return cachedResponse || caches.match("/offline.html");
+        });
+      })
   );
 });
