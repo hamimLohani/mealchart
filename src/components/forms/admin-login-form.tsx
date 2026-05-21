@@ -10,11 +10,13 @@ import { submitJoinRequest } from "@/lib/firebase/repositories";
 import { resolveSignInDestination } from "@/lib/auth/sign-in-routing";
 import { getAuthErrorMessage } from "@/lib/auth/errors";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
+import { useOnlineStatus } from "@/lib/hooks/use-online-status";
 import type { Group } from "@/types/domain";
 
 export function AdminLoginForm() {
   const router = useRouter();
   const { t, tx } = useT();
+  const isOnline = useOnlineStatus();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showJoinForm, setShowJoinForm] = useState(false);
@@ -85,6 +87,10 @@ export function AdminLoginForm() {
 
   async function handleGoogleSignIn() {
     setError(null);
+    if (!isOnline) {
+      setError(t("common.offlineAuth"));
+      return;
+    }
     if (!isFirebaseConfigured || !auth) {
       setError(t("errors.firebaseNotConfigured"));
       return;
@@ -113,6 +119,10 @@ export function AdminLoginForm() {
 
   async function handleGoogleSignInRedirect() {
     setError(null);
+    if (!isOnline) {
+      setError(t("common.offlineAuth"));
+      return;
+    }
     if (!isFirebaseConfigured || !auth) {
       setError(t("errors.firebaseNotConfigured"));
       return;
@@ -134,6 +144,11 @@ export function AdminLoginForm() {
 
     if (!selectedGroupId) {
       setError("Please select a group.");
+      return;
+    }
+
+    if (!isOnline) {
+      setError(t("common.offlineAuth"));
       return;
     }
 
@@ -200,10 +215,11 @@ export function AdminLoginForm() {
           )}
         </label>
 
+        {!isOnline && <p className="alert-warn">{t("common.offlineAuth")}</p>}
         {error && <p className="alert-error">{error}</p>}
 
         <div className="grid gap-2.5 mt-1">
-          <button className="button-primary w-full py-3" disabled={isSubmitting} type="submit">
+          <button className="button-primary w-full py-3" disabled={isSubmitting || !isOnline} type="submit">
             {isSubmitting ? t("enterForm.submittingRequest") : t("enterForm.submitJoinRequest")}
           </button>
           <button className="w-full py-2.5 text-sm font-medium text-[color:var(--muted)] hover:text-[color:var(--foreground)] transition-colors" onClick={() => setShowJoinForm(false)} type="button">
@@ -223,11 +239,13 @@ export function AdminLoginForm() {
         </div>
       )}
 
+      {!isOnline && <p className="alert-warn">{t("common.offlineAuth")}</p>}
+
       {error && <p className="alert-error">{error}</p>}
 
       <button
         className="button-primary w-full flex items-center justify-center gap-3 py-3.5 text-[0.95rem]"
-        disabled={isSubmitting || !isFirebaseConfigured}
+        disabled={isSubmitting || !isFirebaseConfigured || !isOnline}
         onClick={handleGoogleSignIn}
         type="button"
       >
@@ -245,6 +263,7 @@ export function AdminLoginForm() {
       {error?.includes("blocked") && (
         <button
           className="button-secondary w-full py-3"
+          disabled={!isOnline}
           onClick={handleGoogleSignInRedirect}
           type="button"
         >

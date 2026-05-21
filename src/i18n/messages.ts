@@ -89,7 +89,10 @@ export const en = {
   "common.loading": "Loading…",
   "common.signingOut": "Signing out…",
   "common.reloading": "Reloading…",
-  "common.offline": "You are offline. Reconnect to continue.",
+  "common.offline": "You are offline.",
+  "common.offlineTitle": "No internet connection",
+  "common.offlineBody": "Check your connection. Online actions are paused for now.",
+  "common.offlineAuth": "No internet connection. Connect before signing in.",
   "common.backOnline": "Back online.",
   "common.back": " Back",
   "common.tk": "tk",
@@ -174,6 +177,8 @@ export const en = {
   // Group nav
   "groupNav.home": "Home",
   "groupNav.chart": "Meal Chart",
+  "groupNav.money": "Money",
+  "groupNav.members": "Members",
   "groupNav.notices": "Notices",
 
   // Group dashboard
@@ -531,6 +536,7 @@ export const en = {
   "errors.loadDataFailed": "Failed to load data.",
   "errors.loadSelectedMonth": "Failed to load selected month.",
   "errors.emailInUse": "Please provide another email, it's already taken",
+  "errors.networkRequestFailed": "You are offline. Connect to the internet and try again.",
   "errors.registerFailed": "Failed to register the group.",
   "errors.adminProfileNotFound": "No admin profile was found for the current user.",
   "errors.adminProfileNotFoundShort": "No admin profile found.",
@@ -695,7 +701,10 @@ export const bn: Record<MessageKey, string> = {
   "common.loading": "লোড হচ্ছে…",
   "common.signingOut": "সাইন আউট হচ্ছে…",
   "common.reloading": "রিলোড হচ্ছে…",
-  "common.offline": "আপনি অফলাইনে আছেন। চালিয়ে যেতে পুনরায় সংযুক্ত করুন।",
+  "common.offline": "আপনি অফলাইনে আছেন।",
+  "common.offlineTitle": "ইন্টারনেট সংযোগ নেই",
+  "common.offlineBody": "ইন্টারনেট চালু করুন। অনলাইন কাজগুলো আপাতত বন্ধ আছে।",
+  "common.offlineAuth": "ইন্টারনেট সংযোগ নেই। সাইন ইন করার আগে সংযোগ চালু করুন।",
   "common.backOnline": "আবার অনলাইনে।",
   "common.back": " পিছনে",
   "common.tk": "টাকা",
@@ -774,6 +783,8 @@ export const bn: Record<MessageKey, string> = {
 
   "groupNav.home": "হোম",
   "groupNav.chart": "মিল চার্ট",
+  "groupNav.money": "টাকা",
+  "groupNav.members": "সদস্য",
   "groupNav.notices": "নোটিশ",
 
   "groupDash.loading": "গ্রুপ লোড হচ্ছে…",
@@ -1101,6 +1112,7 @@ export const bn: Record<MessageKey, string> = {
   "errors.loadDataFailed": "ডেটা লোড ব্যর্থ।",
   "errors.loadSelectedMonth": "বাছাই করা মাস লোড ব্যর্থ।",
   "errors.emailInUse": "এই ইমেইলটি আগে থেকেই ব্যবহৃত হচ্ছে।",
+  "errors.networkRequestFailed": "আপনি অফলাইনে আছেন। ইন্টারনেট সংযোগ দিয়ে আবার চেষ্টা করুন।",
   "errors.registerFailed": "গ্রুপ নিবন্ধন ব্যর্থ।",
   "errors.adminProfileNotFound": "এই ইউজারের জন্য অ্যাডমিন প্রোফাইল নেই।",
   "errors.adminProfileNotFoundShort": "অ্যাডমিন প্রোফাইল নেই।",

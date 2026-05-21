@@ -12,6 +12,7 @@ import { groupsCollection, adminsCollection } from "@/lib/firebase/paths";
 import { getAdminProfileForUser, normalizeEmail } from "@/lib/auth/sign-in-routing";
 import { getAuthErrorMessage } from "@/lib/auth/errors";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
+import { useOnlineStatus } from "@/lib/hooks/use-online-status";
 import { sendAdminWelcomeEmail } from "@/lib/email/actions";
 import { getFriendlyEmailError } from "@/lib/utils/email-error";
 
@@ -21,6 +22,7 @@ const pendingGroupNameKey = "mealchart.pendingGroupName";
 
 export function RegisterGroupForm() {
   const { t, tx } = useT();
+  const isOnline = useOnlineStatus();
   const [form, setForm] = useState<FormState>(initialState);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -121,6 +123,11 @@ export function RegisterGroupForm() {
     setError(null);
     setIsCreated(false);
 
+    if (!isOnline) {
+      setError(t("common.offlineAuth"));
+      return;
+    }
+
     if (!auth || !db || !isFirebaseConfigured) {
       setError(t("errors.firebaseNotConfiguredLocal"));
       return;
@@ -151,6 +158,10 @@ export function RegisterGroupForm() {
 
   async function handleGoogleSignInRedirect() {
     setError(null);
+    if (!isOnline) {
+      setError(t("common.offlineAuth"));
+      return;
+    }
     if (!isFirebaseConfigured || !auth) {
       setError(t("errors.firebaseNotConfigured"));
       return;
@@ -195,6 +206,8 @@ export function RegisterGroupForm() {
         </p>
       )}
 
+      {!isOnline && <p className="alert-warn">{t("common.offlineAuth")}</p>}
+
       {error && <p className="alert-error">{error}</p>}
 
       {isCreated && (
@@ -215,7 +228,7 @@ export function RegisterGroupForm() {
       ) : (
         <button
           className="button-primary w-full flex items-center justify-center gap-3 py-3.5"
-          disabled={isSubmitting || !isFirebaseConfigured}
+          disabled={isSubmitting || !isFirebaseConfigured || !isOnline}
           type="submit"
         >
           {isSubmitting ? (
@@ -252,6 +265,7 @@ export function RegisterGroupForm() {
       {error?.includes("blocked") && (
         <button
           className="button-secondary w-full py-3"
+          disabled={!isOnline}
           onClick={handleGoogleSignInRedirect}
           type="button"
         >

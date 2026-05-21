@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { SWRConfig } from "swr";
 import { useUiStore } from "@/store/ui-store";
@@ -8,6 +8,7 @@ import { useAuthStore } from "@/store/auth-store";
 import { auth } from "@/lib/firebase/client";
 import { useT } from "@/i18n/use-t";
 import { useToast } from "@/lib/hooks/use-toast";
+import { useOnlineStatus } from "@/lib/hooks/use-online-status";
 import { ToastContainer } from "@/components/ui/toast-container";
 
 export function UiProvider({ children }: { children: React.ReactNode }) {
@@ -18,7 +19,9 @@ export function UiProvider({ children }: { children: React.ReactNode }) {
   const { error: showOffline, info: showInfo } = useToast();
   const [mounted, setMounted] = useState(false);
   const [isReloadingFromSession, setIsReloadingFromSession] = useState(false);
-  const [isOffline, setIsOffline] = useState(false);
+  const isOnline = useOnlineStatus();
+  const isOffline = !isOnline;
+  const previousOnlineStatus = useRef<boolean | null>(null);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -62,34 +65,25 @@ export function UiProvider({ children }: { children: React.ReactNode }) {
   }, [setAdmin, setLoaded]);
 
   useEffect(() => {
-    const handleOffline = () => {
-      setIsOffline(true);
-      showOffline(t("common.offline"));
-    };
+    if (previousOnlineStatus.current === null) {
+      previousOnlineStatus.current = isOnline;
 
-    const handleOnline = () => {
-      setIsOffline(false);
-      showInfo(t("common.backOnline"));
-    };
-
-    if (typeof window !== "undefined") {
-      setIsOffline(!window.navigator.onLine);
-
-      if (!window.navigator.onLine) {
+      if (!isOnline) {
         showOffline(t("common.offline"));
       }
 
-      window.addEventListener("offline", handleOffline);
-      window.addEventListener("online", handleOnline);
+      return;
     }
 
-    return () => {
-      if (typeof window !== "undefined") {
-        window.removeEventListener("offline", handleOffline);
-        window.removeEventListener("online", handleOnline);
-      }
-    };
-  }, [showInfo, showOffline, t]);
+    if (previousOnlineStatus.current === isOnline) return;
+    previousOnlineStatus.current = isOnline;
+
+    if (isOnline) {
+      showInfo(t("common.backOnline"));
+    } else {
+      showOffline(t("common.offline"));
+    }
+  }, [isOnline, showInfo, showOffline, t]);
 
   const loadingMessages = Object.entries(loadingEntries);
   // Prioritize reloading message if it exists
@@ -104,6 +98,7 @@ export function UiProvider({ children }: { children: React.ReactNode }) {
       value={{
         revalidateOnFocus: false,
         revalidateOnReconnect: true,
+        shouldRetryOnError: () => isOnline,
         dedupingInterval: 10000,
         focusThrottleInterval: 15000,
       }}
@@ -111,14 +106,7 @@ export function UiProvider({ children }: { children: React.ReactNode }) {
       <>
         {children}
         <ToastContainer />
-        {isOffline ? (
-          <div className="global-loading-overlay pointer-events-auto" aria-live="polite" aria-busy="true" role="alert">
-            <div className="global-loading-card">
-              <span className="global-loading-spinner" aria-hidden="true" />
-              <p className="global-loading-message">{t("common.offline")}</p>
-            </div>
-          </div>
-        ) : null}
+        {isOffline ? <OfflineBanner /> : null}
         {isLoading ? (
           <div className="global-loading-overlay" aria-live="polite" aria-busy="true" role="status">
             <div className="global-loading-card">
@@ -129,5 +117,26 @@ export function UiProvider({ children }: { children: React.ReactNode }) {
         ) : null}
       </>
     </SWRConfig>
+  );
+}
+
+function OfflineBanner() {
+  const { t } = useT();
+
+  return (
+    <div className="offline-banner" role="alert" aria-live="assertive">
+      <div className="offline-banner-icon" aria-hidden="true">
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75h.008v.008H12v-.008Z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8.287 15.038a5.25 5.25 0 0 1 7.426 0" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5.106 11.856c3.807-3.807 9.981-3.807 13.788 0" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="m3 3 18 18" />
+        </svg>
+      </div>
+      <div className="min-w-0">
+        <p className="offline-banner-title">{t("common.offlineTitle")}</p>
+        <p className="offline-banner-message">{t("common.offlineBody")}</p>
+      </div>
+    </div>
   );
 }

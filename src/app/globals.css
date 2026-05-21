@@ -712,6 +712,60 @@ button:focus-visible {
   color: var(--foreground);
 }
 
+/* ── Connection status ─────────────────────────────── */
+.offline-banner {
+  position: fixed;
+  left: 50%;
+  bottom: 1rem;
+  z-index: 150;
+  display: flex;
+  width: min(calc(100% - 1.5rem), 30rem);
+  transform: translateX(-50%);
+  align-items: flex-start;
+  gap: 0.8rem;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--danger-bg) 92%, var(--panel-solid));
+  padding: 0.85rem 1rem;
+  color: var(--danger);
+  box-shadow: var(--shadow);
+}
+
+.offline-banner-icon {
+  display: flex;
+  height: 2rem;
+  width: 2rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
+.offline-banner-title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.offline-banner-message {
+  margin: 0.2rem 0 0;
+  color: color-mix(in srgb, var(--danger) 78%, var(--foreground));
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+@media (min-width: 640px) {
+  .offline-banner {
+    right: 1.5rem;
+    bottom: 1.5rem;
+    left: auto;
+    transform: none;
+  }
+}
+
 @keyframes global-loading-spin {
   to {
     transform: rotate(360deg);

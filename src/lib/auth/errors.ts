@@ -14,5 +14,9 @@ export function getAuthErrorMessage(error: unknown, fallback: string) {
     return `Firebase Auth is not enabled for ${host}. Add ${host} in Firebase Console > Authentication > Settings > Authorized domains, or open the app from http://localhost:3000.`;
   }
 
+  if (code === "auth/network-request-failed") {
+    return "Firebase: Error (auth/network-request-failed).";
+  }
+
   return error instanceof Error ? error.message : fallback;
 }

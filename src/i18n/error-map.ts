@@ -69,6 +69,7 @@ export const errorMessageToKey: Partial<Record<string, MessageKey>> = {
   "Invalid date format.": "errors.invalidDateFormat",
   "Missing or insufficient permissions.": "errors.permissionDenied",
   "Firebase: Error (auth/permission-denied).": "errors.permissionDenied",
+  "Firebase: Error (auth/network-request-failed).": "errors.networkRequestFailed",
 };
 
 export function translateErrorMessage(

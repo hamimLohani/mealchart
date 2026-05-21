@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useMemo } from "react";
 import { useT } from "@/i18n/use-t";
 
-type NavKey = "home" | "chart" | "notices";
+type NavKey = "home" | "chart" | "money" | "members" | "notices";
 
 export function GroupNavbar({
   groupId,
@@ -20,6 +20,8 @@ export function GroupNavbar({
       [
         { key: "home" as const, label: t("groupNav.home") },
         { key: "chart" as const, label: t("groupNav.chart") },
+        { key: "money" as const, label: t("groupNav.money") },
+        { key: "members" as const, label: t("groupNav.members") },
         { key: "notices" as const, label: t("groupNav.notices") },
       ] as const,
     [t],
@@ -29,7 +31,7 @@ export function GroupNavbar({
     const parts = pathname.split("/").filter(Boolean);
     if (parts.length === 2 && parts[0] === "group") return "home";
     const last = parts[parts.length - 1] as NavKey | undefined;
-    if (last === "chart" || last === "notices") return last;
+    if (last === "chart" || last === "money" || last === "members" || last === "notices") return last;
     return "home";
   }, [pathname]);
 

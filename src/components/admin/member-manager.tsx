@@ -355,7 +355,7 @@ export function MemberManager() {
   return (
     <div className="mt-6 grid gap-4">
       {resolvedError && (
-        <div className={resolvedError === "LIMIT_REACHED_MEMBER" ? "alert-warning" : "alert-error"}>
+        <div className={resolvedError === "LIMIT_REACHED_MEMBER" ? "alert-warn" : "alert-error"}>
           {resolvedError === "LIMIT_REACHED_MEMBER" ? (
             <div className="flex flex-col gap-2">
               <p className="font-bold">{t("usage.memberStatus")}</p>

@@ -325,7 +325,7 @@ export function CreateChartManager() {
   return (
     <div className="mt-6 grid gap-4">
       {resolvedError && (
-        <div className={resolvedError === "LIMIT_REACHED_CHART" ? "alert-warning" : "alert-error"}>
+        <div className={resolvedError === "LIMIT_REACHED_CHART" ? "alert-warn" : "alert-error"}>
           {resolvedError === "LIMIT_REACHED_CHART" ? (
             <div className="flex flex-col gap-2">
               <p className="font-bold">{t("usage.chartStatus")}</p>
