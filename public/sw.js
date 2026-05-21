@@ -33,15 +33,18 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
+  const request = event.request;
+
+  if (request.mode === "navigate" || (request.method === "GET" && request.headers.get("accept")?.includes("text/html"))) {
+    event.respondWith(
+      fetch(request).catch(() => caches.match("/offline.html"))
+    );
+    return;
+  }
+
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        return response;
-      })
-      .catch(() => {
-        return caches.match(event.request).then((cachedResponse) => {
-          return cachedResponse || caches.match("/offline.html");
-        });
-      })
+    caches.match(request).then((cachedResponse) => {
+      return cachedResponse || fetch(request).catch(() => null);
+    })
   );
 });
