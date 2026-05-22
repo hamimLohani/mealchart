@@ -58,8 +58,7 @@ export function GroupNavbar({
 
             <Link
               href={`/group/${groupId}`}
-              className={activeKey === "home" ? "admin-sidebar-link active" : "admin-sidebar-link"}
-              style={{ margin: "0.5rem 0" }}
+              className={activeKey === "home" ? "admin-sidebar-home-link active" : "admin-sidebar-home-link"}
             >
               <span className="admin-sidebar-link-label">{t("groupNav.home")}</span>
               <span className="admin-sidebar-link-hint">{t("groupNav.homeHint")}</span>

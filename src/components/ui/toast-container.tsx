@@ -36,10 +36,10 @@ function ToastItem({ toast }: { toast: ToastType }) {
 
   const bgClass =
     toast.type === "success"
-      ? "bg-[color:var(--accent)] text-white shadow-[0_8px_20px_var(--accent-glow)]"
+      ? "border border-[color:var(--success-border)] bg-[color:var(--success-bg)] text-[color:var(--success-text)] shadow-[0_8px_20px_rgba(34,197,94,0.14)]"
       : toast.type === "error"
-      ? "bg-[color:var(--danger)] text-white shadow-[0_8px_20px_rgba(239,68,68,0.3)]"
-      : "bg-[color:var(--foreground)] text-white shadow-lg";
+      ? "border border-[color:var(--danger-border)] bg-[color:var(--danger-bg)] text-[color:var(--danger)] shadow-[0_8px_20px_rgba(239,68,68,0.14)]"
+      : "border border-[color:var(--border-strong)] bg-[color:var(--panel-solid)] text-[color:var(--foreground)] shadow-lg";
 
   return (
     <motion.div
@@ -54,7 +54,8 @@ function ToastItem({ toast }: { toast: ToastType }) {
       <p className="flex-1 leading-snug">{toast.message}</p>
       <button
         onClick={() => removeToast(toast.id)}
-        className="ml-1 rounded-full p-1 transition-colors hover:bg-white/20"
+        className="ml-1 rounded-full p-1 transition-colors hover:bg-[color:var(--accent-dim)]"
+        aria-label="Dismiss notification"
       >
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

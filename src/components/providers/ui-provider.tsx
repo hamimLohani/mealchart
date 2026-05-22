@@ -16,7 +16,7 @@ export function UiProvider({ children }: { children: React.ReactNode }) {
   const loadingEntries = useUiStore((state) => state.loadingEntries);
   const { setAdmin, setLoaded } = useAuthStore();
   const { t } = useT();
-  const { error: showOffline, info: showInfo } = useToast();
+  const { success: showOnline } = useToast();
   const [mounted, setMounted] = useState(false);
   const [isReloadingFromSession, setIsReloadingFromSession] = useState(false);
   const isOnline = useOnlineStatus();
@@ -68,10 +68,6 @@ export function UiProvider({ children }: { children: React.ReactNode }) {
     if (previousOnlineStatus.current === null) {
       previousOnlineStatus.current = isOnline;
 
-      if (!isOnline) {
-        showOffline(t("common.offline"));
-      }
-
       return;
     }
 
@@ -79,11 +75,9 @@ export function UiProvider({ children }: { children: React.ReactNode }) {
     previousOnlineStatus.current = isOnline;
 
     if (isOnline) {
-      showInfo(t("common.backOnline"));
-    } else {
-      showOffline(t("common.offline"));
+      showOnline(t("common.backOnline"));
     }
-  }, [isOnline, showInfo, showOffline, t]);
+  }, [isOnline, showOnline, t]);
 
   const loadingMessages = Object.entries(loadingEntries);
   // Prioritize reloading message if it exists

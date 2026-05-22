@@ -108,7 +108,7 @@ export function AdminNav() {
           </button>
         </>
       ) : (
-        <Link href="/admin/login" className="admin-sidebar-link" style={{ margin: "0.5rem 0" }}>
+        <Link href="/admin/login" className="admin-sidebar-link admin-sidebar-standalone-link">
           <span className="admin-sidebar-link-label">{t("adminNav.login")}</span>
           <span className="admin-sidebar-link-hint">{t("adminNav.loginHint")}</span>
         </Link>

@@ -287,6 +287,31 @@ button:focus-visible {
   flex: 1;
 }
 
+.admin-sidebar-home-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.08rem;
+  margin: 0.75rem 1.1rem 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--background);
+  padding: 0.55rem 0.75rem;
+  color: var(--soft-foreground);
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition:
+    border-color 130ms ease,
+    background-color 130ms ease,
+    color 130ms ease;
+}
+
+.admin-sidebar-home-link:hover,
+.admin-sidebar-home-link.active {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
 .admin-sidebar-group {
   padding: 0.35rem 0;
 }
@@ -338,6 +363,10 @@ button:focus-visible {
 
 .admin-sidebar-link.active .admin-sidebar-link-label {
   color: var(--accent);
+}
+
+.admin-sidebar-standalone-link {
+  margin: 0.5rem 0;
 }
 
 .admin-sidebar-logout {
@@ -487,60 +516,6 @@ button:focus-visible {
 }
 
 /* ── Group workspace ───────────────────────────────── */
-.group-nav-shell {
-  position: sticky;
-  top: 3.75rem;
-  z-index: 20;
-  margin-left: -0.625rem;
-  margin-right: -0.625rem;
-  padding: 0.5rem 0.625rem 0;
-}
-
-@media (min-width: 640px) {
-  .group-nav-shell {
-    top: 4rem;
-    margin-left: 0;
-    margin-right: 0;
-    padding-left: 0;
-    padding-right: 0;
-  }
-}
-
-.group-nav-panel {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--panel) 96%, white 4%);
-  box-shadow: var(--shadow);
-  padding: 0.5rem;
-  backdrop-filter: blur(16px);
-}
-
-.group-nav-link {
-  display: inline-flex;
-  align-items: center;
-  min-height: 2rem;
-  white-space: nowrap;
-  border-radius: 999px;
-  padding: 0.4rem 0.85rem;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--muted);
-  transition:
-    background-color 130ms ease,
-    color 130ms ease;
-}
-
-.group-nav-link:hover {
-  color: var(--foreground);
-  background: var(--accent-dim);
-}
-
-.group-nav-link.active {
-  color: var(--accent);
-  background: var(--accent-dim);
-  box-shadow: inset 0 0 0 1px var(--accent-glow);
-}
-
 .group-search-input {
   width: 100%;
   min-height: 2rem;
