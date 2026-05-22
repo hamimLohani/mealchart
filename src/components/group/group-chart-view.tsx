@@ -1,8 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
+import { GroupMonthSelector } from "@/components/group/group-month-selector";
 import { useGroupSession } from "@/lib/hooks/use-group-session";
 
 import { memberDisplayName, memberIdsForChartRows } from "@/lib/utils/chart-members";
@@ -13,7 +13,6 @@ import { useGroup, useMembers, useMealsForMonth, useCosts, useDeposits } from "@
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 
 export function GroupChartView({ groupId }: { groupId: string }) {
-  const router = useRouter();
   const { t } = useT();
   const { chart } = useGroupSession();
 
@@ -50,18 +49,7 @@ export function GroupChartView({ groupId }: { groupId: string }) {
 
   if (!chart) {
     return (
-      <div className="group-page-grid">
-        <div className="group-hero">
-          <div className="min-w-0">
-            <p className="group-kicker">{group.name}</p>
-            <p className="group-title">{t("groupChart.noMonthTitle")}</p>
-            <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">{t("groupChart.noMonthBody")}</p>
-          </div>
-          <button type="button" onClick={() => router.push(`/group/${groupId}`)} className="button-secondary shrink-0">
-            ← {t("groupNav.home")}
-          </button>
-        </div>
-      </div>
+      <GroupMonthSelector groupId={group.id} groupName={group.name} />
     );
   }
 
@@ -94,6 +82,8 @@ export function GroupChartView({ groupId }: { groupId: string }) {
 
   return (
     <div className="group-page-grid">
+      <GroupMonthSelector groupId={group.id} groupName={group.name} />
+
       <div className="group-hero">
         <div className="min-w-0">
           <p className="group-kicker">{group.name}</p>

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 
+import { GroupMonthSelector } from "@/components/group/group-month-selector";
 import { getGroupById, listMembers } from "@/lib/firebase/repositories";
 import { useGroupSession } from "@/lib/hooks/use-group-session";
 import type { Group, Member } from "@/types/domain";
@@ -81,6 +82,8 @@ export function GroupMembersList({
 
   return (
     <div className="py-6 grid gap-4">
+      <GroupMonthSelector groupId={group.id} groupName={group.name} />
+
       <div className="group-hero">
         <div className="min-w-0">
           <p className="group-kicker">

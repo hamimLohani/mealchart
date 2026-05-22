@@ -3,6 +3,8 @@
 import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { useT } from "@/i18n/use-t";
+import { GroupNavbar } from "@/components/group/group-navbar";
+import { GroupMonthSelector } from "@/components/group/group-month-selector";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { saveMealEntry } from "@/lib/firebase/repositories";
 import { auth } from "@/lib/firebase/client";
@@ -124,7 +126,9 @@ export default function MemberPage({
   if (!group || !member) return null;
   if (!chart) {
     return (
-      <div className="py-6 grid gap-4">
+      <div className="mx-auto w-full max-w-7xl px-2.5 pb-20 sm:px-8 md:pb-16">
+        <GroupNavbar groupId={groupId} />
+        <GroupMonthSelector groupId={group.id} groupName={group.name} />
         <div className="alert-warn">{t("memberPage.selectMonthWarn")}</div>
         <button type="button" onClick={() => router.push(`/group/${groupId}`)} className="button-secondary w-full">
           {t("memberPage.backToHome")}
@@ -190,7 +194,9 @@ export default function MemberPage({
             : t("memberPage.tapUpdate");
 
   return (
-    <motion.main initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="mx-auto w-full max-w-7xl px-2.5 pb-16 sm:px-8">
+    <motion.main initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="mx-auto w-full max-w-7xl px-2.5 pb-20 sm:px-8 md:pb-16">
+      <GroupNavbar groupId={groupId} />
+      <GroupMonthSelector groupId={group.id} groupName={group.name} />
       <div className="py-6 grid gap-4">
         <div className="group-hero">
           <div className="min-w-0">

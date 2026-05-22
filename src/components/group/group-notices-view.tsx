@@ -1,10 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { Timestamp } from "firebase/firestore";
 import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 
+import { GroupMonthSelector } from "@/components/group/group-month-selector";
 import { useGroupSession } from "@/lib/hooks/use-group-session";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGroup, useNotices } from "@/lib/hooks/use-data";
@@ -24,7 +24,6 @@ function formatNoticeCreatedAt(raw: unknown, locale: string): string {
 }
 
 export function GroupNoticesView({ groupId }: { groupId: string }) {
-  const router = useRouter();
   const { t, tx, language } = useT();
   const locale = language === "bn" ? "bn" : "en";
   const { chart } = useGroupSession();
@@ -57,18 +56,7 @@ export function GroupNoticesView({ groupId }: { groupId: string }) {
 
   if (!chart) {
     return (
-      <div className="group-page-grid">
-        <div className="group-hero">
-          <div className="min-w-0">
-            <p className="group-kicker">{group.name}</p>
-            <p className="group-title">{t("groupNotices.pageTitle")}</p>
-            <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">{t("groupChart.noMonthBody")}</p>
-          </div>
-          <button type="button" onClick={() => router.push(`/group/${groupId}`)} className="button-secondary shrink-0">
-            ← {t("groupNav.home")}
-          </button>
-        </div>
-      </div>
+      <GroupMonthSelector groupId={group.id} groupName={group.name} />
     );
   }
 
@@ -91,6 +79,8 @@ export function GroupNoticesView({ groupId }: { groupId: string }) {
 
   return (
     <div className="group-page-grid">
+      <GroupMonthSelector groupId={group.id} groupName={group.name} />
+
       <div className="group-hero">
         <div className="min-w-0">
           <p className="group-kicker">{group.name}</p>

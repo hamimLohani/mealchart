@@ -1,42 +1,30 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
-import type { Chart, Member } from "@/types/domain";
+import type { Member } from "@/types/domain";
 import { useT } from "@/i18n/use-t";
 
-import { readStoredChartFromSession } from "@/lib/utils/group-chart-session";
+import { GroupMonthSelector } from "@/components/group/group-month-selector";
+import { useGroupSession } from "@/lib/hooks/use-group-session";
 import { saveChartReportPdf } from "@/lib/utils/pdf-report";
 import { formatMeal, getMonthTotals } from "@/lib/utils/meal-money";
 import { motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useGroup, useMembers, useCharts, useMealsForMonth, useCosts, useDeposits } from "@/lib/hooks/use-data";
+import { useGroup, useMembers, useMealsForMonth, useCosts, useDeposits } from "@/lib/hooks/use-data";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 
 export function GroupDashboard({ groupId }: { groupId: string }) {
   const router = useRouter();
   const { t } = useT();
 
-  const [activeChart, setActiveChart] = useState<Chart | null>(() => readStoredChartFromSession());
+  const { chart: activeChart } = useGroupSession();
   const [memberSearch, setMemberSearch] = useState("");
 
   // SWR — shared cache, automatic dedup & background refresh
   const { data: group, error: groupError, isLoading: groupLoading } = useGroup(isFirebaseConfigured ? groupId : undefined);
   const { data: members = [] } = useMembers(group?.id);
-  const { data: charts = [] } = useCharts(group?.id);
-
-  // Auto-select most recent chart on first arrival
-  useEffect(() => {
-    if (!groupLoading && charts.length > 0 && !activeChart) {
-      const hasManuallyExited = sessionStorage.getItem("mc_manual_exit");
-      const hasStoredChart = sessionStorage.getItem("mc_chart_id");
-      
-      if (!hasStoredChart && !hasManuallyExited) {
-        handleChartSelect(charts[0]);
-      }
-    }
-  }, [groupLoading, charts, activeChart]);
   const { data: monthMeals = [], isLoading: mealsLoading } = useMealsForMonth(group?.id, activeChart?.monthKey);
   const { data: monthCosts = [], isLoading: costsLoading } = useCosts(group?.id, activeChart?.id);
   const { data: monthDeposits = [], isLoading: depositsLoading } = useDeposits(group?.id, activeChart?.id);
@@ -50,29 +38,6 @@ export function GroupDashboard({ groupId }: { groupId: string }) {
 
   function handleMemberSelect(member: Member) {
     router.push(`/group/${groupId}/member/${member.id}`);
-  }
-
-  function handleChartSelect(chart: Chart) {
-    sessionStorage.setItem("mc_chart_id", chart.id);
-    sessionStorage.setItem("mc_chart_label", chart.label);
-    sessionStorage.setItem("mc_chart_month_key", chart.monthKey);
-    sessionStorage.setItem("mc_chart_year", String(chart.year));
-    sessionStorage.setItem("mc_chart_month", String(chart.month));
-    sessionStorage.setItem("mc_chart_locked", String(chart.locked));
-    sessionStorage.removeItem("mc_manual_exit");
-    setActiveChart(chart);
-  }
-
-  function handleChangeChart() {
-    sessionStorage.removeItem("mc_chart_id");
-    sessionStorage.removeItem("mc_chart_label");
-    sessionStorage.removeItem("mc_chart_month_key");
-    sessionStorage.removeItem("mc_chart_year");
-    sessionStorage.removeItem("mc_chart_month");
-    sessionStorage.removeItem("mc_chart_locked");
-    // Set a flag so the auto-select effect doesn't immediately put them back in
-    sessionStorage.setItem("mc_manual_exit", "true");
-    setActiveChart(null);
   }
 
   function handleDownloadPDF() {
@@ -124,44 +89,8 @@ export function GroupDashboard({ groupId }: { groupId: string }) {
   // Step 1: Select month/chart first
   if (!activeChart) {
     return (
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="group-page-grid">
-        <div className="group-hero">
-          <div className="min-w-0">
-            <p className="group-kicker">{group.name}</p>
-            <p className="group-title">{t("groupDash.selectMonth")}</p>
-            <p className="mt-2 inline-block rounded-lg bg-[color:var(--accent-dim)] px-2.5 py-1 text-sm font-medium text-[color:var(--accent)]">
-              {t("groupDash.selectMonthHelp")}
-            </p>
-          </div>
-        </div>
-        <div className="group-card">
-          <p className="group-kicker">{t("groupDash.availableMonths")}</p>
-          {charts.length === 0 ? (
-            <p className="mt-4 py-6 text-center text-sm text-[color:var(--soft-foreground)]">
-              {t("groupDash.noCharts")}
-            </p>
-          ) : (
-            <div className="mt-3 grid gap-2">
-              {charts.map((chart, i) => (
-                <button
-                  key={chart.id}
-                  type="button"
-                  onClick={() => handleChartSelect(chart)}
-                  className="flex items-center justify-between rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-3 py-2.5 text-left transition hover:border-[color:var(--accent)] hover:bg-[color:var(--accent-dim)]"
-                >
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="font-semibold">{chart.label}</p>
-                      {i === 0 && <span className="badge-accent">{t("common.active")}</span>}
-                    </div>
-                    <p className="mt-0.5 text-xs text-[color:var(--muted)]">{chart.monthKey}</p>
-                  </div>
-                  <span className="text-[color:var(--accent)]">→</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+        <GroupMonthSelector groupId={group.id} groupName={group.name} autoSelect />
       </motion.div>
     );
   }
@@ -169,25 +98,12 @@ export function GroupDashboard({ groupId }: { groupId: string }) {
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="group-page-grid">
-      <div className="group-hero">
-        <div className="min-w-0">
-          <p className="group-kicker">{group.name}</p>
-          <p className="group-title">{activeChart.label}</p>
-          <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">{t("groupDash.reviewTotals")}</p>
-          {activeChart.locked && (
-            <p className="mt-1 inline-flex rounded-full border border-[color:var(--danger-border)] bg-[color:var(--danger-bg)] px-2 py-0.5 text-xs font-semibold text-[color:var(--danger)]">
-              {t("groupDash.monthLocked")}
-            </p>
-          )}
-        </div>
-        <div className="flex flex-col gap-2 shrink-0 sm:flex-row">
-          <button type="button" onClick={handleDownloadPDF} className="button-secondary">
-            {t("groupDash.exportCSV", { defaultValue: "Export PDF" })}
-          </button>
-          <button type="button" onClick={handleChangeChart} className="button-secondary">
-            {t("groupDash.changeMonth")}
-          </button>
-        </div>
+      <GroupMonthSelector groupId={group.id} groupName={group.name} autoSelect />
+
+      <div className="flex justify-end">
+        <button type="button" onClick={handleDownloadPDF} className="button-secondary">
+          {t("groupDash.exportCSV", { defaultValue: "Export PDF" })}
+        </button>
       </div>
 
       {isMonthLoading ? (

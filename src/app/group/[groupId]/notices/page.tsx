@@ -8,10 +8,9 @@ export default async function GroupNoticesPage({
 }) {
   const { groupId } = await params;
   return (
-    <main className="mx-auto w-full max-w-7xl px-2.5 pb-16 sm:px-8">
+    <main className="mx-auto w-full max-w-7xl px-2.5 pb-20 sm:px-8 md:pb-16">
       <GroupNavbar groupId={groupId} />
       <GroupNoticesView groupId={groupId} />
     </main>
   );
 }
-
