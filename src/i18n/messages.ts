@@ -180,6 +180,13 @@ export const en = {
   "groupNav.money": "Money",
   "groupNav.members": "Members",
   "groupNav.notices": "Notices",
+  "groupNav.panel": "Member",
+  "groupNav.overview": "Group",
+  "groupNav.homeHint": "Month summary",
+  "groupNav.chartHint": "Daily meals",
+  "groupNav.moneyHint": "Deposits and cost",
+  "groupNav.membersHint": "People in group",
+  "groupNav.noticesHint": "Updates and alerts",
 
   // Group dashboard
   "groupDash.loading": "Loading group…",
@@ -786,6 +793,13 @@ export const bn: Record<MessageKey, string> = {
   "groupNav.money": "টাকা",
   "groupNav.members": "সদস্য",
   "groupNav.notices": "নোটিশ",
+  "groupNav.panel": "সদস্য",
+  "groupNav.overview": "গ্রুপ",
+  "groupNav.homeHint": "মাসের সারাংশ",
+  "groupNav.chartHint": "প্রতিদিনের মিল",
+  "groupNav.moneyHint": "জমা ও খরচ",
+  "groupNav.membersHint": "গ্রুপের সদস্য",
+  "groupNav.noticesHint": "আপডেট ও সতর্কতা",
 
   "groupDash.loading": "গ্রুপ লোড হচ্ছে…",
   "groupDash.selectMonth": "মাস বাছুন",

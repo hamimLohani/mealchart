@@ -12,9 +12,11 @@ export default function GroupDashboardPage({
   const { groupId } = use(params);
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-2.5 pb-20 sm:px-8 md:pb-16">
+    <main className="mx-auto w-full max-w-7xl px-2.5 py-4 sm:px-8 sm:py-6 md:flex md:items-start md:gap-6 md:py-8">
       <GroupNavbar groupId={groupId} />
-      <GroupDashboard groupId={groupId} />
+      <div className="min-w-0 flex-1 pb-20 md:pb-0">
+        <GroupDashboard groupId={groupId} />
+      </div>
     </main>
   );
 }

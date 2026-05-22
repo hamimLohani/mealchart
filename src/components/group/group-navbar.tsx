@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
 import { useT } from "@/i18n/use-t";
+import { useGroup, useMembers } from "@/lib/hooks/use-data";
+import { useAuthStore } from "@/store/auth-store";
 
 type NavKey = "home" | "chart" | "money" | "members" | "notices";
 
@@ -14,15 +16,21 @@ export function GroupNavbar({
 }) {
   const pathname = usePathname();
   const { t } = useT();
+  const { admin: currentUser } = useAuthStore();
+  const { data: group } = useGroup(groupId);
+  const { data: members = [] } = useMembers(groupId);
+  const groupName = group?.name ?? groupId;
+  const currentEmail = currentUser?.email?.trim().toLowerCase();
+  const signedInMember = currentEmail ? members.find((member) => member.email.trim().toLowerCase() === currentEmail) : null;
+  const identityName = signedInMember?.fullName ?? currentUser?.displayName ?? groupName;
 
   const navItems = useMemo(
     () =>
       [
-        { key: "home" as const, icon: <HomeIcon />, label: t("groupNav.home") },
-        { key: "chart" as const, icon: <ChartIcon />, label: t("groupNav.chart") },
-        { key: "money" as const, icon: <MoneyIcon />, label: t("groupNav.money") },
-        { key: "members" as const, icon: <MembersIcon />, label: t("groupNav.members") },
-        { key: "notices" as const, icon: <NoticesIcon />, label: t("groupNav.notices") },
+        { key: "chart" as const, icon: <ChartIcon />, label: t("groupNav.chart"), hint: t("groupNav.chartHint") },
+        { key: "money" as const, icon: <MoneyIcon />, label: t("groupNav.money"), hint: t("groupNav.moneyHint") },
+        { key: "members" as const, icon: <MembersIcon />, label: t("groupNav.members"), hint: t("groupNav.membersHint") },
+        { key: "notices" as const, icon: <NoticesIcon />, label: t("groupNav.notices"), hint: t("groupNav.noticesHint") },
       ] as const,
     [t],
   );
@@ -37,26 +45,47 @@ export function GroupNavbar({
 
   return (
     <>
-      <div className="group-nav-shell hidden md:block">
-        <div className="group-nav-panel">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <nav className="flex items-center gap-0.5 overflow-x-auto">
-              {navItems.map((item) => (
-                <Link
-                  key={item.key}
-                  href={item.key === "home" ? `/group/${groupId}` : `/group/${groupId}/${item.key}`}
-                  className={item.key === activeKey ? "group-nav-link active" : "group-nav-link"}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
-          </div>
+      <aside className="hidden shrink-0 md:block md:w-56 lg:w-64">
+        <div className="sticky top-20">
+          <nav className="admin-sidebar">
+            <div className="admin-sidebar-identity">
+              <div className="admin-sidebar-avatar">{identityName[0]?.toUpperCase() ?? "M"}</div>
+              <div className="min-w-0">
+                <p className="admin-sidebar-role">{t("groupNav.panel")}</p>
+                <p className="admin-sidebar-email">{identityName}</p>
+              </div>
+            </div>
+
+            <Link
+              href={`/group/${groupId}`}
+              className={activeKey === "home" ? "admin-sidebar-link active" : "admin-sidebar-link"}
+              style={{ margin: "0.5rem 0" }}
+            >
+              <span className="admin-sidebar-link-label">{t("groupNav.home")}</span>
+              <span className="admin-sidebar-link-hint">{t("groupNav.homeHint")}</span>
+            </Link>
+
+            <div className="admin-sidebar-groups">
+              <div className="admin-sidebar-group">
+                <p className="admin-sidebar-group-label">{t("groupNav.overview")}</p>
+                {navItems.map((item) => (
+                  <Link
+                    key={item.key}
+                    href={`/group/${groupId}/${item.key}`}
+                    className={item.key === activeKey ? "admin-sidebar-link active" : "admin-sidebar-link"}
+                  >
+                    <span className="admin-sidebar-link-label">{item.label}</span>
+                    <span className="admin-sidebar-link-hint">{item.hint}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </nav>
         </div>
-      </div>
+      </aside>
 
       <div className="fixed bottom-0 left-0 right-0 z-[60] flex items-center justify-around border-t border-[color:var(--border)] bg-[color:var(--panel)] px-1 py-1.5 pb-safe shadow-[0_-4px_12px_rgba(0,0,0,0.05)] md:hidden">
-        {navItems.map((item) => {
+        {[{ key: "home" as const, icon: <HomeIcon />, label: t("groupNav.home") }, ...navItems].map((item) => {
           const isActive = item.key === activeKey;
           return (
             <Link

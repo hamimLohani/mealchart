@@ -100,7 +100,12 @@ export function GroupDashboard({ groupId }: { groupId: string }) {
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="group-page-grid">
       <GroupMonthSelector groupId={group.id} groupName={group.name} autoSelect />
 
-      <div className="flex justify-end">
+      <div className="group-hero">
+        <div className="min-w-0">
+          <p className="group-kicker">{group.name}</p>
+          <p className="group-title">{t("groupNav.home")}</p>
+          <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">{activeChart.label}</p>
+        </div>
         <button type="button" onClick={handleDownloadPDF} className="button-secondary">
           {t("groupDash.exportCSV", { defaultValue: "Export PDF" })}
         </button>

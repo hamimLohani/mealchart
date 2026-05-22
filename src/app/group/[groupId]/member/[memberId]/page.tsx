@@ -126,13 +126,15 @@ export default function MemberPage({
   if (!group || !member) return null;
   if (!chart) {
     return (
-      <div className="mx-auto w-full max-w-7xl px-2.5 pb-20 sm:px-8 md:pb-16">
+      <div className="mx-auto w-full max-w-7xl px-2.5 py-4 sm:px-8 sm:py-6 md:flex md:items-start md:gap-6 md:py-8">
         <GroupNavbar groupId={groupId} />
-        <GroupMonthSelector groupId={group.id} groupName={group.name} />
-        <div className="alert-warn">{t("memberPage.selectMonthWarn")}</div>
-        <button type="button" onClick={() => router.push(`/group/${groupId}`)} className="button-secondary w-full">
-          {t("memberPage.backToHome")}
-        </button>
+        <div className="min-w-0 flex-1 space-y-4 pb-20 md:pb-0">
+          <GroupMonthSelector groupId={group.id} groupName={group.name} />
+          <div className="alert-warn">{t("memberPage.selectMonthWarn")}</div>
+          <button type="button" onClick={() => router.push(`/group/${groupId}`)} className="button-secondary w-full">
+            {t("memberPage.backToHome")}
+          </button>
+        </div>
       </div>
     );
   }
@@ -194,10 +196,11 @@ export default function MemberPage({
             : t("memberPage.tapUpdate");
 
   return (
-    <motion.main initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="mx-auto w-full max-w-7xl px-2.5 pb-20 sm:px-8 md:pb-16">
+    <motion.main initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="mx-auto w-full max-w-7xl px-2.5 py-4 sm:px-8 sm:py-6 md:flex md:items-start md:gap-6 md:py-8">
       <GroupNavbar groupId={groupId} />
-      <GroupMonthSelector groupId={group.id} groupName={group.name} />
-      <div className="py-6 grid gap-4">
+      <div className="min-w-0 flex-1 pb-20 md:pb-0">
+        <GroupMonthSelector groupId={group.id} groupName={group.name} />
+        <div className="py-6 grid gap-4">
         <div className="group-hero">
           <div className="min-w-0">
             <p className="group-kicker">{group.name} · {chart.label}</p>
@@ -377,6 +380,7 @@ export default function MemberPage({
             </div>
           </>
         )}
+        </div>
       </div>
     </motion.main>
   );
