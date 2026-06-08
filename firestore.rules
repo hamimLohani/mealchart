@@ -175,12 +175,29 @@ service cloud.firestore {
     match /groups/{groupId} {
       allow read: if true;
       allow create: if isSignedIn()
-        && hasOnlyFields(["id", "name", "token", "adminId", "currentChartId", "currentChartMonth", "createdAt", "active"])
+        && hasOnlyFields([
+          "id",
+          "name",
+          "token",
+          "adminId",
+          "currentChartId",
+          "currentChartMonth",
+          "createdAt",
+          "active",
+          "paidChartSlots",
+          "paidMemberSlots",
+          "totalChartsCreated",
+          "totalMembersCreated"
+        ])
         && request.resource.data.id == groupId
         && request.resource.data.name is string
         && request.resource.data.token is string
         && request.resource.data.adminId == request.auth.uid
-        && request.resource.data.active == true;
+        && request.resource.data.active == true
+        && request.resource.data.paidChartSlots == 0
+        && request.resource.data.paidMemberSlots == 0
+        && request.resource.data.totalChartsCreated == 0
+        && request.resource.data.totalMembersCreated == 0;
       allow update: if isGroupAdmin(groupId) || isAdminAccountMigration(groupId);
       allow delete: if isGroupAdmin(groupId);
     }
