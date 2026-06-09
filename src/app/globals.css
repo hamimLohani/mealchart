@@ -178,6 +178,45 @@ button:focus-visible {
   outline-offset: 3px;
 }
 
+/* ── Global Button Motion Enhancements ───────────────────────────────── */
+/* Apply consistent hover/press motion across button types */
+.button-primary:not(:disabled),
+.button-secondary:not(:disabled),
+.button-ghost:not(:disabled),
+.button-danger:not(:disabled),
+.meal-stepper-button:not(:disabled),
+button:not(.no-motion):not(:disabled) {
+  transition: transform 140ms cubic-bezier(.2,.9,.2,1), box-shadow 140ms ease, opacity 120ms ease;
+  will-change: transform;
+}
+
+.button-primary:not(:disabled):hover,
+.button-secondary:not(:disabled):hover,
+.button-ghost:not(:disabled):hover,
+.button-danger:not(:disabled):hover,
+.meal-stepper-button:not(:disabled):hover,
+button:not(.no-motion):not(:disabled):hover {
+  transform: translateY(-2px) scale(1.02);
+}
+
+.button-primary:not(:disabled):active,
+.button-secondary:not(:disabled):active,
+.button-ghost:not(:disabled):active,
+.button-danger:not(:disabled):active,
+.meal-stepper-button:not(:disabled):active,
+button:not(.no-motion):not(:disabled):active {
+  transform: translateY(0) scale(0.985);
+}
+
+/* Keep disabled buttons static */
+.button-primary:disabled,
+.button-secondary:disabled,
+.button-ghost:disabled,
+.button-danger:disabled,
+.meal-stepper-button:disabled {
+  transform: none !important;
+}
+
 /* ── Inputs ────────────────────────────────────────── */
 .input {
   width: 100%;
@@ -305,6 +344,22 @@ button:focus-visible {
     color 130ms ease;
 }
 
+.admin-sidebar-home-link,
+.admin-sidebar-link {
+  position: relative;
+}
+
+.sidebar-indicator {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  bottom: 8px;
+  width: 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-dim);
+}
+
 .admin-sidebar-home-link:hover,
 .admin-sidebar-home-link.active {
   border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
@@ -359,6 +414,24 @@ button:focus-visible {
   font-size: 0.72rem;
   color: var(--soft-foreground);
   line-height: 1.3;
+  display: block;
+  margin-top: 0.12rem;
+}
+
+.mobile-nav-hint {
+  font-size: 0.65rem;
+  line-height: 1;
+  color: var(--soft-foreground);
+}
+
+.admin-sidebar-link-text {
+  display: block;
+}
+.admin-sidebar-link-text .admin-sidebar-link-label {
+  display: block;
+}
+.admin-sidebar-link-text .admin-sidebar-link-hint {
+  display: block;
 }
 
 .admin-sidebar-link.active .admin-sidebar-link-label {
@@ -596,6 +669,7 @@ button:focus-visible {
   border-radius: var(--radius-sm);
   background: var(--panel);
   padding: 0.85rem 1rem;
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease, transform 180ms ease;
 }
 
 .group-stat-label {

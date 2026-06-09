@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { GroupDashboard } from "@/components/group/group-dashboard";
@@ -75,11 +76,11 @@ export function GroupHome({ groupId }: { groupId: string }) {
   }
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-2.5 py-4 sm:px-8 sm:py-6 md:flex md:items-start md:gap-6 md:py-8">
+    <motion.main initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28 }} className="mx-auto w-full max-w-7xl px-2.5 py-4 sm:px-8 sm:py-6 md:flex md:items-start md:gap-6 md:py-8">
       <GroupNavbar groupId={groupId} />
       <div className="min-w-0 flex-1 pb-20 md:pb-0">
         <GroupDashboard groupId={groupId} />
       </div>
-    </main>
+    </motion.main>
   );
 }

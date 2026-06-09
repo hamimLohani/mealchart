@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
@@ -79,8 +80,10 @@ export function AdminNav() {
         href="/admin"
         className="mt-3 flex items-center gap-2 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-3 py-2 text-sm font-medium text-[color:var(--soft-foreground)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]"
       >
-        {pathname !== "/admin" && <span>←</span>}
-        <span>{t("adminNav.panel")}</span>
+        <motion.div whileHover={{ x: 4 }} whileTap={{ scale: 0.99 }} transition={{ type: "spring", stiffness: 300 }} className="flex items-center gap-2 w-full">
+          {pathname !== "/admin" && <span>←</span>}
+          <span>{t("adminNav.panel")}</span>
+        </motion.div>
       </Link>
 
       {isLoggedIn ? (
@@ -95,22 +98,34 @@ export function AdminNav() {
                     href={item.href}
                     className={pathname === item.href ? "admin-sidebar-link active" : "admin-sidebar-link"}
                   >
-                    <span className="admin-sidebar-link-label">{t(item.labelKey)}</span>
-                    <span className="admin-sidebar-link-hint">{t(item.hintKey)}</span>
+                    <motion.div whileHover={{ x: 6 }} whileTap={{ scale: 0.985 }} transition={{ type: "spring", stiffness: 300 }} className="admin-sidebar-link-text">
+                      <span className="admin-sidebar-link-label">{t(item.labelKey)}</span>
+                      <span className="admin-sidebar-link-hint">{t(item.hintKey)}</span>
+                    </motion.div>
+                    {pathname === item.href && <motion.div layoutId="sidebar-active" className="sidebar-indicator" aria-hidden />}
                   </Link>
                 ))}
               </div>
             ))}
           </div>
-          <button className="admin-sidebar-logout" onClick={handleLogout} type="button">
+          <motion.button
+            className="admin-sidebar-logout"
+            whileHover={{ x: 4 }}
+            whileTap={{ scale: 0.99 }}
+            transition={{ type: "spring", stiffness: 300 }}
+            onClick={handleLogout}
+            type="button"
+          >
             <span>↩</span>
             <span>{t("adminNav.signOut")}</span>
-          </button>
+          </motion.button>
         </>
       ) : (
         <Link href="/admin/login" className="admin-sidebar-link admin-sidebar-standalone-link">
-          <span className="admin-sidebar-link-label">{t("adminNav.login")}</span>
-          <span className="admin-sidebar-link-hint">{t("adminNav.loginHint")}</span>
+          <motion.div whileHover={{ x: 4 }} whileTap={{ scale: 0.99 }} transition={{ type: "spring", stiffness: 300 }} className="admin-sidebar-link-text">
+            <span className="admin-sidebar-link-label">{t("adminNav.login")}</span>
+            <span className="admin-sidebar-link-hint">{t("adminNav.loginHint")}</span>
+          </motion.div>
         </Link>
       )}
     </nav>

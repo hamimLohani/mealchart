@@ -142,7 +142,7 @@ export default function MemberPage({
 
   const monthStart = `${chart.monthKey}-01`;
   const monthEnd = `${chart.monthKey}-${String(daysInMonth(chart.year, chart.month)).padStart(2, "0")}`;
-  const { mealRate } = getMonthTotals(monthMeals, costs, deposits);
+  const { mealRate, totalMeals, totalCost: monthTotalCost, totalPaid: monthTotalPaid, remainingTaka } = getMonthTotals(monthMeals, costs, deposits);
   const myDeposits = deposits.filter((deposit) => deposit.memberId.toLowerCase() === normalizedMemberId);
   const memberTotals = getMemberTotals(normalizedMemberId, monthMeals, deposits, mealRate);
   const myMeals = memberTotals.memberMeals.sort((a, b) => a.date.localeCompare(b.date));
@@ -243,14 +243,16 @@ export default function MemberPage({
             <Skeleton className="h-20 w-full" />
             <Skeleton className="h-20 w-full" />
             <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <motion.div layout transition={{ duration: 0.18, ease: "easeOut" }} className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
               {[
-                { label: t("memberPage.statTotalMeals"), value: formatMeal(myTotalMeals) },
-                { label: t("memberPage.statTotalCost"), value: `${myCost.toFixed(2)} ${tk}`, color: "var(--success-text)" },
-                { label: t("memberPage.statTotalPaid"), value: `${myTotalPaid.toFixed(2)} ${tk}`, color: "var(--success-text)" },
+                { label: t("memberPage.statMyMeals"), value: formatMeal(myTotalMeals) },
+                { label: t("memberPage.statMyCost"), value: `${myCost.toFixed(2)} ${tk}`, color: "var(--success-text)" },
+                { label: t("memberPage.statMyPaid"), value: `${myTotalPaid.toFixed(2)} ${tk}`, color: "var(--success-text)" },
+                { label: t("memberPage.statMealRate"), value: `${mealRate.toFixed(2)} ${tk}`, color: "var(--accent)" },
                 { 
                   label: t("memberPage.statBalance"), 
                   value: `${myBalance >= 0 ? "+" : ""}${myBalance.toFixed(2)} ${tk}`,
@@ -262,7 +264,26 @@ export default function MemberPage({
                   <p className="group-stat-value" style={s.color ? { color: s.color } : {}}>{s.value}</p>
                 </div>
               ))}
+            </motion.div>
+
+            <div className="mt-4">
+              <p className="group-kicker">{t("memberPage.monthTotals")}</p>
             </div>
+
+            <motion.div layout transition={{ duration: 0.18, ease: "easeOut" }} className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-5">
+              {[
+                { label: t("memberPage.statTotalMeals"), value: formatMeal(totalMeals) },
+                { label: t("memberPage.statTotalCost"), value: `${monthTotalCost.toFixed(2)} ${tk}`, color: "var(--success-text)" },
+                { label: t("memberPage.statTotalPaid"), value: `${monthTotalPaid.toFixed(2)} ${tk}`, color: "var(--success-text)" },
+                { label: t("memberPage.statTotalRemaining"), value: `${remainingTaka >= 0 ? "+" : ""}${remainingTaka.toFixed(2)} ${tk}`, color: remainingTaka < 0 ? "var(--danger)" : "var(--success-text)" },
+                { label: t("memberPage.statTotalMembers"), value: allMembers.length },
+              ].map((s) => (
+                <div key={s.label} className="group-stat-card">
+                  <p className="group-stat-label" style={s.color ? { color: s.color, opacity: 0.8 } : {}}>{s.label}</p>
+                  <p className="group-stat-value" style={s.color ? { color: s.color } : {}}>{s.value}</p>
+                </div>
+              ))}
+            </motion.div>
 
             <div className="rounded-[var(--radius)] border-2 border-[color:var(--accent)] bg-[color:var(--panel)] p-5 shadow-[0_0_0_4px_var(--accent-dim)]">
               <p className="group-kicker text-[color:var(--accent)]">{t("memberPage.addMeal")} ({chart.label})</p>

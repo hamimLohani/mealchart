@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import { useT } from "@/i18n/use-t";
 import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
 import { useGroup, useMembers } from "@/lib/hooks/use-data";
@@ -90,8 +91,15 @@ export function GroupNavbar({
               href={memberHomeHref}
               className={activeKey === "home" ? "admin-sidebar-home-link active" : "admin-sidebar-home-link"}
             >
-              <span className="admin-sidebar-link-label">{t("groupNav.home")}</span>
-              <span className="admin-sidebar-link-hint">{t("groupNav.homeHint")}</span>
+              <motion.div whileHover={{ x: 6 }} whileTap={{ scale: 0.985 }} transition={{ type: "spring", stiffness: 300 }}>
+                <div className="admin-sidebar-link-text">
+                  <span className="admin-sidebar-link-label">{t("groupNav.home")}</span>
+                  <span className="admin-sidebar-link-hint">{t("groupNav.homeHint")}</span>
+                </div>
+              </motion.div>
+              {activeKey === "home" && (
+                <motion.div layoutId="sidebar-active" className="sidebar-indicator" aria-hidden />
+              )}
             </Link>
 
             <div className="admin-sidebar-groups">
@@ -103,8 +111,15 @@ export function GroupNavbar({
                     href={`/group/${groupId}/${item.key}`}
                     className={item.key === activeKey ? "admin-sidebar-link active" : "admin-sidebar-link"}
                   >
-                    <span className="admin-sidebar-link-label">{item.label}</span>
-                    <span className="admin-sidebar-link-hint">{item.hint}</span>
+                    <motion.div whileHover={{ x: 6 }} whileTap={{ scale: 0.985 }} transition={{ type: "spring", stiffness: 300 }}>
+                      <div className="admin-sidebar-link-text">
+                        <span className="admin-sidebar-link-label">{item.label}</span>
+                        <span className="admin-sidebar-link-hint">{item.hint}</span>
+                      </div>
+                    </motion.div>
+                    {item.key === activeKey && (
+                      <motion.div layoutId="sidebar-active" className="sidebar-indicator" aria-hidden />
+                    )}
                   </Link>
                 ))}
               </div>
@@ -124,12 +139,14 @@ export function GroupNavbar({
                 isActive ? "text-[color:var(--accent)]" : "text-[color:var(--muted)]"
               }`}
             >
-              <div className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+              <motion.div whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.95 }} transition={{ duration: 0.12 }} className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
                 isActive ? "bg-[color:var(--accent-dim)]" : "bg-transparent"
               }`}>
                 {item.icon}
-              </div>
-              <span className="text-[10px] font-bold tracking-tight">{item.label}</span>
+              </motion.div>
+              <motion.div animate={{ scale: isActive ? 1.03 : 1 }} transition={{ duration: 0.12 }} className="flex flex-col items-center">
+                <span className="text-[10px] font-bold tracking-tight">{item.label}</span>
+              </motion.div>
             </Link>
           );
         })}
