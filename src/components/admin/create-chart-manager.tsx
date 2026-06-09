@@ -26,6 +26,7 @@ import { sendMonthSummaryEmails } from "@/lib/email/actions";
 import { getFriendlyEmailError } from "@/lib/utils/email-error";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
 import { useToast } from "@/lib/hooks/use-toast";
 
@@ -56,10 +57,12 @@ export function CreateChartManager() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [lockingAction, setLockingAction] = useState<{ id: string; type: "lock" | "unlock" } | null>(null);
+  const [pendingLockAction, setPendingLockAction] = useState<{ chart: Chart; type: "lock" | "unlock" } | null>(null);
   const [exportingChartId, setExportingChartId] = useState<string | null>(null);
   const [isRepairingData, setIsRepairingData] = useState(false);
   const [copiedGroupId, setCopiedGroupId] = useState(false);
   const [carryOver, setCarryOver] = useState(true);
+  const [chartToDelete, setChartToDelete] = useState<Chart | null>(null);
   const { adminProfile: currentAdminProfile, isLoading: profileLoading, error: profileError } = useCurrentAdminProfile();
   const activeAdminProfile =
     currentAdminProfile && adminProfile?.id === currentAdminProfile.id ? adminProfile : null;
@@ -234,8 +237,7 @@ export function CreateChartManager() {
 
   async function handleDeleteChart(chart: Chart) {
     if (!activeAdminProfile) return;
-    const confirmed = window.confirm(t("createChart.deleteConfirm"));
-    if (!confirmed) return;
+    // deletion is confirmed via modal; this function performs the delete
     setError(null);
     setIsDeleting(true);
     try {
@@ -323,6 +325,7 @@ export function CreateChartManager() {
   const daysUnit = t("createChart.daysUnit");
 
   return (
+    <>
     <div className="mt-6 grid gap-4">
       {resolvedError && (
         <div className={resolvedError === "LIMIT_REACHED_CHART" ? "alert-warn" : "alert-error"}>
@@ -522,14 +525,14 @@ export function CreateChartManager() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => void handleToggleLock(chart)}
+                    onClick={() => setPendingLockAction({ chart, type: chart.locked ? "unlock" : "lock" })}
                     className="button-secondary flex-1 sm:flex-none"
                   >
                     {chart.locked ? t("createChart.unlock") : t("createChart.lock")}
                   </button>
                   <button
                     type="button"
-                    onClick={() => void handleDeleteChart(chart)}
+                    onClick={() => setChartToDelete(chart)}
                     className="rounded-full border border-[color:var(--danger-border)] px-3 py-1.5 text-xs font-semibold text-[color:var(--danger)] transition hover:bg-[color:var(--danger)] hover:text-white sm:px-4"
                   >
                     {t("createChart.deleteBtn")}
@@ -545,5 +548,42 @@ export function CreateChartManager() {
         </div>
       </div>
     </div>
+    {pendingLockAction && (
+      <ConfirmModal
+        open={!!pendingLockAction}
+        title={pendingLockAction.type === "lock" ? t("createChart.lock") : t("createChart.unlock")}
+        description={t(
+          pendingLockAction.type === "lock" ? "createChart.lockConfirm" : "createChart.unlockConfirm",
+          { label: pendingLockAction.chart.label },
+        )}
+        confirmLabel={pendingLockAction.type === "lock" ? t("createChart.lock") : t("createChart.unlock")}
+        cancelLabel={t("common.cancel")}
+        isProcessing={lockingAction !== null && lockingAction.id === pendingLockAction.chart.id}
+        processingLabel={lockingAction?.type === "unlock" ? t("createChart.unlocking") : t("createChart.locking")}
+        onCancel={() => setPendingLockAction(null)}
+        onConfirm={async () => {
+          if (!pendingLockAction) return;
+          await handleToggleLock(pendingLockAction.chart);
+          setPendingLockAction(null);
+        }}
+      />
+    )}
+    {chartToDelete && (
+      <ConfirmModal
+        open={!!chartToDelete}
+        title={t("createChart.deleteBtn")}
+        description={t("createChart.deleteConfirm")}
+        confirmLabel={t("createChart.deleteBtn")}
+        cancelLabel={t("common.cancel")}
+        isProcessing={isDeleting}
+        onCancel={() => setChartToDelete(null)}
+        onConfirm={async () => {
+          if (!chartToDelete) return;
+          await handleDeleteChart(chartToDelete);
+          setChartToDelete(null);
+        }}
+      />
+    )}
+    </>
   );
 }

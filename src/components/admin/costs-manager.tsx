@@ -19,6 +19,7 @@ import { getMonthTotals } from "@/lib/utils/meal-money";
 import type { AdminProfile, Chart, CostEntry, CostRequest, DepositEntry } from "@/types/domain";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
 import { useToast } from "@/lib/hooks/use-toast";
 
@@ -37,6 +38,8 @@ export function CostsManager() {
   const [costRequests, setCostRequests] = useState<CostRequest[]>([]);
   const [deposits, setDeposits] = useState<DepositEntry[]>([]);
   const [dataLoading, setDataLoading] = useState(false);
+  const [costToDelete, setCostToDelete] = useState<CostEntry | null>(null);
+  const [isDeletingCost, setIsDeletingCost] = useState(false);
   const [search, setSearch] = useState("");
   const [itemName, setItemName] = useState("");
   const [amount, setAmount] = useState("");
@@ -158,27 +161,20 @@ export function CostsManager() {
     } finally { setIsSubmitting(false); }
   }
 
-  async function handleDelete(costId: string) {
+  async function performDeleteCost(cost: CostEntry) {
     if (!adminProfile || !selectedChart) return;
     if (selectedChart.locked) { setError("This month is locked."); return; }
-    const costToDelete = costs.find((cost) => cost.id === costId);
-    const confirmed = window.confirm(
-      t("costs.deleteConfirm", {
-        item: costToDelete?.itemName || t("common.unknown"),
-        amount: costToDelete ? costToDelete.amount.toFixed(2) : "0.00",
-        currency: tk,
-      }),
-    );
-    if (!confirmed) return;
-
+    setIsDeletingCost(true);
     try {
-      await deleteCost(adminProfile.groupId, selectedChart.id, costId);
-      setCosts((prev) => prev.filter((c) => c.id !== costId));
+      await deleteCost(adminProfile.groupId, selectedChart.id, cost.id);
+      setCosts((prev) => prev.filter((c) => c.id !== cost.id));
       showSuccess(t("toast.costDeleted"));
     } catch (e) {
       const msg = e instanceof Error ? e.message : t("toast.genericError");
       setError(msg);
       showError(msg);
+    } finally {
+      setIsDeletingCost(false);
     }
   }
 
@@ -262,6 +258,7 @@ export function CostsManager() {
   const dateBounds = chartMonthDateBounds(selectedChart);
 
   return (
+    <>
     <div className="mt-6 grid gap-5">
       {resolvedError && <p className="alert-error">{tx(resolvedError)}</p>}
 
@@ -422,7 +419,7 @@ export function CostsManager() {
             <div className="flex items-center gap-3">
               <p className="font-bold text-[color:var(--success-text)]">{cost.amount.toFixed(2)} {tk}</p>
               <button
-                onClick={() => void handleDelete(cost.id)}
+                onClick={() => setCostToDelete(cost)}
                 type="button"
                 disabled={selectedChart.locked}
                 className="rounded-full border border-[color:var(--danger-border)] px-3 py-1 text-xs font-semibold text-[color:var(--danger)] transition hover:bg-[color:var(--danger)] hover:text-white"
@@ -434,5 +431,22 @@ export function CostsManager() {
         ))}
       </div>
     </div>
+    {costToDelete && (
+      <ConfirmModal
+        open={!!costToDelete}
+        title={t("admin.delete")}
+        description={t("costs.deleteConfirm", { item: costToDelete.itemName, amount: costToDelete.amount.toFixed(2), currency: tk })}
+        confirmLabel={t("admin.delete")}
+        cancelLabel={t("common.cancel")}
+        isProcessing={isDeletingCost}
+        onCancel={() => setCostToDelete(null)}
+        onConfirm={async () => {
+          if (!costToDelete) return;
+          await performDeleteCost(costToDelete);
+          setCostToDelete(null);
+        }}
+      />
+    )}
+    </>
   );
 }

@@ -11,6 +11,7 @@ import { sendWelcomeEmail, sendRemovalEmail, verifyEmailExistence } from "@/lib/
 import { getFriendlyEmailError } from "@/lib/utils/email-error";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
 import { useToast } from "@/lib/hooks/use-toast";
 
@@ -43,6 +44,7 @@ export function MemberManager() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
+  const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
   const [requestAction, setRequestAction] = useState<"approve" | "reject" | null>(null);
   const [copiedGroupId, setCopiedGroupId] = useState(false);
   const { adminProfile: currentAdminProfile, isLoading: profileLoading, error: profileError } = useCurrentAdminProfile();
@@ -220,37 +222,22 @@ export function MemberManager() {
     }
   }
 
-  async function handleDelete(memberId: string) {
+  async function performDeleteMember(member: Member) {
     if (!activeAdminProfile) return;
-    const memberToRemove = members.find(m => m.id === memberId);
-    const confirmed = window.confirm(
-      t("memberMgr.removeConfirm", {
-        member: memberToRemove?.fullName || memberId,
-      }),
-    );
-    if (!confirmed) return;
-
     setError(null);
     setIsRemoving(true);
     try {
-      await deleteMember(activeAdminProfile.groupId, memberId);
-      setMembers((c) => c.filter((m) => m.id !== memberId));
-      if (editingMemberId === memberId) resetForm();
+      await deleteMember(activeAdminProfile.groupId, member.id);
+      setMembers((c) => c.filter((m) => m.id !== member.id));
+      if (editingMemberId === member.id) resetForm();
       showSuccess(t("toast.memberRemoved"));
 
-      if (memberToRemove && memberToRemove.email) {
-        const emailResult = await sendRemovalEmail(
-          memberToRemove.email,
-          memberToRemove.fullName,
-          groupName || activeAdminProfile.groupId
-        );
+      if (member && member.email) {
+        const emailResult = await sendRemovalEmail(member.email, member.fullName, groupName || activeAdminProfile.groupId);
         if (!emailResult.success) {
-           const friendlyError = getFriendlyEmailError(emailResult.error || "");
-           setError(`ERR_TRANS:${JSON.stringify({ 
-             key: "errors.emailRemovalFailed", 
-             vars: { error: friendlyError } 
-           })}`);
-         }
+          const friendlyError = getFriendlyEmailError(emailResult.error || "");
+          setError(`ERR_TRANS:${JSON.stringify({ key: "errors.emailRemovalFailed", vars: { error: friendlyError } })}`);
+        }
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : t("toast.genericError");
@@ -360,6 +347,7 @@ export function MemberManager() {
   }
 
   return (
+    <>
     <div className="mt-6 grid gap-4">
       {resolvedError && (
         <div className={resolvedError === "LIMIT_REACHED_MEMBER" ? "alert-warn" : "alert-error"}>
@@ -548,7 +536,7 @@ export function MemberManager() {
                   <button className="button-secondary" onClick={() => startEdit(member)} type="button">
                     {t("memberMgr.edit")}
                   </button>
-                  <button className="button-danger" onClick={() => void handleDelete(member.id)} type="button">
+                  <button className="button-danger" onClick={() => setMemberToDelete(member)} type="button">
                     {t("memberMgr.remove")}
                   </button>
                 </div>
@@ -562,5 +550,22 @@ export function MemberManager() {
         </div>
       </div>
     </div>
+    {memberToDelete && (
+      <ConfirmModal
+        open={!!memberToDelete}
+        title={t("memberMgr.remove")}
+        description={t("memberMgr.removeConfirm", { member: memberToDelete.fullName })}
+        confirmLabel={t("memberMgr.remove")}
+        cancelLabel={t("common.cancel")}
+        isProcessing={isRemoving}
+        onCancel={() => setMemberToDelete(null)}
+        onConfirm={async () => {
+          if (!memberToDelete) return;
+          await performDeleteMember(memberToDelete);
+          setMemberToDelete(null);
+        }}
+      />
+    )}
+    </>
   );
 }
