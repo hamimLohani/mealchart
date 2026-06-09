@@ -8,6 +8,7 @@ import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { GroupMonthSelector } from "@/components/group/group-month-selector";
 import { getGroupById, listMembers } from "@/lib/firebase/repositories";
 import { useGroupSession } from "@/lib/hooks/use-group-session";
+import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import type { Group, Member } from "@/types/domain";
 
 export function GroupMembersList({
@@ -24,6 +25,8 @@ export function GroupMembersList({
   const [members, setMembers] = useState<Member[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  useGlobalLoading(`group-members-list-${groupId}`, isLoading, t("groupMembers.loading"));
 
   useEffect(() => {
     let active = true;

@@ -130,7 +130,7 @@ export default function MemberPage({
       <div className="mx-auto w-full max-w-7xl px-2.5 py-4 sm:px-8 sm:py-6 md:flex md:items-start md:gap-6 md:py-8">
         <GroupNavbar groupId={groupId} />
         <div className="min-w-0 flex-1 space-y-4 pb-20 md:pb-0">
-          <GroupMonthSelector groupId={group.id} groupName={group.name} />
+          <GroupMonthSelector groupId={group.id} groupName={group.name} autoSelect />
           <div className="alert-warn">{t("memberPage.selectMonthWarn")}</div>
           <button type="button" onClick={() => router.push(`/group/${groupId}`)} className="button-secondary w-full">
             {t("memberPage.backToHome")}

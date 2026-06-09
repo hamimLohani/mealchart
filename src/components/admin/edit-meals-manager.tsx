@@ -12,6 +12,7 @@ import {
   saveMealsBatch,
 } from "@/lib/firebase/repositories";
 import { normalizeMealQuantity, formatMeal } from "@/lib/utils/meal-money";
+import { toDateInputValue } from "@/lib/utils/date";
 import type { AdminProfile, Chart, MealEntry, Member } from "@/types/domain";
 import { memberDisplayName, memberIdsForChartRows } from "@/lib/utils/chart-members";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
@@ -259,6 +260,8 @@ export function EditMealsManager() {
   }
 
   const totalDays = daysInMonth(selectedChart.year, selectedChart.month);
+  const currentDate = toDateInputValue(new Date());
+  const todayDate = currentDate.slice(0, 7) === selectedChart.monthKey ? currentDate : null;
   const days = Array.from({ length: totalDays }, (_, i) => {
     const d = String(i + 1).padStart(2, "0");
     return `${selectedChart.monthKey}-${d}`;
@@ -306,11 +309,19 @@ export function EditMealsManager() {
                 <th className="sticky left-0 z-10 min-w-[120px] bg-[color:var(--panel)] px-2.5 py-2 text-left text-xs font-bold uppercase tracking-[0.15em] text-[color:var(--muted)]">
                   {t("groupChart.colMember")}
                 </th>
-                {days.map((date) => (
-                  <th key={date} className="min-w-[40px] px-0.5 py-2 text-center text-xs font-semibold text-[color:var(--muted)]">
-                    {date.slice(8)}
-                  </th>
-                ))}
+                {days.map((date) => {
+                  const isToday = date === todayDate;
+                  return (
+                    <th
+                      key={date}
+                      className={`min-w-[40px] px-0.5 py-2 text-center text-xs font-semibold tracking-tight ${
+                        isToday ? "bg-[color:var(--accent-dim)] text-[color:var(--accent)]" : "text-[color:var(--muted)]"
+                      }`}
+                    >
+                      {date.slice(8)}
+                    </th>
+                  );
+                })}
                 <th className="min-w-[50px] px-2.5 py-2 text-center text-xs font-bold uppercase tracking-[0.15em] text-[color:var(--accent)]">
                   {t("groupChart.colTotal")}
                 </th>
@@ -345,10 +356,13 @@ export function EditMealsManager() {
                   </td>
                   {days.map((date) => {
                     const val = meals[memberId]?.[date] ?? 0;
+                    const isToday = date === todayDate;
                     return (
-                      <td key={date} className="px-0.5 py-1 text-center">
+                      <td key={date} className={`px-0.5 py-1 text-center ${isToday ? "bg-[color:var(--accent-dim)]" : ""}`}>
                         <input
-                          className="w-10 rounded-md border border-transparent bg-transparent text-center text-sm font-medium outline-none transition focus:border-[color:var(--accent)] focus:bg-[color:var(--panel)]"
+                          className={`w-10 rounded-md border border-transparent bg-transparent text-center text-sm font-medium outline-none transition focus:border-[color:var(--accent)] focus:bg-[color:var(--panel)] ${
+                            isToday ? "border-[color:var(--accent)] bg-[color:var(--panel)]" : ""
+                          }`}
                           min="0"
                           step="0.25"
                           type="number"
