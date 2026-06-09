@@ -7,6 +7,7 @@ import { GroupNavbar } from "@/components/group/group-navbar";
 import { GroupMonthSelector } from "@/components/group/group-month-selector";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { saveMealEntry } from "@/lib/firebase/repositories";
+import { saveChartReportPdf } from "@/lib/utils/pdf-report";
 import { auth } from "@/lib/firebase/client";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
@@ -160,6 +161,25 @@ export default function MemberPage({
   const canEdit = isOwner || isAdmin;
   const isLocked = chart.locked || !canEdit;
 
+  function handleDownloadPDF() {
+    if (!chart || !group) return;
+    try {
+      saveChartReportPdf({
+        groupName: group.name || "Group",
+        chartLabel: chart.label,
+        monthKey: chart.monthKey,
+        members: allMembers,
+        meals: monthMeals,
+        costs,
+        deposits,
+        fileName: `${group.name}_${chart.label}_Report.pdf`,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to generate PDF.";
+      console.error("PDF export failed:", message);
+    }
+  }
+
   async function handleMealChange(value: number) {
     if (!group || !selectedDate || !chart || isLocked) return;
     const clamped = normalizeMealQuantity(value);
@@ -212,8 +232,8 @@ export default function MemberPage({
               </p>
             )}
           </div>
-          <button type="button" onClick={() => router.push(`/group/${groupId}`)} className="button-secondary shrink-0">
-            {t("common.back")}
+          <button type="button" onClick={handleDownloadPDF} className="button-secondary shrink-0">
+            {t("groupDash.exportCSV", { defaultValue: "Export PDF" })}
           </button>
         </div>
 
