@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useT } from "@/i18n/use-t";
+import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
 import { useGroup, useMembers } from "@/lib/hooks/use-data";
 import { useAuthStore } from "@/store/auth-store";
 
@@ -17,12 +18,40 @@ export function GroupNavbar({
   const pathname = usePathname();
   const { t } = useT();
   const { admin: currentUser } = useAuthStore();
+  const [isGroupAdmin, setIsGroupAdmin] = useState(false);
   const { data: group } = useGroup(groupId);
   const { data: members = [] } = useMembers(groupId);
   const groupName = group?.name ?? groupId;
   const currentEmail = currentUser?.email?.trim().toLowerCase();
   const signedInMember = currentEmail ? members.find((member) => member.email.trim().toLowerCase() === currentEmail) : null;
-  const identityName = signedInMember?.fullName ?? currentUser?.displayName ?? groupName;
+  const identityName = !isGroupAdmin && signedInMember?.fullName ? signedInMember.fullName : currentUser?.displayName ?? groupName;
+  const memberHomeHref =
+    signedInMember && !isGroupAdmin
+      ? `/group/${groupId}/member/${encodeURIComponent(signedInMember.id)}`
+      : `/group/${groupId}`;
+
+  useEffect(() => {
+    let active = true;
+
+    async function checkAdmin() {
+      if (!currentUser) {
+        setIsGroupAdmin(false);
+        return;
+      }
+
+      try {
+        const adminProfile = await getAdminProfileForUser(currentUser);
+        if (active) setIsGroupAdmin(adminProfile?.groupId === groupId);
+      } catch {
+        if (active) setIsGroupAdmin(false);
+      }
+    }
+
+    void checkAdmin();
+    return () => {
+      active = false;
+    };
+  }, [currentUser, groupId]);
 
   const navItems = useMemo(
     () =>
@@ -57,7 +86,7 @@ export function GroupNavbar({
             </div>
 
             <Link
-              href={`/group/${groupId}`}
+              href={memberHomeHref}
               className={activeKey === "home" ? "admin-sidebar-home-link active" : "admin-sidebar-home-link"}
             >
               <span className="admin-sidebar-link-label">{t("groupNav.home")}</span>
@@ -89,7 +118,7 @@ export function GroupNavbar({
           return (
             <Link
               key={item.key}
-              href={item.key === "home" ? `/group/${groupId}` : `/group/${groupId}/${item.key}`}
+              href={item.key === "home" ? memberHomeHref : `/group/${groupId}/${item.key}`}
               className={`flex flex-1 flex-col items-center gap-1 py-1 transition-colors ${
                 isActive ? "text-[color:var(--accent)]" : "text-[color:var(--muted)]"
               }`}

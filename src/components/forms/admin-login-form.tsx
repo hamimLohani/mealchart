@@ -38,10 +38,10 @@ export function AdminLoginForm() {
   const finishSignIn = useCallback(
     async (user: NonNullable<typeof auth>["currentUser"]) => {
       if (!user) return;
-      const destination = await resolveSignInDestination(user);
+      const destination = await resolveSignInDestination(user, { preferAdmin: true });
 
       if (destination.kind === "member") {
-        router.push(`/group/${destination.groupId}`);
+        router.push(`/group/${destination.groupId}/member/${encodeURIComponent(destination.memberId)}`);
         return;
       }
 

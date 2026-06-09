@@ -294,7 +294,7 @@ export async function deleteMember(groupId: string, memberId: string) {
   await deleteDoc(memberRef);
 }
 
-export async function findMemberGroupByEmail(email: string): Promise<string | null> {
+export async function findMemberGroupByEmail(email: string): Promise<{ groupId: string; memberId: string } | null> {
   const database = ensureDb();
   const q = query(collectionGroup(database, "members"), where("email", "==", email.trim().toLowerCase()), limit(1));
   const snap = await getDocs(q);
@@ -302,7 +302,8 @@ export async function findMemberGroupByEmail(email: string): Promise<string | nu
   const docSnap = snap.docs[0];
   // path is groups/{groupId}/members/{memberId}
   const groupId = docSnap.ref.parent.parent?.id;
-  return groupId ?? null;
+  if (!groupId) return null;
+  return { groupId, memberId: docSnap.id };
 }
 
 // ── Join Requests ────────────────────────────────────────────────────────

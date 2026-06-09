@@ -10,13 +10,17 @@ import {
 } from "@/lib/firebase/repositories";
 
 export type SignInResolution =
-  | { kind: "member"; groupId: string }
+  | { kind: "member"; groupId: string; memberId: string }
   | { kind: "admin" }
   | { kind: "join"; fullName: string; email: string; groups: Group[] };
 
 export function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
+
+type ResolveSignInOptions = {
+  preferAdmin?: boolean;
+};
 
 export async function getAdminProfileForUser(user: User) {
   let profile: AdminProfile | null = null;
@@ -52,15 +56,28 @@ export async function getAdminProfileForUser(user: User) {
   return profile;
 }
 
-export async function resolveSignInDestination(user: User): Promise<SignInResolution> {
+export async function resolveSignInDestination(user: User, options: ResolveSignInOptions = {}): Promise<SignInResolution> {
   if (!user.email) throw new Error("No email found from Google.");
 
   const email = normalizeEmail(user.email);
-  const memberGroupId = await findMemberGroupByEmail(email);
-  if (memberGroupId) return { kind: "member", groupId: memberGroupId };
+  if (options.preferAdmin) {
+    const adminProfile = await getAdminProfileForUser(user);
+    if (adminProfile) return { kind: "admin" };
+  }
 
-  const adminProfile = await getAdminProfileForUser(user);
-  if (adminProfile) return { kind: "admin" };
+  const memberProfile = await findMemberGroupByEmail(email);
+  if (memberProfile) {
+    return {
+      kind: "member",
+      groupId: memberProfile.groupId,
+      memberId: memberProfile.memberId,
+    };
+  }
+
+  if (!options.preferAdmin) {
+    const adminProfile = await getAdminProfileForUser(user);
+    if (adminProfile) return { kind: "admin" };
+  }
 
   return {
     kind: "join",

@@ -44,7 +44,7 @@ export function EnterGroupForm() {
 
       if (destination.kind === "member") {
         setStep("Found member, redirecting");
-        router.push(`/group/${destination.groupId}`);
+        router.push(`/group/${destination.groupId}/member/${encodeURIComponent(destination.memberId)}`);
         return;
       }
 
