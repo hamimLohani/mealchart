@@ -222,10 +222,17 @@ export function MemberManager() {
 
   async function handleDelete(memberId: string) {
     if (!activeAdminProfile) return;
+    const memberToRemove = members.find(m => m.id === memberId);
+    const confirmed = window.confirm(
+      t("memberMgr.removeConfirm", {
+        member: memberToRemove?.fullName || memberId,
+      }),
+    );
+    if (!confirmed) return;
+
     setError(null);
     setIsRemoving(true);
     try {
-      const memberToRemove = members.find(m => m.id === memberId);
       await deleteMember(activeAdminProfile.groupId, memberId);
       setMembers((c) => c.filter((m) => m.id !== memberId));
       if (editingMemberId === memberId) resetForm();

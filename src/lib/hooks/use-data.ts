@@ -14,7 +14,9 @@ import {
   listCharts,
   listJoinRequests,
   listDepositsForChart,
+  listDepositRequestsForChart,
   listCostsForChart,
+  listCostRequestsForChart,
   listNoticesForChart,
   getMealsForMonth,
   getMealsForDate,
@@ -78,12 +80,26 @@ export function useDeposits(groupId: string | undefined, chartId: string | undef
   );
 }
 
+export function useDepositRequests(groupId: string | undefined, chartId: string | undefined) {
+  return useSWR(
+    groupId && chartId ? ["depositRequests", groupId, chartId] : null,
+    ([, gid, cid]: [string, string, string]) => listDepositRequestsForChart(gid, cid),
+  );
+}
+
 // ── Costs ─────────────────────────────────────────────────────────────────────
 
 export function useCosts(groupId: string | undefined, chartId: string | undefined) {
   return useSWR(
     groupId && chartId ? ["costs", groupId, chartId] : null,
     ([, gid, cid]: [string, string, string]) => listCostsForChart(gid, cid),
+  );
+}
+
+export function useCostRequests(groupId: string | undefined, chartId: string | undefined) {
+  return useSWR(
+    groupId && chartId ? ["costRequests", groupId, chartId] : null,
+    ([, gid, cid]: [string, string, string]) => listCostRequestsForChart(gid, cid),
   );
 }
 

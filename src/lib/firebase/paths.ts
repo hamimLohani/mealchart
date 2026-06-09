@@ -12,5 +12,11 @@ export const lockedMonthsCollection = (groupId: string) => `groups/${groupId}/lo
 export const chartDepositsCollection = (groupId: string, chartId: string) =>
   `groups/${groupId}/charts/${chartId}/deposits`;
 
+export const chartDepositRequestsCollection = (groupId: string, chartId: string) =>
+  `groups/${groupId}/charts/${chartId}/depositRequests`;
+
 export const chartCostsCollection = (groupId: string, chartId: string) =>
   `groups/${groupId}/charts/${chartId}/costs`;
+
+export const chartCostRequestsCollection = (groupId: string, chartId: string) =>
+  `groups/${groupId}/charts/${chartId}/costRequests`;

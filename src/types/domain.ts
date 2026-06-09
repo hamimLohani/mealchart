@@ -57,12 +57,35 @@ export type CostEntry = {
   date: string;
 };
 
+export type CostRequest = {
+  id: string;
+  itemName: string;
+  amount: number;
+  date: string;
+  memberId: string;
+  memberName: string;
+  requestedByEmail: string;
+  status: "pending";
+  createdAt: string;
+};
+
 export type DepositEntry = {
   id: string;
   memberId: string;
   amount: number;
   date: string;
   collectedByAdminId: string;
+};
+
+export type DepositRequest = {
+  id: string;
+  memberId: string;
+  memberName: string;
+  requestedByEmail: string;
+  amount: number;
+  date: string;
+  status: "pending";
+  createdAt: string;
 };
 
 export type Notice = {

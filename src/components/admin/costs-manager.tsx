@@ -5,15 +5,18 @@ import { auth } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { useT } from "@/i18n/use-t";
 import {
+  approveCostRequest,
   createCost,
   deleteCost,
   listCharts,
+  listCostRequestsForChart,
   listCostsForChart,
   listDepositsForChart,
+  rejectCostRequest,
 } from "@/lib/firebase/repositories";
 import { chartMonthDateBounds, toDateInputValue } from "@/lib/utils/date";
 import { getMonthTotals } from "@/lib/utils/meal-money";
-import type { AdminProfile, Chart, CostEntry, DepositEntry } from "@/types/domain";
+import type { AdminProfile, Chart, CostEntry, CostRequest, DepositEntry } from "@/types/domain";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
@@ -31,6 +34,7 @@ export function CostsManager() {
 
   const [selectedChart, setSelectedChart] = useState<Chart | null>(null);
   const [costs, setCosts] = useState<CostEntry[]>([]);
+  const [costRequests, setCostRequests] = useState<CostRequest[]>([]);
   const [deposits, setDeposits] = useState<DepositEntry[]>([]);
   const [dataLoading, setDataLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -38,6 +42,7 @@ export function CostsManager() {
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(toDateInputValue(new Date()));
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [requestAction, setRequestAction] = useState<{ id: string; type: "approve" | "reject" } | null>(null);
   const { adminProfile: currentAdminProfile, isLoading: profileLoading, error: profileError } = useCurrentAdminProfile();
   const resolvedError =
     error ??
@@ -83,14 +88,17 @@ export function CostsManager() {
     const fetchData = async () => {
       setDataLoading(true);
       setCosts([]);
+      setCostRequests([]);
       setDeposits([]);
       try {
-        const [cList, dList] = await Promise.all([
+        const [cList, requestList, dList] = await Promise.all([
           listCostsForChart(adminProfile.groupId, selectedChart.id),
+          listCostRequestsForChart(adminProfile.groupId, selectedChart.id),
           listDepositsForChart(adminProfile.groupId, selectedChart.id),
         ]);
         if (active) {
           setCosts(cList);
+          setCostRequests(requestList);
           setDeposits(dList);
         }
       } catch (e) {
@@ -153,6 +161,16 @@ export function CostsManager() {
   async function handleDelete(costId: string) {
     if (!adminProfile || !selectedChart) return;
     if (selectedChart.locked) { setError("This month is locked."); return; }
+    const costToDelete = costs.find((cost) => cost.id === costId);
+    const confirmed = window.confirm(
+      t("costs.deleteConfirm", {
+        item: costToDelete?.itemName || t("common.unknown"),
+        amount: costToDelete ? costToDelete.amount.toFixed(2) : "0.00",
+        currency: tk,
+      }),
+    );
+    if (!confirmed) return;
+
     try {
       await deleteCost(adminProfile.groupId, selectedChart.id, costId);
       setCosts((prev) => prev.filter((c) => c.id !== costId));
@@ -161,6 +179,41 @@ export function CostsManager() {
       const msg = e instanceof Error ? e.message : t("toast.genericError");
       setError(msg);
       showError(msg);
+    }
+  }
+
+  async function handleApproveRequest(requestId: string) {
+    if (!adminProfile || !selectedChart) return;
+    if (selectedChart.locked) { setError("This month is locked."); return; }
+    setRequestAction({ id: requestId, type: "approve" });
+    try {
+      const approved = await approveCostRequest(adminProfile.groupId, selectedChart.id, requestId);
+      setCosts((prev) => [approved, ...prev]);
+      setCostRequests((prev) => prev.filter((request) => request.id !== requestId));
+      showSuccess(t("toast.costRequestApproved"));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : t("toast.genericError");
+      setError(msg);
+      showError(msg);
+    } finally {
+      setRequestAction(null);
+    }
+  }
+
+  async function handleRejectRequest(requestId: string) {
+    if (!adminProfile || !selectedChart) return;
+    if (selectedChart.locked) { setError("This month is locked."); return; }
+    setRequestAction({ id: requestId, type: "reject" });
+    try {
+      await rejectCostRequest(adminProfile.groupId, selectedChart.id, requestId);
+      setCostRequests((prev) => prev.filter((request) => request.id !== requestId));
+      showSuccess(t("toast.costRequestRejected"));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : t("toast.genericError");
+      setError(msg);
+      showError(msg);
+    } finally {
+      setRequestAction(null);
     }
   }
 
@@ -222,7 +275,7 @@ export function CostsManager() {
         </div>
         <button
           type="button"
-          onClick={() => { setSelectedChart(null); setCosts([]); }}
+          onClick={() => { setSelectedChart(null); setCosts([]); setCostRequests([]); }}
           className="button-secondary shrink-0"
         >
           {t("costs.backMonths")}
@@ -285,6 +338,59 @@ export function CostsManager() {
           {isSubmitting ? t("costs.adding") : t("costs.addCostBtn")}
         </button>
       </form>
+
+      <div className="grid gap-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+          <p className="admin-section-label">{t("costs.pendingRequests")}</p>
+          <span className="badge-accent">{costRequests.length}</span>
+        </div>
+        {dataLoading && (
+          <AdminLoadingState compact message={t("common.loading")} />
+        )}
+        {!dataLoading && costRequests.length === 0 && (
+          <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">
+            {t("costs.noRequests")}
+          </p>
+        )}
+        {costRequests.map((request) => {
+          const isApproving = requestAction?.id === request.id && requestAction.type === "approve";
+          const isRejecting = requestAction?.id === request.id && requestAction.type === "reject";
+          const isActionBusy = requestAction !== null;
+
+          return (
+          <div
+            key={request.id}
+            className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--panel)] px-4 py-3"
+          >
+            <div className="min-w-0">
+              <p className="font-semibold">{request.itemName}</p>
+              <p className="mt-0.5 text-xs text-[color:var(--muted)]">
+                {request.date} · {request.memberName || request.requestedByEmail}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <p className="font-bold text-[color:var(--success-text)]">{request.amount.toFixed(2)} {tk}</p>
+              <button
+                onClick={() => void handleApproveRequest(request.id)}
+                type="button"
+                disabled={selectedChart.locked || isActionBusy}
+                className="button-primary px-3 py-1.5 text-xs"
+              >
+                {isApproving ? t("memberMgr.submittingApprove") : t("memberMgr.approve")}
+              </button>
+              <button
+                onClick={() => void handleRejectRequest(request.id)}
+                type="button"
+                disabled={selectedChart.locked || isActionBusy}
+                className="rounded-full border border-[color:var(--danger-border)] px-3 py-1 text-xs font-semibold text-[color:var(--danger)] transition hover:bg-[color:var(--danger)] hover:text-white"
+              >
+                {isRejecting ? t("memberMgr.submittingReject") : t("memberMgr.reject")}
+              </button>
+            </div>
+          </div>
+          );
+        })}
+      </div>
 
       <div className="grid gap-2.5">
         <div className="flex flex-wrap items-center justify-between gap-3 px-1">

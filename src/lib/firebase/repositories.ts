@@ -27,6 +27,8 @@ import {
   adminsCollection,
   chartsCollection,
   chartCostsCollection,
+  chartCostRequestsCollection,
+  chartDepositRequestsCollection,
   chartDepositsCollection,
   mealsCollection,
   membersCollection,
@@ -44,7 +46,7 @@ import {
   getMonthTotals,
   normalizeMealQuantity,
 } from "@/lib/utils/meal-money";
-import type { AdminProfile, Chart, CostEntry, DepositEntry, Group, MealEntry, Member, Notice } from "@/types/domain";
+import type { AdminProfile, Chart, CostEntry, CostRequest, DepositEntry, DepositRequest, Group, MealEntry, Member, Notice } from "@/types/domain";
 
 function ensureDb() {
   if (!db) throw new Error("Firebase is not configured yet.");
@@ -712,6 +714,54 @@ export async function listDepositsForChart(groupId: string, chartId: string) {
   return snapshot.docs.map((entry) => normalizeDoc<DepositEntry>(entry.id, entry.data()));
 }
 
+export async function listDepositRequestsForChart(groupId: string, chartId: string) {
+  const database = ensureDb();
+  const snapshot = await getDocs(
+    query(
+      collection(database, chartDepositRequestsCollection(groupId, chartId)),
+      orderBy("createdAt", "desc"),
+    ),
+  );
+  return snapshot.docs.map((entry) => {
+    const data = entry.data();
+    return {
+      ...normalizeDoc<DepositRequest>(entry.id, data),
+      createdAt: serializeDate(data.createdAt),
+    };
+  });
+}
+
+export async function submitDepositRequest(input: {
+  groupId: string;
+  chartId: string;
+  memberId: string;
+  memberName: string;
+  requestedByEmail: string;
+  amount: number;
+  date: string;
+}) {
+  await assertDateBelongsToChart(input.groupId, input.chartId, input.date);
+  const database = ensureDb();
+  const requestId = crypto.randomUUID();
+  const payload: DepositRequest = {
+    id: requestId,
+    memberId: input.memberId.toLowerCase(),
+    memberName: input.memberName,
+    requestedByEmail: input.requestedByEmail.trim().toLowerCase(),
+    amount: input.amount,
+    date: input.date,
+    status: "pending",
+    createdAt: new Date().toISOString(),
+  };
+
+  await setDoc(
+    doc(database, chartDepositRequestsCollection(input.groupId, input.chartId), requestId),
+    payload,
+  );
+
+  return payload;
+}
+
 export async function createDeposit(input: {
   groupId: string;
   chartId: string;
@@ -755,6 +805,36 @@ export async function createDeposit(input: {
   });
 
   return record;
+}
+
+export async function approveDepositRequest(input: {
+  groupId: string;
+  chartId: string;
+  requestId: string;
+  collectedByAdminId: string;
+}) {
+  const database = ensureDb();
+  const requestRef = doc(database, chartDepositRequestsCollection(input.groupId, input.chartId), input.requestId);
+  const requestSnap = await getDoc(requestRef);
+  if (!requestSnap.exists()) throw new Error("Money request was not found.");
+  const request = normalizeDoc<DepositRequest>(requestSnap.id, requestSnap.data());
+
+  const deposit = await createDeposit({
+    groupId: input.groupId,
+    chartId: input.chartId,
+    memberId: request.memberId,
+    amount: request.amount,
+    date: request.date,
+    collectedByAdminId: input.collectedByAdminId,
+    memberName: request.memberName,
+  });
+  await deleteDoc(requestRef);
+  return deposit;
+}
+
+export async function rejectDepositRequest(groupId: string, chartId: string, requestId: string) {
+  const database = ensureDb();
+  await deleteDoc(doc(database, chartDepositRequestsCollection(groupId, chartId), requestId));
 }
 
 // ── Meals ─────────────────────────────────────────────────────────────
@@ -884,6 +964,56 @@ export async function listCostsForChart(groupId: string, chartId: string) {
   return snapshot.docs.map((entry) => normalizeDoc<CostEntry>(entry.id, entry.data()));
 }
 
+export async function listCostRequestsForChart(groupId: string, chartId: string) {
+  const database = ensureDb();
+  const snapshot = await getDocs(
+    query(
+      collection(database, chartCostRequestsCollection(groupId, chartId)),
+      orderBy("createdAt", "desc"),
+    ),
+  );
+  return snapshot.docs.map((entry) => {
+    const data = entry.data();
+    return {
+      ...normalizeDoc<CostRequest>(entry.id, data),
+      createdAt: serializeDate(data.createdAt),
+    };
+  });
+}
+
+export async function submitCostRequest(input: {
+  groupId: string;
+  chartId: string;
+  itemName: string;
+  amount: number;
+  date: string;
+  memberId: string;
+  memberName: string;
+  requestedByEmail: string;
+}) {
+  await assertDateBelongsToChart(input.groupId, input.chartId, input.date);
+  const database = ensureDb();
+  const requestId = crypto.randomUUID();
+  const payload: CostRequest = {
+    id: requestId,
+    itemName: input.itemName,
+    amount: input.amount,
+    date: input.date,
+    memberId: input.memberId.toLowerCase(),
+    memberName: input.memberName,
+    requestedByEmail: input.requestedByEmail.trim().toLowerCase(),
+    status: "pending",
+    createdAt: new Date().toISOString(),
+  };
+
+  await setDoc(
+    doc(database, chartCostRequestsCollection(input.groupId, input.chartId), requestId),
+    payload,
+  );
+
+  return payload;
+}
+
 export async function createCost(input: {
   groupId: string;
   chartId: string;
@@ -925,6 +1055,29 @@ export async function deleteCost(groupId: string, chartId: string, costId: strin
   await deleteDoc(doc(database, chartCostsCollection(groupId, chartId), costId));
 }
 
+export async function approveCostRequest(groupId: string, chartId: string, requestId: string) {
+  const database = ensureDb();
+  const requestRef = doc(database, chartCostRequestsCollection(groupId, chartId), requestId);
+  const requestSnap = await getDoc(requestRef);
+  if (!requestSnap.exists()) throw new Error("Cost request was not found.");
+  const request = normalizeDoc<CostRequest>(requestSnap.id, requestSnap.data());
+
+  const cost = await createCost({
+    groupId,
+    chartId,
+    itemName: request.itemName,
+    amount: request.amount,
+    date: request.date,
+  });
+  await deleteDoc(requestRef);
+  return cost;
+}
+
+export async function rejectCostRequest(groupId: string, chartId: string, requestId: string) {
+  const database = ensureDb();
+  await deleteDoc(doc(database, chartCostRequestsCollection(groupId, chartId), requestId));
+}
+
 // ── Delete Chart (and all subcollections) ─────────────────────────────
 
 async function deleteSubcollection(database: ReturnType<typeof ensureDb>, path: string) {
@@ -960,7 +1113,9 @@ export async function deleteChart(groupId: string, chartId: string) {
 
   // Delete all subcollections first
   await deleteSubcollection(database, chartDepositsCollection(groupId, chartId));
+  await deleteSubcollection(database, chartDepositRequestsCollection(groupId, chartId));
   await deleteSubcollection(database, chartCostsCollection(groupId, chartId));
+  await deleteSubcollection(database, chartCostRequestsCollection(groupId, chartId));
   await deleteSubcollection(database, chartNoticesCollection(groupId, chartId));
 
   // Delete meals for this month (stored globally under groups/{groupId}/meals)

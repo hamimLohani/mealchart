@@ -5,17 +5,20 @@ import { auth } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { useT } from "@/i18n/use-t";
 import {
+  approveDepositRequest,
   createDeposit,
   getGroupById,
   listCharts,
   listCostsForChart,
+  listDepositRequestsForChart,
   listDepositsForChart,
   listMembers,
   getMealsForMonth,
+  rejectDepositRequest,
 } from "@/lib/firebase/repositories";
 import { chartMonthDateBounds, toMonthKey, toDateInputValue } from "@/lib/utils/date";
 import { getMemberTotals, getMonthTotals, normalizeMealQuantity } from "@/lib/utils/meal-money";
-import type { AdminProfile, Chart, CostEntry, DepositEntry, Member, MealEntry } from "@/types/domain";
+import type { AdminProfile, Chart, CostEntry, DepositEntry, DepositRequest, Member, MealEntry } from "@/types/domain";
 import { sendMoneyReceiptEmail } from "@/lib/email/actions";
 import { getFriendlyEmailError } from "@/lib/utils/email-error";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
@@ -42,12 +45,14 @@ export function AddMoneyManager() {
 
   const [selectedChart, setSelectedChart] = useState<Chart | null>(null);
   const [deposits, setDeposits] = useState<DepositEntry[]>([]);
+  const [depositRequests, setDepositRequests] = useState<DepositRequest[]>([]);
   const [costs, setCosts] = useState<CostEntry[]>([]);
   const [meals, setMeals] = useState<MealEntry[]>([]);
   const [dataLoading, setDataLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [form, setForm] = useState<DepositFormState>({ memberId: "", amount: "", date: toDateInputValue(new Date()) });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [requestAction, setRequestAction] = useState<{ id: string; type: "approve" | "reject" } | null>(null);
   const { adminProfile: currentAdminProfile, isLoading: profileLoading, error: profileError } = useCurrentAdminProfile();
   const activeAdminProfile =
     currentAdminProfile && adminProfile?.id === currentAdminProfile.id ? adminProfile : null;
@@ -111,16 +116,19 @@ export function AddMoneyManager() {
     const loadData = async () => {
       setDataLoading(true);
       setDeposits([]);
+      setDepositRequests([]);
       setCosts([]);
       setMeals([]);
       try {
-        const [dList, cList, mList] = await Promise.all([
+        const [dList, requestList, cList, mList] = await Promise.all([
           listDepositsForChart(activeAdminProfile.groupId, selectedChart.id),
+          listDepositRequestsForChart(activeAdminProfile.groupId, selectedChart.id),
           listCostsForChart(activeAdminProfile.groupId, selectedChart.id),
           getMealsForMonth(activeAdminProfile.groupId, selectedChart.monthKey || toMonthKey(selectedChart.year, selectedChart.month)),
         ]);
         if (active) {
           setDeposits(dList);
+          setDepositRequests(requestList);
           setCosts(cList);
           setMeals(mList);
         }
@@ -242,6 +250,48 @@ export function AddMoneyManager() {
     }
   }
 
+  async function handleApproveRequest(requestId: string) {
+    if (!activeAdminProfile || !selectedChart) return;
+    if (selectedChart.locked) { setError("This month is locked."); return; }
+    setError(null);
+    setRequestAction({ id: requestId, type: "approve" });
+    try {
+      const deposit = await approveDepositRequest({
+        groupId: activeAdminProfile.groupId,
+        chartId: selectedChart.id,
+        requestId,
+        collectedByAdminId: activeAdminProfile.id,
+      });
+      setDeposits((prev) => [deposit, ...prev]);
+      setDepositRequests((prev) => prev.filter((request) => request.id !== requestId));
+      showSuccess(t("toast.depositRequestApproved"));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : t("toast.genericError");
+      setError(msg);
+      showError(msg);
+    } finally {
+      setRequestAction(null);
+    }
+  }
+
+  async function handleRejectRequest(requestId: string) {
+    if (!activeAdminProfile || !selectedChart) return;
+    if (selectedChart.locked) { setError("This month is locked."); return; }
+    setError(null);
+    setRequestAction({ id: requestId, type: "reject" });
+    try {
+      await rejectDepositRequest(activeAdminProfile.groupId, selectedChart.id, requestId);
+      setDepositRequests((prev) => prev.filter((request) => request.id !== requestId));
+      showSuccess(t("toast.depositRequestRejected"));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : t("toast.genericError");
+      setError(msg);
+      showError(msg);
+    } finally {
+      setRequestAction(null);
+    }
+  }
+
   const tk = t("common.tk");
 
   if (isLoading) {
@@ -304,7 +354,7 @@ export function AddMoneyManager() {
         </div>
         <button
           type="button"
-          onClick={() => { setSelectedChart(null); setDeposits([]); }}
+          onClick={() => { setSelectedChart(null); setDeposits([]); setDepositRequests([]); }}
           className="button-secondary shrink-0"
         >
           {t("costs.backMonths")}
@@ -380,6 +430,64 @@ export function AddMoneyManager() {
           {isSubmitting ? t("addMoney.adding") : t("addMoney.submit")}
         </button>
       </form>
+
+      <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-3.5 sm:p-5 shadow-[var(--shadow-sm)]">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="admin-section-label">{t("addMoney.pendingRequests")}</p>
+          <span className="badge-accent">{depositRequests.length}</span>
+        </div>
+        <div className="mt-3 grid gap-2.5">
+          {dataLoading && (
+            <AdminLoadingState compact message={t("common.loading")} />
+          )}
+          {!dataLoading && depositRequests.length === 0 && (
+            <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">
+              {t("addMoney.noRequests")}
+            </p>
+          )}
+          {depositRequests.map((request) => {
+            const isApproving = requestAction?.id === request.id && requestAction.type === "approve";
+            const isRejecting = requestAction?.id === request.id && requestAction.type === "reject";
+            const isActionBusy = requestAction !== null;
+
+            return (
+            <article
+              key={request.id}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-3 py-2.5 sm:px-4 sm:py-3"
+            >
+              <div className="min-w-0">
+                <p className="font-semibold">{request.memberName || request.requestedByEmail}</p>
+                <p className="mt-0.5 text-xs text-[color:var(--muted)]">{request.date}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <p
+                  className="text-base font-bold"
+                  style={{ color: request.amount >= 0 ? "var(--success-text)" : "var(--danger)" }}
+                >
+                  {request.amount >= 0 ? "+" : ""}{request.amount.toFixed(2)} {tk}
+                </p>
+                <button
+                  onClick={() => void handleApproveRequest(request.id)}
+                  type="button"
+                  disabled={selectedChart.locked || isActionBusy}
+                  className="button-primary px-3 py-1.5 text-xs"
+                >
+                  {isApproving ? t("memberMgr.submittingApprove") : t("memberMgr.approve")}
+                </button>
+                <button
+                  onClick={() => void handleRejectRequest(request.id)}
+                  type="button"
+                  disabled={selectedChart.locked || isActionBusy}
+                  className="rounded-full border border-[color:var(--danger-border)] px-3 py-1 text-xs font-semibold text-[color:var(--danger)] transition hover:bg-[color:var(--danger)] hover:text-white"
+                >
+                  {isRejecting ? t("memberMgr.submittingReject") : t("memberMgr.reject")}
+                </button>
+              </div>
+            </article>
+            );
+          })}
+        </div>
+      </div>
 
       <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-3.5 sm:p-5 shadow-[var(--shadow-sm)]">
         <div className="flex flex-wrap items-center justify-between gap-3">

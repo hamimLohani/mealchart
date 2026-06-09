@@ -49,11 +49,12 @@ export function GroupHome({ groupId }: { groupId: string }) {
     };
   }, [currentUser, groupId, isLoaded]);
 
+  const currentEmail = currentUser?.email;
   const signedInMember = useMemo(() => {
-    if (!currentUser?.email || isGroupAdmin) return null;
-    const currentEmail = currentUser.email.trim().toLowerCase();
-    return members.find((member) => member.email.trim().toLowerCase() === currentEmail) ?? null;
-  }, [currentUser?.email, isGroupAdmin, members]);
+    if (!currentEmail || isGroupAdmin) return null;
+    const normalizedEmail = currentEmail.trim().toLowerCase();
+    return members.find((member) => member.email.trim().toLowerCase() === normalizedEmail) ?? null;
+  }, [currentEmail, isGroupAdmin, members]);
 
   useEffect(() => {
     if (!isLoaded || isCheckingAdmin || membersLoading || isGroupAdmin || !signedInMember) return;

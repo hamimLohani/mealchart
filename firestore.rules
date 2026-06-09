@@ -159,6 +159,37 @@ service cloud.firestore {
         && request.resource.data.amount > 0;
     }
 
+    function isValidChartCostRequestCreate(groupId, chartId, requestId) {
+      return isSignedIn()
+        && isChartUnlocked(groupId, chartId)
+        && requestDateMatchesChartMonth(groupId, chartId)
+        && hasOnlyFields([
+          "id",
+          "itemName",
+          "amount",
+          "date",
+          "memberId",
+          "memberName",
+          "requestedByEmail",
+          "status",
+          "createdAt"
+        ])
+        && request.resource.data.id == requestId
+        && request.resource.data.itemName is string
+        && request.resource.data.amount is number
+        && request.resource.data.amount > 0
+        && request.resource.data.memberId is string
+        && request.resource.data.memberName is string
+        && request.resource.data.requestedByEmail == signedInEmail()
+        && request.resource.data.status == "pending"
+        && request.resource.data.createdAt is string
+        && exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.resource.data.memberId))
+        && (
+          request.resource.data.memberId == signedInEmail()
+          || get(/databases/$(database)/documents/groups/$(groupId)/members/$(request.resource.data.memberId)).data.email == signedInEmail()
+        );
+    }
+
     function isValidChartDepositWrite(groupId, chartId) {
       return isGroupAdmin(groupId)
         && isChartUnlocked(groupId, chartId)
@@ -170,6 +201,35 @@ service cloud.firestore {
         && request.resource.data.amount != 0
         && request.resource.data.collectedByAdminId is string
         && exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.resource.data.memberId));
+    }
+
+    function isValidChartDepositRequestCreate(groupId, chartId, requestId) {
+      return isSignedIn()
+        && isChartUnlocked(groupId, chartId)
+        && requestDateMatchesChartMonth(groupId, chartId)
+        && hasOnlyFields([
+          "id",
+          "memberId",
+          "memberName",
+          "requestedByEmail",
+          "amount",
+          "date",
+          "status",
+          "createdAt"
+        ])
+        && request.resource.data.id == requestId
+        && request.resource.data.memberId is string
+        && request.resource.data.memberName is string
+        && request.resource.data.requestedByEmail == signedInEmail()
+        && request.resource.data.amount is number
+        && request.resource.data.amount != 0
+        && request.resource.data.status == "pending"
+        && request.resource.data.createdAt is string
+        && exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.resource.data.memberId))
+        && (
+          request.resource.data.memberId == signedInEmail()
+          || get(/databases/$(database)/documents/groups/$(groupId)/members/$(request.resource.data.memberId)).data.email == signedInEmail()
+        );
     }
 
     match /groups/{groupId} {
@@ -242,11 +302,23 @@ service cloud.firestore {
         allow delete: if isGroupAdmin(groupId) && isChartUnlocked(groupId, chartId);
       }
 
+      match /depositRequests/{requestId} {
+        allow read: if isGroupAdmin(groupId);
+        allow update, delete: if isGroupAdmin(groupId) && isChartUnlocked(groupId, chartId);
+        allow create: if isValidChartDepositRequestCreate(groupId, chartId, requestId);
+      }
+
       match /costs/{costId} {
         allow read: if true;
         allow create: if isValidChartCostWrite(groupId, chartId);
         allow update: if isValidChartCostWrite(groupId, chartId);
         allow delete: if isGroupAdmin(groupId) && isChartUnlocked(groupId, chartId);
+      }
+
+      match /costRequests/{requestId} {
+        allow read: if isGroupAdmin(groupId);
+        allow update, delete: if isGroupAdmin(groupId) && isChartUnlocked(groupId, chartId);
+        allow create: if isValidChartCostRequestCreate(groupId, chartId, requestId);
       }
 
       match /notices/{noticeId} {

@@ -8,7 +8,7 @@ import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
 import { useGroup, useMembers } from "@/lib/hooks/use-data";
 import { useAuthStore } from "@/store/auth-store";
 
-type NavKey = "home" | "chart" | "money" | "members" | "notices";
+type NavKey = "home" | "chart" | "money" | "costs" | "members" | "notices";
 
 export function GroupNavbar({
   groupId,
@@ -58,6 +58,7 @@ export function GroupNavbar({
       [
         { key: "chart" as const, icon: <ChartIcon />, label: t("groupNav.chart"), hint: t("groupNav.chartHint") },
         { key: "money" as const, icon: <MoneyIcon />, label: t("groupNav.money"), hint: t("groupNav.moneyHint") },
+        { key: "costs" as const, icon: <CostsIcon />, label: t("groupNav.costs"), hint: t("groupNav.costsHint") },
         { key: "members" as const, icon: <MembersIcon />, label: t("groupNav.members"), hint: t("groupNav.membersHint") },
         { key: "notices" as const, icon: <NoticesIcon />, label: t("groupNav.notices"), hint: t("groupNav.noticesHint") },
       ] as const,
@@ -68,7 +69,7 @@ export function GroupNavbar({
     const parts = pathname.split("/").filter(Boolean);
     if (parts.length === 2 && parts[0] === "group") return "home";
     const last = parts[parts.length - 1] as NavKey | undefined;
-    if (last === "chart" || last === "money" || last === "members" || last === "notices") return last;
+    if (last === "chart" || last === "money" || last === "costs" || last === "members" || last === "notices") return last;
     return "home";
   }, [pathname]);
 
@@ -157,6 +158,14 @@ function MoneyIcon() {
   return (
     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+    </svg>
+  );
+}
+
+function CostsIcon() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 7.5h6m-6 3h6m-7.5 9h9A2.25 2.25 0 0 0 18.75 17.25V5.625c0-.621-.504-1.125-1.125-1.125H6.375c-.621 0-1.125.504-1.125 1.125V17.25A2.25 2.25 0 0 0 7.5 19.5Zm0 0v-2.25m9 2.25v-2.25" />
     </svg>
   );
 }
