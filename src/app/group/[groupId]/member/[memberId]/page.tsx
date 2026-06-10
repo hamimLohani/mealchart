@@ -266,25 +266,6 @@ export default function MemberPage({
               ))}
             </motion.div>
 
-            <div className="mt-4">
-              <p className="group-kicker">{t("memberPage.monthTotals")}</p>
-            </div>
-
-            <motion.div layout transition={{ duration: 0.18, ease: "easeOut" }} className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-5">
-              {[
-                { label: t("memberPage.statTotalMeals"), value: formatMeal(totalMeals) },
-                { label: t("memberPage.statTotalCost"), value: `${monthTotalCost.toFixed(2)} ${tk}`, color: "var(--success-text)" },
-                { label: t("memberPage.statTotalPaid"), value: `${monthTotalPaid.toFixed(2)} ${tk}`, color: "var(--success-text)" },
-                { label: t("memberPage.statTotalRemaining"), value: `${remainingTaka >= 0 ? "+" : ""}${remainingTaka.toFixed(2)} ${tk}`, color: remainingTaka < 0 ? "var(--danger)" : "var(--success-text)" },
-                { label: t("memberPage.statTotalMembers"), value: allMembers.length },
-              ].map((s) => (
-                <div key={s.label} className="group-stat-card">
-                  <p className="group-stat-label" style={s.color ? { color: s.color, opacity: 0.8 } : {}}>{s.label}</p>
-                  <p className="group-stat-value" style={s.color ? { color: s.color } : {}}>{s.value}</p>
-                </div>
-              ))}
-            </motion.div>
-
             <div className="rounded-[var(--radius)] border-2 border-[color:var(--accent)] bg-[color:var(--panel)] p-5 shadow-[0_0_0_4px_var(--accent-dim)]">
               <p className="group-kicker text-[color:var(--accent)]">{t("memberPage.addMeal")} ({chart.label})</p>
               {chart.locked && (
@@ -335,6 +316,25 @@ export default function MemberPage({
                 )}
               </div>
             </div>
+
+            <div className="mt-4">
+              <p className="group-kicker">{t("memberPage.monthTotals")}</p>
+            </div>
+
+            <motion.div layout transition={{ duration: 0.18, ease: "easeOut" }} className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-5">
+              {[
+                { label: t("memberPage.statTotalMeals"), value: formatMeal(totalMeals) },
+                { label: t("memberPage.statTotalCost"), value: `${monthTotalCost.toFixed(2)} ${tk}`, color: "var(--success-text)" },
+                { label: t("memberPage.statTotalPaid"), value: `${monthTotalPaid.toFixed(2)} ${tk}`, color: "var(--success-text)" },
+                { label: t("memberPage.statTotalRemaining"), value: `${remainingTaka >= 0 ? "+" : ""}${remainingTaka.toFixed(2)} ${tk}`, color: remainingTaka < 0 ? "var(--danger)" : "var(--success-text)" },
+                { label: t("memberPage.statTotalMembers"), value: allMembers.length },
+              ].map((s) => (
+                <div key={s.label} className="group-stat-card">
+                  <p className="group-stat-label" style={s.color ? { color: s.color, opacity: 0.8 } : {}}>{s.label}</p>
+                  <p className="group-stat-value" style={s.color ? { color: s.color } : {}}>{s.value}</p>
+                </div>
+              ))}
+            </motion.div>
 
             <div className="group-card">
               <p className="group-kicker">{t("memberPage.dailyMeals")} — {chart.label}</p>
