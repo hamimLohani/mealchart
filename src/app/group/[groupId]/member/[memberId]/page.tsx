@@ -306,7 +306,7 @@ export default function MemberPage({
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
                       <button className="meal-stepper-button" disabled={mealCount <= 0 || isLocked} onClick={() => handleMealChange(mealCount - 0.25)} type="button">−</button>
-                      <span className="w-16 text-center text-4xl font-bold tabular-nums">{formatMeal(mealCount)}</span>
+                      <span className="w-24 px-2 text-center text-4xl font-bold tabular-nums">{formatMeal(mealCount)}</span>
                       <button className="meal-stepper-button" disabled={isLocked} onClick={() => handleMealChange(mealCount + 0.25)} type="button">+</button>
                     </div>
                     <p className={`text-sm font-semibold ${chart.locked ? "text-[color:var(--danger)]" : "text-[color:var(--muted)]"}`}>

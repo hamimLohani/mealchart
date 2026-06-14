@@ -335,7 +335,7 @@ export function EditMealsManager() {
                 {days.map((date) => (
                   <td key={date} className="px-1 py-1 text-center">
                     <input
-                      className="w-10 rounded-md border border-[color:var(--border)] bg-[color:var(--background)] text-center text-sm font-medium outline-none transition focus:border-[color:var(--accent)]"
+                      className="w-18 rounded-md border border-[color:var(--border)] bg-[color:var(--background)] px-1 text-center text-sm font-medium tabular-nums outline-none transition focus:border-[color:var(--accent)]"
                       min="0"
                       step="0.25"
                       type="number"
@@ -360,7 +360,7 @@ export function EditMealsManager() {
                     return (
                       <td key={date} className={`px-0.5 py-1 text-center ${isToday ? "bg-[color:var(--accent-dim)]" : ""}`}>
                         <input
-                          className={`w-10 rounded-md border border-transparent bg-transparent text-center text-sm font-medium outline-none transition focus:border-[color:var(--accent)] focus:bg-[color:var(--panel)] ${
+                          className={`w-18 rounded-md border border-transparent bg-transparent px-1 text-center text-sm font-medium tabular-nums outline-none transition focus:border-[color:var(--accent)] focus:bg-[color:var(--panel)] ${
                             isToday ? "border-[color:var(--accent)] bg-[color:var(--panel)]" : ""
                           }`}
                           min="0"
