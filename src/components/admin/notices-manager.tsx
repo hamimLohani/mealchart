@@ -11,6 +11,7 @@ import {
   listNoticesForChart,
   updateNotice,
 } from "@/lib/firebase/repositories";
+import { currentMonthKey, pickCurrentMonthChart } from "@/lib/utils/date";
 import type { AdminProfile, Chart, Notice } from "@/types/domain";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
@@ -27,6 +28,7 @@ export function NoticesManager() {
   const [isLoading, setIsLoading] = useState(false);
 
   const [selectedChart, setSelectedChart] = useState<Chart | null>(null);
+  const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [noticesLoading, setNoticesLoading] = useState(false);
   const [title, setTitle] = useState("");
@@ -97,6 +99,18 @@ export function NoticesManager() {
     })();
     return () => { active = false; };
   }, [configError, currentAdminProfile, profileError, profileLoading]);
+
+  useEffect(() => {
+    if (selectedChart || isMonthPickerOpen || charts.length === 0) return;
+    let active = true;
+    const nextChart = pickCurrentMonthChart(charts);
+    setTimeout(() => {
+      if (active) setSelectedChart(nextChart);
+    }, 0);
+    return () => {
+      active = false;
+    };
+  }, [charts, isMonthPickerOpen, selectedChart]);
 
   useEffect(() => {
     if (!adminProfile || !selectedChart) return;
@@ -196,17 +210,20 @@ export function NoticesManager() {
             </p>
           ) : (
             <div className="mt-4 grid gap-2">
-              {charts.map((chart, i) => (
+              {charts.map((chart) => (
                 <button
                   key={chart.id}
                   type="button"
-                  onClick={() => setSelectedChart(chart)}
+                  onClick={() => {
+                    setIsMonthPickerOpen(false);
+                    setSelectedChart(chart);
+                  }}
                   className="flex items-center justify-between rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3.5 text-left transition hover:border-[color:var(--accent)] hover:bg-[color:var(--accent-dim)]"
                 >
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="font-semibold">{chart.label}</p>
-                      {i === 0 && <span className="badge-accent">{t("common.active")}</span>}
+                      {chart.monthKey === currentMonthKey() && <span className="badge-accent">{t("common.active")}</span>}
                     </div>
                     <p className="mt-0.5 text-xs text-[color:var(--muted)]">{chart.monthKey}</p>
                   </div>
@@ -234,7 +251,7 @@ export function NoticesManager() {
         </div>
         <button
           type="button"
-          onClick={() => { setSelectedChart(null); setNotices([]); cancelEdit(); }}
+          onClick={() => { setIsMonthPickerOpen(true); setSelectedChart(null); setNotices([]); cancelEdit(); }}
           className="button-secondary shrink-0"
         >
           {t("costs.backMonths")}

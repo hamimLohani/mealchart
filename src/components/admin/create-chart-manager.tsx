@@ -18,7 +18,7 @@ import {
   listMembers,
   getGroupById,
 } from "@/lib/firebase/repositories";
-import { formatChartLabel } from "@/lib/utils/date";
+import { currentMonthKey, formatChartLabel } from "@/lib/utils/date";
 import { daysInMonth } from "@/lib/utils/date";
 import { saveChartReportPdf } from "@/lib/utils/pdf-report";
 import type { AdminProfile, Chart } from "@/types/domain";
@@ -484,7 +484,7 @@ export function CreateChartManager() {
         <p className="admin-section-label">{t("createChart.existingTitle")}</p>
         <div className="mt-3 grid gap-2.5">
           {visibleCharts.length ? (
-            visibleCharts.map((chart, index) => (
+            visibleCharts.map((chart) => (
               <article
                 key={chart.id}
                 className="grid gap-4 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] p-4 sm:flex sm:items-center sm:justify-between sm:px-4 sm:py-3"
@@ -502,7 +502,7 @@ export function CreateChartManager() {
                         {t("createChart.lockedBadge")}
                       </span>
                     ) : null}
-                    {index === 0 && <span className="badge-accent !py-0.5 !text-[0.65rem]">{t("common.active")}</span>}
+                    {chart.monthKey === currentMonthKey() && <span className="badge-accent !py-0.5 !text-[0.65rem]">{t("common.active")}</span>}
                   </div>
                 </div>
 
@@ -513,7 +513,7 @@ export function CreateChartManager() {
                         {t("createChart.lockedBadge")}
                       </span>
                     ) : null}
-                    {index === 0 && <span className="badge-accent">{t("common.active")}</span>}
+                    {chart.monthKey === currentMonthKey() && <span className="badge-accent">{t("common.active")}</span>}
                   </div>
                   <button
                     type="button"

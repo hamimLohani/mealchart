@@ -15,7 +15,7 @@ import {
   listDepositsForChart,
   rejectCostRequest,
 } from "@/lib/firebase/repositories";
-import { chartMonthDateBounds, toDateInputValue } from "@/lib/utils/date";
+import { chartMonthDateBounds, currentMonthKey, pickCurrentMonthChart, toDateInputValue } from "@/lib/utils/date";
 import { getMonthTotals } from "@/lib/utils/meal-money";
 import type { AdminProfile, Chart, CostEntry, CostRequest, DepositEntry } from "@/types/domain";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
@@ -36,6 +36,7 @@ export function CostsManager() {
   const [isLoading, setIsLoading] = useState(false);
 
   const [selectedChart, setSelectedChart] = useState<Chart | null>(null);
+  const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
   const [costs, setCosts] = useState<CostEntry[]>([]);
   const [costRequests, setCostRequests] = useState<CostRequest[]>([]);
   const [deposits, setDeposits] = useState<DepositEntry[]>([]);
@@ -86,6 +87,18 @@ export function CostsManager() {
     })();
     return () => { active = false; };
   }, [configError, currentAdminProfile, profileError, profileLoading]);
+
+  useEffect(() => {
+    if (selectedChart || isMonthPickerOpen || charts.length === 0) return;
+    let active = true;
+    const nextChart = pickCurrentMonthChart(charts);
+    setTimeout(() => {
+      if (active) setSelectedChart(nextChart);
+    }, 0);
+    return () => {
+      active = false;
+    };
+  }, [charts, isMonthPickerOpen, selectedChart]);
 
   useEffect(() => {
     if (!adminProfile || !selectedChart) return;
@@ -237,17 +250,20 @@ export function CostsManager() {
             </p>
           ) : (
             <div className="mt-4 grid gap-2">
-              {charts.map((chart, i) => (
+              {charts.map((chart) => (
                 <button
                   key={chart.id}
                   type="button"
-                  onClick={() => setSelectedChart(chart)}
+                  onClick={() => {
+                    setIsMonthPickerOpen(false);
+                    setSelectedChart(chart);
+                  }}
                   className="flex items-center justify-between rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3.5 text-left transition hover:border-[color:var(--accent)] hover:bg-[color:var(--accent-dim)]"
                 >
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="font-semibold">{chart.label}</p>
-                      {i === 0 && <span className="badge-accent">{t("common.active")}</span>}
+                      {chart.monthKey === currentMonthKey() && <span className="badge-accent">{t("common.active")}</span>}
                     </div>
                     <p className="mt-0.5 text-xs text-[color:var(--muted)]">{chart.monthKey}</p>
                   </div>
@@ -278,7 +294,7 @@ export function CostsManager() {
         </div>
         <button
           type="button"
-          onClick={() => { setSelectedChart(null); setCosts([]); setCostRequests([]); }}
+          onClick={() => { setIsMonthPickerOpen(true); setSelectedChart(null); setCosts([]); setCostRequests([]); }}
           className="button-secondary shrink-0"
         >
           {t("costs.backMonths")}

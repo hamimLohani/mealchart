@@ -17,7 +17,7 @@ import {
   getMealsForMonth,
   rejectDepositRequest,
 } from "@/lib/firebase/repositories";
-import { chartMonthDateBounds, toMonthKey, toDateInputValue } from "@/lib/utils/date";
+import { chartMonthDateBounds, currentMonthKey, pickCurrentMonthChart, toMonthKey, toDateInputValue } from "@/lib/utils/date";
 import { getMemberTotals, getMonthTotals, normalizeMealQuantity } from "@/lib/utils/meal-money";
 import type { AdminProfile, Chart, CostEntry, DepositEntry, DepositRequest, Member, MealEntry } from "@/types/domain";
 import { sendMoneyReceiptEmail } from "@/lib/email/actions";
@@ -46,6 +46,7 @@ export function AddMoneyManager() {
   const [isLoading, setIsLoading] = useState(false);
 
   const [selectedChart, setSelectedChart] = useState<Chart | null>(null);
+  const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
   const [deposits, setDeposits] = useState<DepositEntry[]>([]);
   const [depositRequests, setDepositRequests] = useState<DepositRequest[]>([]);
   const [costs, setCosts] = useState<CostEntry[]>([]);
@@ -110,6 +111,18 @@ export function AddMoneyManager() {
       active = false;
     };
   }, [configurationError, currentAdminProfile, profileError, profileLoading]);
+
+  useEffect(() => {
+    if (selectedChart || isMonthPickerOpen || visibleCharts.length === 0) return;
+    let active = true;
+    const nextChart = pickCurrentMonthChart(visibleCharts);
+    setTimeout(() => {
+      if (active) setSelectedChart(nextChart);
+    }, 0);
+    return () => {
+      active = false;
+    };
+  }, [isMonthPickerOpen, selectedChart, visibleCharts]);
 
   useEffect(() => {
     if (!activeAdminProfile || !selectedChart) return;
@@ -320,17 +333,20 @@ export function AddMoneyManager() {
             </p>
           ) : (
             <div className="mt-4 grid gap-2">
-              {visibleCharts.map((chart, i) => (
+              {visibleCharts.map((chart) => (
                 <button
                   key={chart.id}
                   type="button"
-                  onClick={() => setSelectedChart(chart)}
+                  onClick={() => {
+                    setIsMonthPickerOpen(false);
+                    setSelectedChart(chart);
+                  }}
                   className="flex items-center justify-between rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3.5 text-left transition hover:border-[color:var(--accent)] hover:bg-[color:var(--accent-dim)]"
                 >
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="font-semibold">{chart.label}</p>
-                      {i === 0 && <span className="badge-accent">{t("common.active")}</span>}
+                      {chart.monthKey === currentMonthKey() && <span className="badge-accent">{t("common.active")}</span>}
                     </div>
                     <p className="mt-0.5 text-xs text-[color:var(--muted)]">{chart.monthKey}</p>
                   </div>
@@ -360,7 +376,7 @@ export function AddMoneyManager() {
         </div>
         <button
           type="button"
-          onClick={() => { setSelectedChart(null); setDeposits([]); setDepositRequests([]); }}
+          onClick={() => { setIsMonthPickerOpen(true); setSelectedChart(null); setDeposits([]); setDepositRequests([]); }}
           className="button-secondary shrink-0"
         >
           {t("costs.backMonths")}
