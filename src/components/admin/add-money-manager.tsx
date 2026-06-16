@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useSWRConfig } from "swr";
 import { auth } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { useT } from "@/i18n/use-t";
@@ -30,6 +31,7 @@ type DepositFormState = { memberId: string; amount: string; date: string };
 
 export function AddMoneyManager() {
   const { t, tx } = useT();
+  const { mutate } = useSWRConfig();
   const { success: showSuccess, error: showError } = useToast();
   const configurationError =
     !isFirebaseConfigured || !auth
@@ -264,6 +266,8 @@ export function AddMoneyManager() {
       });
       setDeposits((prev) => [deposit, ...prev]);
       setDepositRequests((prev) => prev.filter((request) => request.id !== requestId));
+      void mutate((key) => Array.isArray(key) && key[0] === "adminChartRequestCounts");
+      void mutate(["depositRequests", activeAdminProfile.groupId, selectedChart.id]);
       showSuccess(t("toast.depositRequestApproved"));
     } catch (e) {
       const msg = e instanceof Error ? e.message : t("toast.genericError");
@@ -282,6 +286,8 @@ export function AddMoneyManager() {
     try {
       await rejectDepositRequest(activeAdminProfile.groupId, selectedChart.id, requestId);
       setDepositRequests((prev) => prev.filter((request) => request.id !== requestId));
+      void mutate((key) => Array.isArray(key) && key[0] === "adminChartRequestCounts");
+      void mutate(["depositRequests", activeAdminProfile.groupId, selectedChart.id]);
       showSuccess(t("toast.depositRequestRejected"));
     } catch (e) {
       const msg = e instanceof Error ? e.message : t("toast.genericError");

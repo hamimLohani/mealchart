@@ -386,8 +386,9 @@ button:not(.no-motion):not(:disabled):active {
 
 .admin-sidebar-link {
   display: flex;
-  flex-direction: column;
-  gap: 0.08rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
   padding: 0.5rem 1.1rem;
   color: var(--foreground);
   transition: background-color 130ms ease;
@@ -426,6 +427,7 @@ button:not(.no-motion):not(:disabled):active {
 
 .admin-sidebar-link-text {
   display: block;
+  min-width: 0;
 }
 .admin-sidebar-link-text .admin-sidebar-link-label {
   display: block;
@@ -436,6 +438,38 @@ button:not(.no-motion):not(:disabled):active {
 
 .admin-sidebar-link.active .admin-sidebar-link-label {
   color: var(--accent);
+}
+
+.admin-request-badge,
+.admin-mobile-request-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  background: var(--danger);
+  color: white;
+  padding: 0 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.admin-request-badge {
+  flex: 0 0 auto;
+}
+
+.admin-mobile-request-badge {
+  position: absolute;
+  top: -0.25rem;
+  right: -0.25rem;
+  min-width: 1.15rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  padding: 0;
+  font-size: 0.62rem;
+  box-shadow: 0 0 0 2px var(--panel);
 }
 
 .admin-sidebar-standalone-link {

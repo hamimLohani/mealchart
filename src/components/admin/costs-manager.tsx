@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { useSWRConfig } from "swr";
 import { auth } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { useT } from "@/i18n/use-t";
@@ -25,6 +26,7 @@ import { useToast } from "@/lib/hooks/use-toast";
 
 export function CostsManager() {
   const { t, tx } = useT();
+  const { mutate } = useSWRConfig();
   const { success: showSuccess, error: showError } = useToast();
   const configError = !isFirebaseConfigured || !auth ? "Firebase is not configured yet." : null;
 
@@ -186,6 +188,8 @@ export function CostsManager() {
       const approved = await approveCostRequest(adminProfile.groupId, selectedChart.id, requestId);
       setCosts((prev) => [approved, ...prev]);
       setCostRequests((prev) => prev.filter((request) => request.id !== requestId));
+      void mutate((key) => Array.isArray(key) && key[0] === "adminChartRequestCounts");
+      void mutate(["costRequests", adminProfile.groupId, selectedChart.id]);
       showSuccess(t("toast.costRequestApproved"));
     } catch (e) {
       const msg = e instanceof Error ? e.message : t("toast.genericError");
@@ -203,6 +207,8 @@ export function CostsManager() {
     try {
       await rejectCostRequest(adminProfile.groupId, selectedChart.id, requestId);
       setCostRequests((prev) => prev.filter((request) => request.id !== requestId));
+      void mutate((key) => Array.isArray(key) && key[0] === "adminChartRequestCounts");
+      void mutate(["costRequests", adminProfile.groupId, selectedChart.id]);
       showSuccess(t("toast.costRequestRejected"));
     } catch (e) {
       const msg = e instanceof Error ? e.message : t("toast.genericError");

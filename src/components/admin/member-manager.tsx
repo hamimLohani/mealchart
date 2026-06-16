@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useSWRConfig } from "swr";
 import { auth } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { useT } from "@/i18n/use-t";
@@ -24,6 +25,7 @@ const initialForm: MemberFormState = {
 
 export function MemberManager() {
   const { t, tx } = useT();
+  const { mutate } = useSWRConfig();
   const { success: showSuccess, error: showError } = useToast();
   const paymentPhone = process.env.NEXT_PUBLIC_PAYMENT_PHONE || "01xxxxxxxxx";
   const configurationError =
@@ -287,6 +289,7 @@ export function MemberManager() {
 
       await approveJoinRequest(activeAdminProfile.groupId, req.id, req.fullName, req.email);
       setJoinRequests((c) => c.filter((r) => r.id !== req.id));
+      void mutate(["joinRequests", activeAdminProfile.groupId]);
       const currentMembers = await listMembers(activeAdminProfile.groupId);
       setMembers(currentMembers);
       showSuccess(t("toast.joinRequestApproved"));
@@ -330,6 +333,7 @@ export function MemberManager() {
     try {
       await rejectJoinRequest(activeAdminProfile.groupId, req.id);
       setJoinRequests((c) => c.filter((r) => r.id !== req.id));
+      void mutate(["joinRequests", activeAdminProfile.groupId]);
       showSuccess(t("toast.joinRequestRejected"));
     } catch (e) {
       const msg = e instanceof Error ? e.message : t("errors.cannotReject");

@@ -3,16 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useT } from "@/i18n/use-t";
+import { useAdminRequestCounts, type AdminRequestCountKey } from "@/lib/hooks/use-admin-request-counts";
 
 export function AdminMobileBar() {
   const pathname = usePathname();
   const { t } = useT();
+  const requestCounts = useAdminRequestCounts();
 
   const navItems = [
     { href: "/admin", icon: <HomeIcon />, labelKey: "adminMobile.panel" as const },
-    { href: "/admin/add-money", icon: <MoneyIcon />, labelKey: "adminNav.addMoney" as const },
-    { href: "/admin/members", icon: <MembersIcon />, labelKey: "adminNav.members" as const },
-    { href: "/admin/costs", icon: <CostsIcon />, labelKey: "adminNav.costs" as const },
+    { href: "/admin/add-money", icon: <MoneyIcon />, labelKey: "adminNav.addMoney" as const, requestCountKey: "money" as const },
+    { href: "/admin/members", icon: <MembersIcon />, labelKey: "adminNav.members" as const, requestCountKey: "members" as const },
+    { href: "/admin/costs", icon: <CostsIcon />, labelKey: "adminNav.costs" as const, requestCountKey: "costs" as const },
     { href: "/admin/edit-meals", icon: <MealsIcon />, labelKey: "adminNav.editMeals" as const },
     { href: "/admin/create-chart", icon: <ChartIcon />, labelKey: "adminNav.createChart" as const },
     { href: "/admin/notices", icon: <NoticesIcon />, labelKey: "adminNav.notices" as const },
@@ -22,6 +24,12 @@ export function AdminMobileBar() {
     <div className="fixed bottom-0 left-0 right-0 z-[60] flex items-center justify-around border-t border-[color:var(--border)] bg-[color:var(--panel)] px-1 py-1.5 pb-safe shadow-[0_-4px_12px_rgba(0,0,0,0.05)] md:hidden">
       {navItems.map((item) => {
         const isActive = pathname === item.href;
+        const requestCountKey: AdminRequestCountKey | undefined =
+          "requestCountKey" in item ? item.requestCountKey : undefined;
+        const count = requestCountKey
+          ? requestCounts[requestCountKey]
+          : 0;
+
         return (
           <Link
             key={item.href}
@@ -30,16 +38,25 @@ export function AdminMobileBar() {
               isActive ? "text-[color:var(--accent)]" : "text-[color:var(--muted)]"
             }`}
           >
-            <div className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+            <div className={`relative flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
               isActive ? "bg-[color:var(--accent-dim)]" : "bg-transparent"
             }`}>
               {item.icon}
+              {count > 0 && <RequestCountBadge count={count} />}
             </div>
             <span className="text-[10px] font-bold tracking-tight">{t(item.labelKey)}</span>
           </Link>
         );
       })}
     </div>
+  );
+}
+
+function RequestCountBadge({ count }: { count: number }) {
+  return (
+    <span className="admin-mobile-request-badge" aria-label={`${count} pending requests`}>
+      {count > 99 ? "99+" : count}
+    </span>
   );
 }
 

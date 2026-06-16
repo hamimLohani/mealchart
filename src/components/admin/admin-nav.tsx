@@ -9,12 +9,14 @@ import { auth } from "@/lib/firebase/client";
 import { useT } from "@/i18n/use-t";
 import { useAuthStore } from "@/store/auth-store";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
+import { useAdminRequestCounts, type AdminRequestCountKey } from "@/lib/hooks/use-admin-request-counts";
 
 export function AdminNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { t } = useT();
   const { admin, isLoaded } = useAuthStore();
+  const requestCounts = useAdminRequestCounts();
   const [isSignOutInProgress, setIsSignOutInProgress] = useState(false);
   const isLoggedIn = isLoaded && !!admin;
 
@@ -24,11 +26,12 @@ export function AdminNav() {
     {
       labelKey: "adminNav.people" as const,
       items: [
-        { href: "/admin/members", labelKey: "adminNav.members" as const, hintKey: "adminNav.membersHint" as const },
+        { href: "/admin/members", labelKey: "adminNav.members" as const, hintKey: "adminNav.membersHint" as const, requestCountKey: "members" as const },
         {
           href: "/admin/add-money",
           labelKey: "adminNav.addMoney" as const,
           hintKey: "adminNav.addMoneyHint" as const,
+          requestCountKey: "money" as const,
         },
       ],
     },
@@ -40,7 +43,7 @@ export function AdminNav() {
           labelKey: "adminNav.editMeals" as const,
           hintKey: "adminNav.editMealsHint" as const,
         },
-        { href: "/admin/costs", labelKey: "adminNav.costs" as const, hintKey: "adminNav.costsHint" as const },
+        { href: "/admin/costs", labelKey: "adminNav.costs" as const, hintKey: "adminNav.costsHint" as const, requestCountKey: "costs" as const },
       ],
     },
     {
@@ -92,19 +95,28 @@ export function AdminNav() {
             {navGroups.map((group) => (
               <div key={group.labelKey} className="admin-sidebar-group">
                 <p className="admin-sidebar-group-label">{t(group.labelKey)}</p>
-                {group.items.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={pathname === item.href ? "admin-sidebar-link active" : "admin-sidebar-link"}
-                  >
-                    <motion.div whileHover={{ x: 6 }} whileTap={{ scale: 0.985 }} transition={{ type: "spring", stiffness: 300 }} className="admin-sidebar-link-text">
-                      <span className="admin-sidebar-link-label">{t(item.labelKey)}</span>
-                      <span className="admin-sidebar-link-hint">{t(item.hintKey)}</span>
-                    </motion.div>
-                    {pathname === item.href && <motion.div layoutId="sidebar-active" className="sidebar-indicator" aria-hidden />}
-                  </Link>
-                ))}
+                {group.items.map((item) => {
+                  const requestCountKey: AdminRequestCountKey | undefined =
+                    "requestCountKey" in item ? item.requestCountKey : undefined;
+                  const count = requestCountKey
+                    ? requestCounts[requestCountKey]
+                    : 0;
+
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={pathname === item.href ? "admin-sidebar-link active" : "admin-sidebar-link"}
+                    >
+                      <motion.div whileHover={{ x: 6 }} whileTap={{ scale: 0.985 }} transition={{ type: "spring", stiffness: 300 }} className="admin-sidebar-link-text">
+                        <span className="admin-sidebar-link-label">{t(item.labelKey)}</span>
+                        <span className="admin-sidebar-link-hint">{t(item.hintKey)}</span>
+                      </motion.div>
+                      {count > 0 && <RequestCountBadge count={count} />}
+                      {pathname === item.href && <motion.div layoutId="sidebar-active" className="sidebar-indicator" aria-hidden />}
+                    </Link>
+                  );
+                })}
               </div>
             ))}
           </div>
@@ -129,5 +141,13 @@ export function AdminNav() {
         </Link>
       )}
     </nav>
+  );
+}
+
+function RequestCountBadge({ count }: { count: number }) {
+  return (
+    <span className="admin-request-badge" aria-label={`${count} pending requests`}>
+      {count > 99 ? "99+" : count}
+    </span>
   );
 }

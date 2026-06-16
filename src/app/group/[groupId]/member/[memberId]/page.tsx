@@ -219,7 +219,7 @@ export default function MemberPage({
     <motion.main initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="mx-auto w-full max-w-7xl px-2.5 py-4 sm:px-8 sm:py-6 md:flex md:items-start md:gap-6 md:py-8">
       <GroupNavbar groupId={groupId} />
       <div className="min-w-0 flex-1 pb-20 md:pb-0">
-        <GroupMonthSelector groupId={group.id} groupName={group.name} />
+        <GroupMonthSelector groupId={group.id} groupName={group.name} autoSelect />
         <div className="py-6 grid gap-4">
         <div className="group-hero">
           <div className="min-w-0">

@@ -5,6 +5,9 @@ import type { Chart } from "@/types/domain";
 import { useT } from "@/i18n/use-t";
 import { useCharts } from "@/lib/hooks/use-data";
 import { useGroupSession } from "@/lib/hooks/use-group-session";
+import { toDateInputValue } from "@/lib/utils/date";
+
+const AUTO_SELECTED_CHART_KEY = "mc_auto_selected_chart";
 
 export function GroupMonthSelector({
   groupId,
@@ -19,18 +22,30 @@ export function GroupMonthSelector({
   const { chart, clearChart, selectChart } = useGroupSession();
   const { data: charts = [] } = useCharts(groupId);
   const [isExpanded, setIsExpanded] = useState(false);
+  const currentMonthKey = toDateInputValue(new Date()).slice(0, 7);
 
   useEffect(() => {
-    if (!autoSelect || chart || charts.length === 0) return;
+    if (!autoSelect || charts.length === 0) return;
     const hasManuallyExited = sessionStorage.getItem("mc_manual_exit");
     const hasStoredChart = sessionStorage.getItem("mc_chart_id");
+    const wasAutoSelected = sessionStorage.getItem(AUTO_SELECTED_CHART_KEY) !== "false";
+    const currentMonthChart = charts.find((monthChart) => monthChart.monthKey === currentMonthKey);
+    const preferredChart = currentMonthChart ?? charts[0];
 
-    if (!hasStoredChart && !hasManuallyExited) {
-      selectChart(charts[0]);
+    if (hasManuallyExited) return;
+
+    if (
+      !chart ||
+      !hasStoredChart ||
+      (wasAutoSelected && currentMonthChart && chart.monthKey !== currentMonthKey)
+    ) {
+      sessionStorage.setItem(AUTO_SELECTED_CHART_KEY, "true");
+      selectChart(preferredChart);
     }
-  }, [autoSelect, chart, charts, selectChart]);
+  }, [autoSelect, chart, charts, currentMonthKey, selectChart]);
 
   function handleChartSelect(nextChart: Chart) {
+    sessionStorage.setItem(AUTO_SELECTED_CHART_KEY, "false");
     selectChart(nextChart);
     setIsExpanded(false);
   }
@@ -73,7 +88,7 @@ export function GroupMonthSelector({
             </p>
           ) : (
             <div className="mt-3 grid gap-2">
-              {charts.map((monthChart, i) => (
+              {charts.map((monthChart) => (
                 <button
                   key={monthChart.id}
                   type="button"
@@ -83,7 +98,7 @@ export function GroupMonthSelector({
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="font-semibold">{monthChart.label}</p>
-                      {i === 0 && <span className="badge-accent">{t("common.active")}</span>}
+                      {monthChart.monthKey === currentMonthKey && <span className="badge-accent">{t("common.active")}</span>}
                     </div>
                     <p className="mt-0.5 text-xs text-[color:var(--muted)]">{monthChart.monthKey}</p>
                   </div>
