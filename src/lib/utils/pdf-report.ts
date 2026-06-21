@@ -17,7 +17,7 @@ type ChartReportOptions = {
 
 export function saveChartReportPdf(options: ChartReportOptions) {
   const { groupName, chartLabel, monthKey, members, meals, costs, deposits, fileName } = options;
-  
+
   // Guard against invalid monthKey format
   const parts = monthKey.split("-");
   if (parts.length !== 2) {
@@ -42,45 +42,72 @@ export function saveChartReportPdf(options: ChartReportOptions) {
     muted: [71, 85, 105],
     accent: [59, 130, 246],
   };
+  const borderColor: RgbColor = [226, 232, 240];
+  const headerColor: RgbColor = [15, 23, 42];
+  const rowAltColor: RgbColor = [248, 250, 252];
+  const generatedAt = new Date().toLocaleDateString();
 
-  doc.setFillColor(30, 64, 175);
-  doc.rect(0, 0, pageWidth, 92, "F");
-  doc.setFontSize(22);
-  doc.setTextColor(255, 255, 255);
-  doc.text("Meal Chart Report", margin, 56);
+  const fitText = (text: string, width: number) => {
+    let value = text;
+    while (doc.getTextWidth(value) > width && value.length > 4) {
+      value = `${value.slice(0, -4)}...`;
+    }
+    return value;
+  };
 
-  doc.setFontSize(11);
-  doc.setTextColor(245, 245, 245);
-  doc.text(`Group: ${groupName}`, margin, 80);
-  doc.text(`Month: ${chartLabel}`, margin + 300, 80);
+  const money = (value: number, decimals = 2) => `${value.toFixed(decimals)} Tk`;
+  const memberNameById = (memberId: string) => memberDisplayName(memberId.toLowerCase(), members, "Former member");
 
-  const summaryTop = 110;
-  const summaryHeight = 96;
-  doc.setFillColor(249, 250, 251);
-  doc.setDrawColor(226, 232, 240);
-  doc.roundedRect(margin, summaryTop, contentWidth, summaryHeight, 10, 10, "FD");
+  const drawPageHeader = (title = "Meal Chart Report") => {
+    doc.setFillColor(30, 64, 175);
+    doc.rect(0, 0, pageWidth, 88, "F");
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(255, 255, 255);
+    doc.text(title, margin, 38);
 
-  doc.setFontSize(11);
-  doc.setTextColor(...textColor.dark);
-  const summaryLabelX = margin + 12;
-  const summaryValueX = margin + 128;
-  const summaryLineHeight = 18;
-  doc.text(`Total meals`, summaryLabelX, summaryTop + 24);
-  doc.text(formatMeal(totals.totalMeals), summaryValueX, summaryTop + 24);
-  doc.text(`Total cost`, summaryLabelX, summaryTop + 24 + summaryLineHeight);
-  doc.text(`${totals.totalCost.toFixed(2)} Tk`, summaryValueX, summaryTop + 24 + summaryLineHeight);
-  doc.text(`Total paid`, summaryLabelX, summaryTop + 24 + summaryLineHeight * 2);
-  doc.text(`${totals.totalPaid.toFixed(2)} Tk`, summaryValueX, summaryTop + 24 + summaryLineHeight * 2);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(226, 232, 240);
+    doc.text(`Group: ${groupName}`, margin, 62);
+    doc.text(`Month: ${chartLabel}`, margin + 300, 62);
+    doc.text(`Generated: ${generatedAt}`, pageWidth - margin, 62, { align: "right" });
+  };
 
-  doc.text(`Meal rate`, summaryLabelX + 280, summaryTop + 24);
-  doc.text(`${totals.mealRate.toFixed(2)} Tk`, summaryValueX + 280, summaryTop + 24);
-  doc.text(`Remaining`, summaryLabelX + 280, summaryTop + 24 + summaryLineHeight);
-  doc.text(`${totals.remainingTaka.toFixed(2)} Tk`, summaryValueX + 280, summaryTop + 24 + summaryLineHeight);
-  doc.text(`Members`, summaryLabelX + 280, summaryTop + 24 + summaryLineHeight * 2);
-  doc.text(String(memberIdsForChartRows(members, meals, monthKey).length), summaryValueX + 280, summaryTop + 24 + summaryLineHeight * 2);
+  drawPageHeader();
 
-  const tableTop = summaryTop + summaryHeight + 30;
   const rowMemberIds = memberIdsForChartRows(members, meals, monthKey);
+
+  const summaryTop = 108;
+  const cardGap = 10;
+  const cardCount = 6;
+  const cardWidth = (contentWidth - cardGap * (cardCount - 1)) / cardCount;
+  const cardHeight = 58;
+  const summaryItems = [
+    { label: "Total meals", value: formatMeal(totals.totalMeals) },
+    { label: "Total cost", value: money(totals.totalCost) },
+    { label: "Total paid", value: money(totals.totalPaid) },
+    { label: "Meal rate", value: money(totals.mealRate) },
+    { label: "Remaining", value: money(totals.remainingTaka) },
+    { label: "Members", value: String(rowMemberIds.length) },
+  ];
+
+  summaryItems.forEach((item, index) => {
+    const left = margin + index * (cardWidth + cardGap);
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(...borderColor);
+    doc.roundedRect(left, summaryTop, cardWidth, cardHeight, 6, 6, "FD");
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...textColor.muted);
+    doc.text(item.label.toUpperCase(), left + 10, summaryTop + 19);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(...textColor.dark);
+    doc.text(fitText(item.value, cardWidth - 20), left + 10, summaryTop + 40);
+  });
+
+  const tableTop = summaryTop + cardHeight + 28;
   const mealMap: Record<string, Record<string, number>> = {};
   meals.forEach((meal) => {
     const memberId = meal.memberId.toLowerCase();
@@ -88,35 +115,41 @@ export function saveChartReportPdf(options: ChartReportOptions) {
     mealMap[memberId][meal.date] = normalizeMealQuantity(meal.quantity);
   });
 
-  const nameWidth = 100;
-  const dayWidth = 16;
-  const totalWidth = 35;
-  const paidWidth = 45;
-  const balanceWidth = 50;
+  const nameWidth = 122;
+  const totalWidth = 40;
+  const paidWidth = 54;
+  const balanceWidth = 58;
+  const dayWidth = (contentWidth - nameWidth - totalWidth - paidWidth - balanceWidth) / totalDays;
   const tableWidth = nameWidth + totalDays * dayWidth + totalWidth + paidWidth + balanceWidth;
-  const tableLeft = (pageWidth - tableWidth) / 2; // Center the table
-  const headerHeight = 20;
-  const bodyRowHeight = 18;
+  const tableLeft = margin;
+  const headerHeight = 24;
+  const bodyRowHeight = 21;
   const bottomLimit = pageHeight - margin;
 
   const drawTableHeader = (top: number) => {
-    doc.setFillColor(15, 23, 42);
+    doc.setFillColor(...headerColor);
     doc.rect(tableLeft, top, tableWidth, headerHeight, "F");
-    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
     doc.setTextColor(255, 255, 255);
-    let x = tableLeft + 4;
-    doc.text("Member", x, top + 13);
+    let x = tableLeft;
+    doc.text("Member", x + 8, top + 15);
     x += nameWidth;
     for (let dayIndex = 0; dayIndex < totalDays; dayIndex += 1) {
       const label = String(dayIndex + 1);
-      doc.text(label, x + dayWidth / 2, top + 13, { align: "center" });
+      doc.text(label, x + dayWidth / 2, top + 15, { align: "center" });
       x += dayWidth;
     }
-    doc.text("Meals", x + totalWidth / 2, top + 13, { align: "center" });
+    doc.text("Meals", x + totalWidth / 2, top + 15, { align: "center" });
     x += totalWidth;
-    doc.text("Paid", x + paidWidth / 2, top + 13, { align: "center" });
+    doc.text("Paid", x + paidWidth / 2, top + 15, { align: "center" });
     x += paidWidth;
-    doc.text("Balance", x + balanceWidth / 2, top + 13, { align: "center" });
+    doc.text("Balance", x + balanceWidth / 2, top + 15, { align: "center" });
+
+    doc.setDrawColor(51, 65, 85);
+    doc.line(tableLeft + nameWidth, top, tableLeft + nameWidth, top + headerHeight);
+    doc.line(tableLeft + tableWidth - paidWidth - balanceWidth, top, tableLeft + tableWidth - paidWidth - balanceWidth, top + headerHeight);
+    doc.line(tableLeft + tableWidth - balanceWidth, top, tableLeft + tableWidth - balanceWidth, top + headerHeight);
   };
 
   let currentY = tableTop;
@@ -125,7 +158,8 @@ export function saveChartReportPdf(options: ChartReportOptions) {
 
   const addPageAndHeader = () => {
     doc.addPage();
-    currentY = margin;
+    drawPageHeader("Meal Chart Report");
+    currentY = 108;
     drawTableHeader(currentY);
     currentY += headerHeight;
   };
@@ -136,31 +170,37 @@ export function saveChartReportPdf(options: ChartReportOptions) {
     }
 
     if (rowIndex % 2 === 0) {
-      doc.setFillColor(249, 250, 251);
+      doc.setFillColor(...rowAltColor);
       doc.rect(tableLeft, currentY, tableWidth, bodyRowHeight, "F");
     }
+    doc.setDrawColor(...borderColor);
+    doc.line(tableLeft, currentY + bodyRowHeight, tableLeft + tableWidth, currentY + bodyRowHeight);
 
     const memberName = memberDisplayName(memberId, members, "Former member");
-    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
     doc.setTextColor(...textColor.dark);
-    const nameLines = doc.splitTextToSize(memberName, nameWidth - 8);
-    doc.text(nameLines, tableLeft + 4, currentY + 13);
+    doc.text(fitText(memberName, nameWidth - 12), tableLeft + 8, currentY + 14);
 
     let x = tableLeft + nameWidth;
     const memberTotals = getMemberTotals(memberId, meals, deposits, totals.mealRate);
 
+    doc.setFontSize(7);
     for (let dayIndex = 0; dayIndex < totalDays; dayIndex += 1) {
       const dayKey = days[dayIndex];
       const value = mealMap[memberId]?.[dayKey];
       if (value) {
-        doc.text(formatMeal(value), x + dayWidth / 2, currentY + 13, { align: "center" });
+        doc.text(formatMeal(value), x + dayWidth / 2, currentY + 14, { align: "center" });
       }
       x += dayWidth;
     }
 
-    doc.text(formatMeal(memberTotals.totalMeals), x + totalWidth / 2, currentY + 13, { align: "center" });
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.text(formatMeal(memberTotals.totalMeals), x + totalWidth / 2, currentY + 14, { align: "center" });
     x += totalWidth;
-    doc.text(memberTotals.totalPaid.toFixed(1), x + paidWidth / 2, currentY + 13, { align: "center" });
+    doc.setFont("helvetica", "normal");
+    doc.text(memberTotals.totalPaid.toFixed(1), x + paidWidth / 2, currentY + 14, { align: "center" });
     x += paidWidth;
 
     const balance = memberTotals.balance;
@@ -169,9 +209,9 @@ export function saveChartReportPdf(options: ChartReportOptions) {
     } else if (balance > 0) {
       doc.setTextColor(21, 128, 61); // Green
     }
-    doc.text(balance.toFixed(1), x + balanceWidth / 2, currentY + 13, { align: "center" });
+    doc.text(balance.toFixed(1), x + balanceWidth / 2, currentY + 14, { align: "center" });
     doc.setTextColor(...textColor.dark); // Reset
-    
+
     currentY += bodyRowHeight;
   });
 
@@ -179,84 +219,180 @@ export function saveChartReportPdf(options: ChartReportOptions) {
     addPageAndHeader();
   }
 
-  doc.setFillColor(15, 23, 42);
+  doc.setFillColor(...headerColor);
   doc.rect(tableLeft, currentY, tableWidth, bodyRowHeight, "F");
-  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
   doc.setTextColor(255, 255, 255);
-  doc.text("Total", tableLeft + 4, currentY + 13);
+  doc.text("Total", tableLeft + 8, currentY + 14);
   let x = tableLeft + nameWidth;
+  doc.setFontSize(7);
   for (let dayIndex = 0; dayIndex < totalDays; dayIndex += 1) {
     const dayKey = days[dayIndex];
     const dayTotal = rowMemberIds.reduce((sum, id) => sum + (mealMap[id]?.[dayKey] ?? 0), 0);
     if (dayTotal) {
-      doc.text(formatMeal(dayTotal), x + dayWidth / 2, currentY + 13, { align: "center" });
+      doc.text(formatMeal(dayTotal), x + dayWidth / 2, currentY + 14, { align: "center" });
     }
     x += dayWidth;
   }
-  doc.text(formatMeal(totals.totalMeals), x + totalWidth / 2, currentY + 13, { align: "center" });
+  doc.setFontSize(8);
+  doc.text(formatMeal(totals.totalMeals), x + totalWidth / 2, currentY + 14, { align: "center" });
   x += totalWidth;
-  doc.text(totals.totalPaid.toFixed(1), x + paidWidth / 2, currentY + 13, { align: "center" });
+  doc.text(totals.totalPaid.toFixed(1), x + paidWidth / 2, currentY + 14, { align: "center" });
   x += paidWidth;
-  doc.text(totals.remainingTaka.toFixed(1), x + balanceWidth / 2, currentY + 13, { align: "center" });
+  doc.text(totals.remainingTaka.toFixed(1), x + balanceWidth / 2, currentY + 14, { align: "center" });
 
-  // Detailed Cost History Section
+  // Detailed Cost and Paid History Section
   currentY += bodyRowHeight + 40;
 
-  if (costs.length > 0) {
+  if (costs.length > 0 || deposits.length > 0) {
     if (currentY + 60 > bottomLimit) {
       doc.addPage();
-      currentY = margin;
+      drawPageHeader("Transaction History");
+      currentY = 108;
     }
 
-    doc.setFontSize(14);
-    doc.setTextColor(...textColor.dark);
-    doc.text("Cost History", margin, currentY);
-    currentY += 15;
-
-    const costTableWidth = 400;
+    const historyGap = 24;
+    const historyTableWidth = (contentWidth - historyGap) / 2;
     const costTableLeft = margin;
-    const colDateWidth = 100;
-    const colItemWidth = 220;
-    const colAmountWidth = 80;
+    const paidTableLeft = margin + historyTableWidth + historyGap;
+    const sectionTitleY = currentY;
 
-    // Header
-    doc.setFillColor(15, 23, 42);
-    doc.rect(costTableLeft, currentY, costTableWidth, headerHeight, "F");
-    doc.setFontSize(9);
-    doc.setTextColor(255, 255, 255);
-    doc.text("Date", costTableLeft + 8, currentY + 13);
-    doc.text("Item Name", costTableLeft + colDateWidth + 8, currentY + 13);
-    doc.text("Amount", costTableLeft + colDateWidth + colItemWidth + colAmountWidth - 8, currentY + 13, { align: "right" });
-    
-    currentY += headerHeight;
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...textColor.dark);
+    doc.text("Cost History", costTableLeft, sectionTitleY);
+    doc.text("Paid History", paidTableLeft, sectionTitleY);
 
-    costs.sort((a, b) => a.date.localeCompare(b.date)).forEach((cost, index) => {
-      if (currentY + bodyRowHeight > bottomLimit) {
-        doc.addPage();
-        currentY = margin;
-        // Repeat Header on new page
-        doc.setFillColor(15, 23, 42);
-        doc.rect(costTableLeft, currentY, costTableWidth, headerHeight, "F");
-        doc.setFontSize(9);
-        doc.setTextColor(255, 255, 255);
-        doc.text("Date", costTableLeft + 8, currentY + 13);
-        doc.text("Item Name", costTableLeft + colDateWidth + 8, currentY + 13);
-        doc.text("Amount", costTableLeft + colDateWidth + colItemWidth + colAmountWidth - 8, currentY + 13, { align: "right" });
-        currentY += headerHeight;
-      }
+    currentY += 15;
+    const historyStartY = currentY;
 
+    const drawHistoryHeader = (
+      left: number,
+      top: number,
+      columns: { dateWidth: number; detailWidth: number; amountWidth: number; detailLabel: string },
+    ) => {
+      doc.setFillColor(...headerColor);
+      doc.rect(left, top, historyTableWidth, headerHeight, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(255, 255, 255);
+      doc.text("Date", left + 8, top + 13);
+      doc.text(columns.detailLabel, left + columns.dateWidth + 8, top + 13);
+      doc.text("Amount", left + columns.dateWidth + columns.detailWidth + columns.amountWidth - 8, top + 13, { align: "right" });
+    };
+
+    const drawHistoryRow = (
+      left: number,
+      top: number,
+      index: number,
+      columns: { dateWidth: number; detailWidth: number; amountWidth: number },
+      row: { date: string; detail: string; amount: number },
+    ) => {
       if (index % 2 === 0) {
-        doc.setFillColor(249, 250, 251);
-        doc.rect(costTableLeft, currentY, costTableWidth, bodyRowHeight, "F");
+        doc.setFillColor(...rowAltColor);
+        doc.rect(left, top, historyTableWidth, bodyRowHeight, "F");
+      }
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(...textColor.dark);
+      doc.text(row.date, left + 8, top + 13);
+      doc.text(fitText(row.detail, columns.detailWidth - 16), left + columns.dateWidth + 8, top + 13);
+      doc.text(money(row.amount), left + columns.dateWidth + columns.detailWidth + columns.amountWidth - 8, top + 13, { align: "right" });
+      doc.setDrawColor(...borderColor);
+      doc.line(left, top + bodyRowHeight, left + historyTableWidth, top + bodyRowHeight);
+    };
+
+    const drawHistoryPageHeader = () => {
+      doc.addPage();
+      drawPageHeader("Transaction History");
+      currentY = 108;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.setTextColor(...textColor.dark);
+      doc.text("Cost History", costTableLeft, currentY);
+      doc.text("Paid History", paidTableLeft, currentY);
+      currentY += 15;
+    };
+
+    const costColumns = {
+      dateWidth: 72,
+      amountWidth: 78,
+      detailWidth: historyTableWidth - 72 - 78,
+      detailLabel: "Item Name",
+    };
+    const paidColumns = {
+      dateWidth: 72,
+      amountWidth: 78,
+      detailWidth: historyTableWidth - 72 - 78,
+      detailLabel: "Member",
+    };
+    const sortedCosts = [...costs].sort((a, b) => a.date.localeCompare(b.date));
+    const sortedDeposits = [...deposits].sort((a, b) => a.date.localeCompare(b.date));
+    const maxHistoryRows = Math.max(sortedCosts.length, sortedDeposits.length);
+
+    let costPageRowIndex = 0;
+    let paidPageRowIndex = 0;
+    for (let rowIndex = 0; rowIndex < maxHistoryRows; rowIndex += 1) {
+      if (rowIndex === 0) {
+        if (costs.length > 0) drawHistoryHeader(costTableLeft, currentY, costColumns);
+        if (deposits.length > 0) drawHistoryHeader(paidTableLeft, currentY, paidColumns);
+        currentY += headerHeight;
+      } else if (currentY + bodyRowHeight > bottomLimit) {
+        drawHistoryPageHeader();
+        if (costs.length > rowIndex) drawHistoryHeader(costTableLeft, currentY, costColumns);
+        if (deposits.length > rowIndex) drawHistoryHeader(paidTableLeft, currentY, paidColumns);
+        currentY += headerHeight;
+        costPageRowIndex = 0;
+        paidPageRowIndex = 0;
       }
 
-      doc.setTextColor(...textColor.dark);
-      doc.text(cost.date, costTableLeft + 8, currentY + 13);
-      doc.text(cost.itemName, costTableLeft + colDateWidth + 8, currentY + 13);
-      doc.text(`${cost.amount.toFixed(2)} Tk`, costTableLeft + colDateWidth + colItemWidth + colAmountWidth - 8, currentY + 13, { align: "right" });
-      
+      const cost = sortedCosts[rowIndex];
+      const deposit = sortedDeposits[rowIndex];
+      if (cost) {
+        drawHistoryRow(costTableLeft, currentY, costPageRowIndex, costColumns, {
+          date: cost.date,
+          detail: cost.itemName,
+          amount: cost.amount,
+        });
+        costPageRowIndex += 1;
+      }
+      if (deposit) {
+        drawHistoryRow(paidTableLeft, currentY, paidPageRowIndex, paidColumns, {
+          date: deposit.date,
+          detail: memberNameById(deposit.memberId),
+          amount: deposit.amount,
+        });
+        paidPageRowIndex += 1;
+      }
+
       currentY += bodyRowHeight;
-    });
+    }
+
+    if (maxHistoryRows === 0) {
+      currentY = historyStartY;
+    }
+
+    if (costs.length > 0 && deposits.length === 0 && currentY + bodyRowHeight <= bottomLimit) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(...textColor.muted);
+      doc.text("No paid history for this month.", paidTableLeft, historyStartY + 13);
+    }
+
+    if (deposits.length > 0 && costs.length === 0 && currentY + bodyRowHeight <= bottomLimit) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(...textColor.muted);
+      doc.text("No cost history for this month.", costTableLeft, historyStartY + 13);
+    }
+
+    if (costs.length === 0 && deposits.length === 0) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(...textColor.muted);
+      doc.text("No cost or paid history for this month.", margin, currentY);
+    }
   }
 
   doc.save(fileName || `${groupName}_${chartLabel}_Report.pdf`);

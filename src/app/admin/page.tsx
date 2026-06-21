@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { signOut } from "firebase/auth";
 import { auth, db } from "@/lib/firebase/client";
 import { doc, getDoc } from "firebase/firestore";
@@ -14,6 +14,8 @@ import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
 import { AdminMonthSummary } from "@/components/admin/admin-month-summary";
+import { useCharts, useCosts, useDeposits, useMealsForMonth, useMembers } from "@/lib/hooks/use-data";
+import { saveChartReportPdf } from "@/lib/utils/pdf-report";
 
 const navItemKeys = [
   { href: "/admin/members", labelKey: "adminNav.members" as const, hintKey: "adminNav.membersHint" as const, metric: "01" },
@@ -53,6 +55,20 @@ export default function AdminPage() {
   const [isSignOutInProgress, setIsSignOutInProgress] = useState(false);
   const { adminProfile, isLoading: profileLoading, error: profileError } = useCurrentAdminProfile();
   const visibleGroup = adminProfile && group?.id === adminProfile.groupId ? group : null;
+  const { data: charts = [] } = useCharts(visibleGroup?.id);
+  const { data: members = [] } = useMembers(visibleGroup?.id);
+  const activeChart = useMemo(() => {
+    if (!charts.length) return null;
+    const currentChartId = visibleGroup?.currentChartId;
+    if (currentChartId) {
+      const found = charts.find((chart) => chart.id === currentChartId);
+      if (found) return found;
+    }
+    return charts[0];
+  }, [charts, visibleGroup?.currentChartId]);
+  const { data: monthMeals = [] } = useMealsForMonth(visibleGroup?.id, activeChart?.monthKey);
+  const { data: monthCosts = [] } = useCosts(visibleGroup?.id, activeChart?.id);
+  const { data: monthDeposits = [] } = useDeposits(visibleGroup?.id, activeChart?.id);
   const isPageLoading = !isLoaded || profileLoading || (!!adminProfile && !visibleGroup && !loadError);
   const displayError =
     loadError ??
@@ -91,6 +107,27 @@ export default function AdminPage() {
     router.push("/?noredirect=1");
   }
 
+  function handleDownloadPDF() {
+    if (!visibleGroup || !activeChart || members.length === 0) return;
+
+    try {
+      saveChartReportPdf({
+        groupName: visibleGroup.name || "Group",
+        chartLabel: activeChart.label || "Report",
+        monthKey: activeChart.monthKey,
+        members,
+        meals: monthMeals || [],
+        costs: monthCosts || [],
+        deposits: monthDeposits || [],
+        fileName: `${visibleGroup.name}_${activeChart.label}_Report.pdf`,
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to generate PDF";
+      console.error("PDF export error:", msg);
+      setLoadError(tx(msg));
+    }
+  }
+
   if (!isLoaded) {
     return (
       <AdminLoadingState message={t("adminDash.loading")} />
@@ -125,9 +162,19 @@ export default function AdminPage() {
             {t("adminDash.subtitle")}
           </p>
         </div>
-        <button onClick={handleLogout} type="button" className="button-secondary shrink-0">
-          {t("adminDash.signOut")}
-        </button>
+        <div className="admin-dashboard-hero-actions">
+          <button
+            onClick={handleDownloadPDF}
+            type="button"
+            className="button-secondary"
+            disabled={!visibleGroup || !activeChart || members.length === 0}
+          >
+            {t("groupDash.exportCSV", { defaultValue: "Export PDF" })}
+          </button>
+          <button onClick={handleLogout} type="button" className="button-secondary">
+            {t("adminDash.signOut")}
+          </button>
+        </div>
       </section>
 
       {visibleGroup && <AdminMonthSummary groupId={visibleGroup.id} />}
