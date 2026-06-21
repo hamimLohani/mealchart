@@ -39,6 +39,7 @@ export function EditMealsManager() {
   const [members, setMembers] = useState<Member[]>([]);
   const [meals, setMeals] = useState<Record<string, Record<string, number>>>({});
   const [tableLoading, setTableLoading] = useState(false);
+  const [search, setSearch] = useState("");
   const savingRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const { adminProfile: currentAdminProfile, isLoading: profileLoading, error: profileError } = useCurrentAdminProfile();
   const resolvedError =
@@ -149,6 +150,18 @@ export function EditMealsManager() {
     if (!selectedChart) return [];
     return memberIdsForChartRows(members, mealsAsEntries, selectedChart.monthKey);
   }, [members, mealsAsEntries, selectedChart]);
+
+  const filteredRowMemberIds = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return rowMemberIds;
+    const formerLabel = t("common.formerMember");
+    return rowMemberIds.filter((memberId) => {
+      const name = memberDisplayName(memberId, members, formerLabel).toLowerCase();
+      const member = members.find((m) => m.id === memberId);
+      const email = member?.email?.toLowerCase() || "";
+      return name.includes(q) || email.includes(q);
+    });
+  }, [search, rowMemberIds, members, t]);
 
   function isActiveMember(memberId: string) {
     return members.some((m) => m.id === memberId);
@@ -302,6 +315,7 @@ export function EditMealsManager() {
             setIsMonthPickerOpen(true);
             setSelectedChart(null);
             setMeals({});
+            setSearch("");
           }}
           className="button-secondary shrink-0"
         >
@@ -309,11 +323,17 @@ export function EditMealsManager() {
         </button>
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-lg font-semibold">
           {formatMeal(grandTotal)}{" "}
           <span className="text-sm font-normal text-[color:var(--muted)]">{t("admin.totalMeals")}</span>
         </p>
+        <input
+          className="input w-full sm:w-64"
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={t("memberMgr.searchPlaceholder")}
+          value={search}
+        />
       </div>
 
       {tableLoading ? (
@@ -345,57 +365,70 @@ export function EditMealsManager() {
               </tr>
             </thead>
             <tbody>
-              <tr className="border-b border-[color:var(--border)] bg-[color:var(--panel)]">
-                <td className="sticky left-0 z-10 bg-[color:var(--panel)] px-3 py-2 text-xs font-bold uppercase tracking-[0.15em] text-[color:var(--accent)]">
-                  {t("admin.defaultMeal") || "Default"}
-                </td>
-                {days.map((date) => (
-                  <td key={date} className="px-1 py-1 text-center">
-                    <input
-                      className="w-18 rounded-md border border-[color:var(--border)] bg-[color:var(--background)] px-1 text-center text-sm font-medium tabular-nums outline-none transition focus:border-[color:var(--accent)]"
-                      min="0"
-                      step="0.25"
-                      type="number"
-                      placeholder="-"
-                      disabled={selectedChart.locked}
-                      onChange={(e) => handleDefaultChange(date, e.target.value)}
-                    />
+              {!search.trim() && (
+                <tr className="border-b border-[color:var(--border)] bg-[color:var(--panel)]">
+                  <td className="sticky left-0 z-10 bg-[color:var(--panel)] px-3 py-2 text-xs font-bold uppercase tracking-[0.15em] text-[color:var(--accent)]">
+                    {t("admin.defaultMeal") || "Default"}
                   </td>
-                ))}
-                <td className="px-3 py-2"></td>
-              </tr>
-              {rowMemberIds.map((memberId, ri) => (
-                <tr key={memberId} className={ri % 2 === 0 ? "bg-[color:var(--background)]" : "bg-[color:var(--panel)]"}>
+                  {days.map((date) => (
+                    <td key={date} className="px-1 py-1 text-center">
+                      <input
+                        className="w-18 rounded-md border border-[color:var(--border)] bg-[color:var(--background)] px-1 text-center text-sm font-medium tabular-nums outline-none transition focus:border-[color:var(--accent)]"
+                        min="0"
+                        step="0.25"
+                        type="number"
+                        placeholder="-"
+                        disabled={selectedChart.locked}
+                        onChange={(e) => handleDefaultChange(date, e.target.value)}
+                      />
+                    </td>
+                  ))}
+                  <td className="px-3 py-2"></td>
+                </tr>
+              )}
+              {filteredRowMemberIds.length === 0 ? (
+                <tr>
                   <td
-                    className={`sticky left-0 z-10 px-2.5 py-1.5 text-sm font-medium ${ri % 2 === 0 ? "bg-[color:var(--background)]" : "bg-[color:var(--panel)]"}`}
+                    colSpan={days.length + 2}
+                    className="py-8 text-center text-sm text-[color:var(--soft-foreground)]"
                   >
-                    {memberDisplayName(memberId, members, former)}
-                  </td>
-                  {days.map((date) => {
-                    const val = meals[memberId]?.[date] ?? 0;
-                    const isToday = date === todayDate;
-                    return (
-                      <td key={date} className={`px-0.5 py-1 text-center ${isToday ? "bg-[color:var(--accent-dim)]" : ""}`}>
-                        <input
-                          className={`w-18 rounded-md border border-transparent bg-transparent px-1 text-center text-sm font-medium tabular-nums outline-none transition focus:border-[color:var(--accent)] focus:bg-[color:var(--panel)] ${
-                            isToday ? "border-[color:var(--accent)] bg-[color:var(--panel)]" : ""
-                          }`}
-                          min="0"
-                          step="0.25"
-                          type="number"
-                          value={val === 0 ? "" : val}
-                          placeholder="0"
-                          disabled={selectedChart.locked || !isActiveMember(memberId)}
-                          onChange={(e) => handleChange(memberId, date, e.target.value)}
-                        />
-                      </td>
-                    );
-                  })}
-                  <td className="px-2.5 py-1.5 text-center text-sm font-bold text-[color:var(--accent)]">
-                    {formatMeal(memberTotal(memberId))}
+                    {t("memberMgr.noSearchMatch")}
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredRowMemberIds.map((memberId, ri) => (
+                  <tr key={memberId} className={ri % 2 === 0 ? "bg-[color:var(--background)]" : "bg-[color:var(--panel)]"}>
+                    <td
+                      className={`sticky left-0 z-10 px-2.5 py-1.5 text-sm font-medium ${ri % 2 === 0 ? "bg-[color:var(--background)]" : "bg-[color:var(--panel)]"}`}
+                    >
+                      {memberDisplayName(memberId, members, former)}
+                    </td>
+                    {days.map((date) => {
+                      const val = meals[memberId]?.[date] ?? 0;
+                      const isToday = date === todayDate;
+                      return (
+                        <td key={date} className={`px-0.5 py-1 text-center ${isToday ? "bg-[color:var(--accent-dim)]" : ""}`}>
+                          <input
+                            className={`w-18 rounded-md border border-transparent bg-transparent px-1 text-center text-sm font-medium tabular-nums outline-none transition focus:border-[color:var(--accent)] focus:bg-[color:var(--panel)] ${
+                              isToday ? "border-[color:var(--accent)] bg-[color:var(--panel)]" : ""
+                            }`}
+                            min="0"
+                            step="0.25"
+                            type="number"
+                            value={val === 0 ? "" : val}
+                            placeholder="0"
+                            disabled={selectedChart.locked || !isActiveMember(memberId)}
+                            onChange={(e) => handleChange(memberId, date, e.target.value)}
+                          />
+                        </td>
+                      );
+                    })}
+                    <td className="px-2.5 py-1.5 text-center text-sm font-bold text-[color:var(--accent)]">
+                      {formatMeal(memberTotal(memberId))}
+                    </td>
+                  </tr>
+                ))
+              )}
               <tr className="border-t border-[color:var(--border)] bg-[color:var(--panel)]">
                 <td className="sticky left-0 z-10 bg-[color:var(--panel)] px-3 py-2 text-xs font-bold uppercase tracking-[0.15em] text-[color:var(--muted)]">
                   {t("admin.dayTotal")}
