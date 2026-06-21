@@ -11,18 +11,13 @@ import { useGroupSession } from "@/lib/hooks/use-group-session";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import type { Group, Member } from "@/types/domain";
 
-export function GroupMembersList({
-  groupId,
-  memberSearch = "",
-}: {
-  groupId: string;
-  memberSearch?: string;
-}) {
+export function GroupMembersList({ groupId }: { groupId: string }) {
   const router = useRouter();
   const { t, tx, language } = useT();
   const { chart } = useGroupSession();
   const [group, setGroup] = useState<Group | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
+  const [memberSearch, setMemberSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -100,6 +95,13 @@ export function GroupMembersList({
 
       <div className="group-card">
         <p className="group-kicker">{t("groupMembers.allMembers")}</p>
+        <input
+          className="group-search-input mt-3"
+          placeholder={t("groupDash.searchMembers")}
+          value={memberSearch}
+          onChange={(event) => setMemberSearch(event.target.value)}
+          type="search"
+        />
         <div className="mt-3 grid gap-2">
           {filtered.map((member) => (
             <div
