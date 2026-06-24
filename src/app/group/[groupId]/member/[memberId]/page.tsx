@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useT } from "@/i18n/use-t";
 import { GroupNavbar } from "@/components/group/group-navbar";
@@ -16,7 +16,7 @@ import { chartMonthDateBounds, daysInMonth, toDateInputValue } from "@/lib/utils
 import { formatMeal, getMemberTotals, getMonthTotals, normalizeMealQuantity } from "@/lib/utils/meal-money";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
-import { useGroup, useMembers, useMealsForMonth, useMealsForDate, useCosts, useDeposits } from "@/lib/hooks/use-data";
+import { useGroup, useMembers, useMealsForMonth, useMealsForDate, useCosts, useDeposits, useCharts } from "@/lib/hooks/use-data";
 import { mutate } from "swr";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 export default function MemberPage({
@@ -45,6 +45,27 @@ export default function MemberPage({
   const { data: costs = [] } = useCosts(group?.id, chart?.id);
   const { data: deposits = [] } = useDeposits(group?.id, chart?.id);
   const { data: dateMeals = [], isLoading: dateMealLoading } = useMealsForDate(group?.id, selectedDate);
+  const { data: charts = [] } = useCharts(group?.id);
+
+  // Generate selectable dates for standard members: today and the next 5 days, filtered to only keep dates in the current selected month.
+  const editableDates = useMemo(() => {
+    if (!chart) return [];
+    const dates = [];
+    const baseDate = new Date();
+    for (let i = 0; i <= 5; i++) {
+      const d = new Date(baseDate);
+      d.setDate(baseDate.getDate() + i);
+      const dateStr = toDateInputValue(d);
+      // Only include dates in the currently selected chart's month
+      if (dateStr.startsWith(chart.monthKey)) {
+        dates.push({
+          dateStr,
+          dateObj: d,
+        });
+      }
+    }
+    return dates;
+  }, [chart]);
 
   // Normalize member from the list
   const normalizedMemberId = decodeURIComponent(memberId).toLowerCase();
@@ -159,7 +180,21 @@ export default function MemberPage({
 
   const isOwner = currentUser?.email?.toLowerCase() === member?.email?.toLowerCase();
   const canEdit = isOwner || isAdmin;
-  const isLocked = chart.locked || !canEdit;
+
+  function isDateLocked(dateStr: string) {
+    if (!canEdit) return true;
+    const mKey = dateStr.slice(0, 7);
+    if (chart && mKey === chart.monthKey) {
+      return chart.locked;
+    }
+    const targetChart = charts.find((c) => c.monthKey === mKey);
+    if (targetChart) {
+      return targetChart.locked;
+    }
+    return false;
+  }
+
+  const isLocked = isDateLocked(selectedDate);
 
   function handleDownloadPDF() {
     if (!chart || !group) return;
@@ -284,22 +319,40 @@ export default function MemberPage({
                     disabled={isLocked}
                   />
                 ) : (
-                   <motion.div 
-                     initial={{ opacity: 0, x: -10 }}
-                     animate={{ opacity: 1, x: 0 }}
-                     className="input flex items-center justify-center gap-2.5 border-2 border-[color:var(--accent)] bg-[color:var(--accent-dim)] px-4 font-bold text-[color:var(--accent)] shadow-[0_0_0_2px_var(--accent-dim)]"
-                   >
-                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                       <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                       <line x1="16" y1="2" x2="16" y2="6"></line>
-                       <line x1="8" y1="2" x2="8" y2="6"></line>
-                       <line x1="3" y1="10" x2="21" y2="10"></line>
-                     </svg>
-                     <span>
-                       {new Date(selectedDate).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })}
-                     </span>
-                   </motion.div>
-                 )}
+                  <motion.div 
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="relative w-full"
+                  >
+                    <select
+                      className="input w-full appearance-none pr-8 font-bold bg-[color:var(--panel)] border-2 border-[color:var(--accent)] text-[color:var(--accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent)] cursor-pointer"
+                      value={selectedDate}
+                      onChange={(event) => setSelectedDate(event.target.value)}
+                      disabled={isLocked}
+                    >
+                      {editableDates.length === 0 ? (
+                        <option value={selectedDate}>
+                          {new Date(selectedDate).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })}
+                        </option>
+                      ) : (
+                        editableDates.map(({ dateStr, dateObj }) => {
+                          const isToday = dateStr === toDateInputValue(new Date());
+                          const label = dateObj.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' });
+                          return (
+                            <option key={dateStr} value={dateStr}>
+                              {label}{isToday ? ` (${t("common.today")})` : ""}
+                            </option>
+                          );
+                        })
+                      )}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-[color:var(--accent)]">
+                      <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                      </svg>
+                    </div>
+                  </motion.div>
+                )}
                 {dateMealLoading ? (
                   <p className="text-sm text-[color:var(--soft-foreground)]">{t("memberPage.loadingMeal")}</p>
                 ) : (

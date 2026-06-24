@@ -97,6 +97,7 @@ export const en = {
   "common.back": " Back",
   "common.tk": "tk",
   "common.active": "active",
+  "common.today": "Today",
   "common.auto": "auto",
   "common.update": "Update",
   "common.unknown": "Unknown",
@@ -327,6 +328,7 @@ export const en = {
   "memberPage.saveMealFailed": "Failed to save meal entry.",
   "memberPage.monthInfoSubtitle": "All information for selected month.",
   "memberPage.backToHome": "← Back to Home",
+  "memberPage.selectDate": "Select Date",
 
   // Admin nav
   "adminNav.panel": "Admin",
@@ -755,6 +757,7 @@ export const bn: Record<MessageKey, string> = {
   "common.back": " পিছনে",
   "common.tk": "টাকা",
   "common.active": "সক্রিয়",
+  "common.today": "আজ",
   "common.auto": "স্বয়ংক্রিয়",
   "common.update": "আপডেট",
   "common.unknown": "অজানা",
@@ -971,6 +974,7 @@ export const bn: Record<MessageKey, string> = {
   "memberPage.saveMealFailed": "মিল সেভ ব্যর্থ।",
   "memberPage.monthInfoSubtitle": "নির্বাচিত মাসের সব তথ্য।",
   "memberPage.backToHome": "← হোমে ফিরুন",
+  "memberPage.selectDate": "তারিখ নির্বাচন করুন",
 
   "adminNav.panel": "অ্যাডমিন",
   "adminNav.notSignedIn": "সাইন ইন নেই",
