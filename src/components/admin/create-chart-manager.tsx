@@ -265,6 +265,11 @@ export function CreateChartManager() {
 
   async function handleDeleteChart(chart: Chart) {
     if (!activeAdminProfile) return;
+    if (chart.locked) {
+      setError(t("createChart.deleteLockedChart"));
+      showError(t("createChart.deleteLockedChart"));
+      return;
+    }
     // deletion is confirmed via modal; this function performs the delete
     setError(null);
     setIsDeleting(true);

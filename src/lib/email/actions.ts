@@ -563,3 +563,178 @@ export async function sendMonthSummaryEmails(input: {
     return { success: false, error: getErrorMessage(error) };
   }
 }
+
+export async function sendReminderEmails(input: {
+  groupName: string;
+  chartLabel: string;
+  members: Member[];
+  meals: MealEntry[];
+  costs: CostEntry[];
+  deposits: DepositEntry[];
+}) {
+  const { groupName, chartLabel, members, meals, costs, deposits } = input;
+  console.log(`[Email] Starting reminder batch for group "${groupName}" (${chartLabel}) to ${members.length} members.`);
+
+  try {
+    const { totalMeals, totalCost, totalPaid, mealRate, remainingTaka } = getMonthTotals(
+      meals,
+      costs,
+      deposits,
+    );
+
+    type EmailResult = 
+      | { status: 'fulfilled'; value: { email: string; success: true } }
+      | { status: 'rejected'; reason: unknown };
+
+    const results: EmailResult[] = [];
+
+    for (const member of members) {
+      try {
+        if (!member.email || !member.email.includes("@")) {
+          throw new Error(`Invalid email for member ${member.fullName}`);
+        }
+
+        const totals = getMemberTotals(member.id, meals, deposits, mealRate);
+
+        const html = `
+          <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 650px; margin: 0 auto; padding: 25px; color: #333; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h1 style="color: #f59e0b; margin: 0; font-size: 28px;">🔔 Payment Reminder</h1>
+              <p style="color: #64748b; margin: 5px 0 0 0; font-size: 18px;">${escapeHtml(chartLabel)} • ${escapeHtml(groupName)}</p>
+            </div>
+
+            <div style="background-color: #fef3c7; border-radius: 12px; padding: 20px; margin-bottom: 30px; border: 1px solid #fcd34d;">
+              <p style="margin: 0 0 15px 0; font-size: 16px;">Hello <strong>${escapeHtml(member.fullName)}</strong>,</p>
+              <p style="margin: 0; line-height: 1.6; color: #92400e;">This is a friendly reminder about your current meal account balance for <strong>${escapeHtml(chartLabel)}</strong>.</p>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+              <div style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); padding: 20px; border-radius: 12px; color: white;">
+                <p style="margin: 0; font-size: 12px; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.05em;">Total Meals</p>
+                <p style="margin: 5px 0 0 0; font-size: 24px; font-weight: bold;">${formatMeal(totals.totalMeals)}</p>
+              </div>
+              <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 20px; border-radius: 12px; color: white;">
+                <p style="margin: 0; font-size: 12px; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.05em;">Total Paid</p>
+                <p style="margin: 5px 0 0 0; font-size: 24px; font-weight: bold;">${totals.totalPaid.toFixed(2)} TK</p>
+              </div>
+            </div>
+
+            <div style="background-color: ${totals.balance < 0 ? "#fef2f2" : "#f0fdf4"}; border: 2px solid ${totals.balance < 0 ? "#fecaca" : "#bbf7d0"}; border-radius: 12px; padding: 25px; margin-bottom: 30px; text-align: center;">
+              <p style="margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; color: ${totals.balance < 0 ? "#b91c1c" : "#166534"}; font-weight: bold;">Your Current Balance</p>
+              <p style="margin: 10px 0 0 0; font-size: 40px; font-weight: bold; color: ${totals.balance >= 0 ? "#10b981" : "#ef4444"};">
+                ${totals.balance >= 0 ? "+" : ""}${totals.balance.toFixed(2)} TK
+              </p>
+              ${totals.balance < 0 ? `
+                <p style="margin: 10px 0 0 0; font-size: 14px; color: #991b1b;">
+                  ⚠️ You have a minus (-) balance. Please pay <strong>${Math.abs(totals.balance).toFixed(2)} TK</strong> to clear your dues!
+                </p>
+              ` : `
+                <p style="margin: 10px 0 0 0; font-size: 14px; color: #166534;">
+                  ✅ Great! You have a positive balance!
+                </p>
+              `}
+            </div>
+
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+              <tr>
+                <td style="padding: 12px 0; border-bottom: 1px solid #f1f5f9; color: #64748b;">Meal Rate</td>
+                <td style="padding: 12px 0; border-bottom: 1px solid #f1f5f9; text-align: right; font-weight: 600;">${mealRate.toFixed(4)} TK</td>
+              </tr>
+              <tr>
+                <td style="padding: 12px 0; border-bottom: 1px solid #f1f5f9; color: #64748b;">Individual Cost (${formatMeal(totals.totalMeals)} × ${mealRate.toFixed(2)})</td>
+                <td style="padding: 12px 0; border-bottom: 1px solid #f1f5f9; text-align: right; font-weight: 600;">${totals.totalCost.toFixed(2)} TK</td>
+              </tr>
+            </table>
+
+            <div style="background-color: #f1f5f9; border-radius: 12px; padding: 20px;">
+              <p style="margin: 0 0 10px 0; font-weight: bold; font-size: 14px; color: #475569;">GROUP TOTALS</p>
+              <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+                <div style="min-width: 120px;">
+                  <p style="margin: 0; font-size: 12px; color: #64748b;">Total Costs</p>
+                  <p style="margin: 2px 0 0 0; font-weight: 600;">${totalCost.toFixed(2)} TK</p>
+                </div>
+                <div style="min-width: 120px;">
+                  <p style="margin: 0; font-size: 12px; color: #64748b;">Total Meals</p>
+                  <p style="margin: 2px 0 0 0; font-weight: 600;">${formatMeal(totalMeals)}</p>
+                </div>
+                <div style="min-width: 120px;">
+                  <p style="margin: 0; font-size: 12px; color: #64748b;">Total Paid</p>
+                  <p style="margin: 2px 0 0 0; font-weight: 600;">${totalPaid.toFixed(2)} TK</p>
+                </div>
+                <div style="min-width: 120px;">
+                  <p style="margin: 0; font-size: 12px; color: #64748b;">Remaining Taka</p>
+                  <p style="margin: 2px 0 0 0; font-weight: 600; color: ${remainingTaka >= 0 ? "#10b981" : "#ef4444"};">
+                    ${remainingTaka >= 0 ? "+" : ""}${remainingTaka.toFixed(2)} TK
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top: 30px; border-top: 1px solid #f1f5f9; padding-top: 20px;">
+              <p style="margin: 0 0 10px 0; font-weight: bold; font-size: 14px; color: #475569;">YOUR PAYMENT HISTORY</p>
+              ${buildDepositSummary(member, deposits)}
+            </div>
+
+            <div style="margin-top: 30px; border-top: 1px solid #f1f5f9; padding-top: 20px;">
+              <p style="margin: 0 0 10px 0; font-weight: bold; font-size: 14px; color: #475569;">YOUR MEAL CHART</p>
+              ${buildMealChartTable(member, meals)}
+            </div>
+
+            <div style="margin-top: 30px; border-top: 1px solid #f1f5f9; padding-top: 20px;">
+              <p style="margin: 0 0 10px 0; font-weight: bold; font-size: 14px; color: #475569;">COSTS BREAKDOWN</p>
+              ${buildCostBreakdown(costs)}
+            </div>
+
+            <p style="text-align: center; margin-top: 30px;">
+              <a href="${process.env.NEXT_PUBLIC_BASE_URL || "https://mealchart.vercel.app"}" style="background-color: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+                View Your Account
+              </a>
+            </p>
+
+            <div style="margin-top: 40px; text-align: center; color: #94a3b8; font-size: 12px;">
+              <p>This is a friendly reminder. If you have already cleared your dues, you can ignore this email.</p>
+              <p>© ${new Date().getFullYear()} Meal Chart App</p>
+            </div>
+          </div>
+        `;
+
+        const mailOptions: any = {
+          from: fromEmail,
+          to: member.email,
+          subject: `Payment Reminder: ${chartLabel} - ${groupName}`,
+          html,
+        };
+
+        await transporter.sendMail(mailOptions);
+
+        console.log(`[Email] Successfully sent reminder to ${member.email}`);
+        results.push({ status: 'fulfilled', value: { email: member.email, success: true } });
+      } catch (err) {
+        console.error(`[Email] Failed to send to ${member.email}:`, err);
+        results.push({ status: 'rejected', reason: err });
+      }
+    }
+
+    const successful = results.filter((r) => r.status === "fulfilled" && r.value.success).length;
+    const failed = results.filter((r) => r.status === "rejected" || !r.value.success);
+
+    if (failed.length > 0) {
+      console.error(`[Email] Batch completed with ${failed.length} failures out of ${members.length}.`);
+      failed.forEach((f) => {
+        if (f.status === "rejected") console.error(`[Email] Failure:`, f.reason);
+      });
+    } else {
+      console.log(`[Email] Batch completed successfully! Sent ${successful} reminders.`);
+    }
+
+    return {
+      success: true,
+      sentCount: successful,
+      failedCount: failed.length,
+      totalCount: members.length,
+    };
+  } catch (error) {
+    console.error("[Email] Critical reminder batch failure:", error);
+    return { success: false, error: getErrorMessage(error) };
+  }
+}

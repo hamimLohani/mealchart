@@ -661,6 +661,9 @@ export const en = {
   "toast.joinRequestApproved": "Join request approved!",
   "toast.joinRequestRejected": "Join request rejected.",
   "toast.genericError": "An error occurred. Please try again.",
+  "notices.sendReminders": "Send Reminders",
+  "notices.sendingReminders": "Sending…",
+  "createChart.deleteLockedChart": "Please unlock the month first before deleting.",
 } as const;
 
 export type MessageKey = keyof typeof en;
@@ -1300,6 +1303,9 @@ export const bn: Record<MessageKey, string> = {
   "toast.joinRequestApproved": "যোগদানের অনুরোধ সফলভাবে অনুমোদিত হয়েছে!",
   "toast.joinRequestRejected": "যোগদানের অনুরোধ প্রত্যাখ্যাত হয়েছে।",
   "toast.genericError": "একটি ত্রুটি ঘটেছে। দয়া করে আবার চেষ্টা করুন।",
+  "notices.sendReminders": "রিমাইন্ডার পাঠান",
+  "notices.sendingReminders": "পাঠানো হচ্ছে…",
+  "createChart.deleteLockedChart": "মুছে ফেলার আগে অনুগ্রহ করে মাসটি আনলক করুন।",
 };
 
 export const messages: Record<Language, Record<MessageKey, string>> = {

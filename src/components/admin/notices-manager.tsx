@@ -10,22 +10,33 @@ import {
   listCharts,
   listNoticesForChart,
   updateNotice,
+  listMembers,
+  getMealsForChart,
+  listCostsForChart,
+  listDepositsForChart,
+  getGroupById,
 } from "@/lib/firebase/repositories";
 import { currentMonthKey, pickCurrentMonthChart } from "@/lib/utils/date";
 import type { AdminProfile, Chart, Notice } from "@/types/domain";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
+import { sendReminderEmails } from "@/lib/email/actions";
+import { getFriendlyEmailError } from "@/lib/utils/email-error";
+import { useToast } from "@/lib/hooks/use-toast";
 
 export function NoticesManager() {
   const { t, tx, language } = useT();
+  const { success: showSuccess, error: showError } = useToast();
   const locale = language === "bn" ? "bn-BD" : undefined;
   const configError = !isFirebaseConfigured || !auth ? "Firebase is not configured yet." : null;
 
   const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null);
+  const [groupName, setGroupName] = useState("");
   const [charts, setCharts] = useState<Chart[]>([]);
   const [error, setError] = useState<string | null>(configError);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSendingReminders, setIsSendingReminders] = useState(false);
 
   const [selectedChart, setSelectedChart] = useState<Chart | null>(null);
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
@@ -74,8 +85,8 @@ export function NoticesManager() {
 
   useGlobalLoading(
     "notices-manager",
-    isLoading || profileLoading || noticesLoading || isSubmitting,
-    isLoading ? t("common.loading") : isSubmitting ? t("admin.saving") : t("common.loading"),
+    isLoading || profileLoading || noticesLoading || isSubmitting || isSendingReminders,
+    isLoading ? t("common.loading") : isSubmitting ? t("admin.saving") : isSendingReminders ? t("notices.sendingReminders") : t("common.loading"),
   );
 
   useEffect(() => {
@@ -88,9 +99,13 @@ export function NoticesManager() {
       try {
         if (!active) return;
         setIsLoading(true);
-        const currentCharts = await listCharts(currentAdminProfile.groupId);
+        const [currentCharts, group] = await Promise.all([
+          listCharts(currentAdminProfile.groupId),
+          getGroupById(currentAdminProfile.groupId)
+        ]);
         if (!active) return;
         setAdminProfile(currentAdminProfile);
+        setGroupName(group?.name ?? "");
         setCharts(currentCharts);
       } catch (e) {
         if (!active) return;
@@ -192,6 +207,47 @@ export function NoticesManager() {
     }
   }
 
+  async function handleSendReminders() {
+    if (!adminProfile || !selectedChart) return;
+    setIsSendingReminders(true);
+    setError(null);
+    try {
+      const [members, meals, costs, deposits] = await Promise.all([
+        listMembers(adminProfile.groupId),
+        getMealsForChart(adminProfile.groupId, selectedChart),
+        listCostsForChart(adminProfile.groupId, selectedChart.id),
+        listDepositsForChart(adminProfile.groupId, selectedChart.id),
+      ]);
+
+      const emailResult = await sendReminderEmails({
+        groupName,
+        chartLabel: selectedChart.label,
+        members,
+        meals,
+        costs,
+        deposits,
+      });
+
+      if (!emailResult.success) {
+        const friendlyError = getFriendlyEmailError(emailResult.error || "");
+        setError(friendlyError);
+        showError(friendlyError);
+      } else if (emailResult.failedCount && emailResult.failedCount > 0) {
+        const statusMsg = `Sent ${emailResult.sentCount} reminders, ${emailResult.failedCount} failed.`;
+        setError(statusMsg);
+        showError(statusMsg);
+      } else {
+        showSuccess(`Sent ${emailResult.sentCount} reminder emails!`);
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to send reminders.";
+      setError(msg);
+      showError(msg);
+    } finally {
+      setIsSendingReminders(false);
+    }
+  }
+
   if (isLoading) return <AdminLoadingState message={t("common.loading")} />;
 
   if (!selectedChart) {
@@ -249,13 +305,23 @@ export function NoticesManager() {
             <p className="mt-1 text-xs font-semibold text-[color:var(--danger)]">{t("noticeMgr.monthLocked")}</p>
           )}
         </div>
-        <button
-          type="button"
-          onClick={() => { setIsMonthPickerOpen(true); setSelectedChart(null); setNotices([]); cancelEdit(); }}
-          className="button-secondary shrink-0"
-        >
-          {t("costs.backMonths")}
-        </button>
+        <div className="flex gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={handleSendReminders}
+            disabled={isSendingReminders}
+            className="button-primary"
+          >
+            {isSendingReminders ? t("notices.sendingReminders") : t("notices.sendReminders")}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setIsMonthPickerOpen(true); setSelectedChart(null); setNotices([]); cancelEdit(); }}
+            className="button-secondary"
+          >
+            {t("costs.backMonths")}
+          </button>
+        </div>
       </div>
 
       <form
