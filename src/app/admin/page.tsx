@@ -14,7 +14,7 @@ import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
 import { AdminMonthSummary } from "@/components/admin/admin-month-summary";
-import { useCharts, useCosts, useDeposits, useMealsForMonth, useMembers } from "@/lib/hooks/use-data";
+import { useCharts, useCosts, useDeposits, useMealsForChart, useMembers } from "@/lib/hooks/use-data";
 import { saveChartReportPdf } from "@/lib/utils/pdf-report";
 
 const navItemKeys = [
@@ -66,7 +66,7 @@ export default function AdminPage() {
     }
     return charts[0];
   }, [charts, visibleGroup?.currentChartId]);
-  const { data: monthMeals = [] } = useMealsForMonth(visibleGroup?.id, activeChart?.monthKey);
+  const { data: monthMeals = [] } = useMealsForChart(visibleGroup?.id, activeChart || undefined);
   const { data: monthCosts = [] } = useCosts(visibleGroup?.id, activeChart?.id);
   const { data: monthDeposits = [] } = useDeposits(visibleGroup?.id, activeChart?.id);
   const isPageLoading = !isLoaded || profileLoading || (!!adminProfile && !visibleGroup && !loadError);
@@ -114,7 +114,7 @@ export default function AdminPage() {
       saveChartReportPdf({
         groupName: visibleGroup.name || "Group",
         chartLabel: activeChart.label || "Report",
-        monthKey: activeChart.monthKey,
+        monthKeys: activeChart.monthKeys || [activeChart.monthKey],
         members,
         meals: monthMeals || [],
         costs: monthCosts || [],

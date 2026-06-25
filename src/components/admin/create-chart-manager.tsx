@@ -12,14 +12,13 @@ import {
   listCharts,
   syncLockedMonthDocsFromCharts,
   updateChartLock,
-  getMealsForMonth,
+  getMealsForChart,
   listCostsForChart,
   listDepositsForChart,
   listMembers,
   getGroupById,
 } from "@/lib/firebase/repositories";
-import { currentMonthKey, formatChartLabel } from "@/lib/utils/date";
-import { daysInMonth } from "@/lib/utils/date";
+import { currentMonthKey, formatChartLabel, daysInMonth, isChartActive } from "@/lib/utils/date";
 import { saveChartReportPdf } from "@/lib/utils/pdf-report";
 import type { AdminProfile, Chart } from "@/types/domain";
 import { sendMonthSummaryEmails } from "@/lib/email/actions";
@@ -30,12 +29,13 @@ import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
 import { useToast } from "@/lib/hooks/use-toast";
 
-type ChartFormState = { year: string; month: string };
+type ChartFormState = { year: string; month: string; duration: string };
 
 const today = new Date();
 const initialState: ChartFormState = {
   year: String(today.getFullYear()),
   month: String(today.getMonth() + 1).padStart(2, "0"),
+  duration: "1",
 };
 
 export function CreateChartManager() {
@@ -133,11 +133,16 @@ export function CreateChartManager() {
   const previewLabel = useMemo(() => {
     const y = Number(form.year);
     const m = Number(form.month);
-    if (Number.isNaN(y) || Number.isNaN(m) || m < 1 || m > 12) return t("costs.invalidMonth");
-    const label = formatChartLabel(y, m);
-    const days = daysInMonth(y, m);
-    return t("createChart.previewLine", { label, days: String(days), unit: t("createChart.daysUnit") });
-  }, [form.month, form.year, t]);
+    const d = Number(form.duration);
+    if (Number.isNaN(y) || Number.isNaN(m) || m < 1 || m > 12 || Number.isNaN(d) || d < 1) return t("costs.invalidMonth");
+    const label = formatChartLabel(y, m, d);
+    let totalDays = 0;
+    for (let i = 0; i < d; i++) {
+      const dObj = new Date(y, m - 1 + i, 1);
+      totalDays += daysInMonth(dObj.getFullYear(), dObj.getMonth() + 1);
+    }
+    return t("createChart.previewLine", { label, days: String(totalDays), unit: t("createChart.daysUnit") });
+  }, [form.month, form.year, form.duration, t]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -145,8 +150,9 @@ export function CreateChartManager() {
     if (!activeAdminProfile) { setError("Admin profile is required before creating a chart."); return; }
     const year = Number(form.year);
     const month = Number(form.month);
-    if (Number.isNaN(year) || Number.isNaN(month) || month < 1 || month > 12) {
-      setError("Enter a valid year and month.");
+    const duration = Number(form.duration);
+    if (Number.isNaN(year) || Number.isNaN(month) || month < 1 || month > 12 || Number.isNaN(duration) || duration < 1) {
+      setError("Enter a valid year, month, and duration.");
       return;
     }
     setIsSubmitting(true);
@@ -155,6 +161,7 @@ export function CreateChartManager() {
         groupId: activeAdminProfile.groupId,
         year,
         month,
+        duration,
         carryOver,
       });
       setCharts((c) => [created, ...c].sort((a, b) => b.monthKey.localeCompare(a.monthKey)));
@@ -199,10 +206,30 @@ export function CreateChartManager() {
         if (!group) throw new Error("Group not found");
         const [members, meals, costs, deposits] = await Promise.all([
           listMembers(activeAdminProfile.groupId),
-          getMealsForMonth(activeAdminProfile.groupId, chart.monthKey),
+          getMealsForChart(activeAdminProfile.groupId, chart),
           listCostsForChart(activeAdminProfile.groupId, chart.id),
           listDepositsForChart(activeAdminProfile.groupId, chart.id),
         ]);
+
+        let pdfAttachment: string | undefined;
+        try {
+          const generatedPdf = saveChartReportPdf({
+            groupName: group.name || "Group",
+            chartLabel: chart.label || "Report",
+            monthKeys: chart.monthKeys || [chart.monthKey],
+            members,
+            meals,
+            costs,
+            deposits,
+            outputType: "base64",
+          });
+          if (typeof generatedPdf === "string") {
+            pdfAttachment = generatedPdf;
+          }
+        } catch (pdfErr) {
+          console.error("Failed to generate PDF attachment:", pdfErr);
+        }
+
         const emailResult = await sendMonthSummaryEmails({
           groupName: group.name,
           chartLabel: chart.label,
@@ -210,6 +237,7 @@ export function CreateChartManager() {
           meals,
           costs,
           deposits,
+          pdfAttachment,
         });
         if (!emailResult.success) {
           const friendlyError = getFriendlyEmailError(emailResult.error || "");
@@ -291,7 +319,7 @@ export function CreateChartManager() {
 
       const [members, meals, costs, deposits] = await Promise.all([
         listMembers(groupId),
-        getMealsForMonth(groupId, chart.monthKey),
+        getMealsForChart(groupId, chart),
         listCostsForChart(groupId, chart.id),
         listDepositsForChart(groupId, chart.id),
       ]);
@@ -304,7 +332,7 @@ export function CreateChartManager() {
       saveChartReportPdf({
         groupName: group.name || "Group",
         chartLabel: chart.label || "Report",
-        monthKey: chart.monthKey,
+        monthKeys: chart.monthKeys || [chart.monthKey],
         members,
         meals,
         costs,
@@ -404,7 +432,7 @@ export function CreateChartManager() {
         onSubmit={handleSubmit}
       >
         <p className="admin-section-label">{t("createChart.formTitle")}</p>
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-3">
           <label className="grid gap-1.5 text-sm font-medium">
             {t("admin.year")}
             <input
@@ -426,6 +454,21 @@ export function CreateChartManager() {
                 const m = String(i + 1).padStart(2, "0");
                 return <option key={m} value={m}>{m}</option>;
               })}
+            </select>
+          </label>
+          <label className="grid gap-1.5 text-sm font-medium">
+            {t("createChart.duration")}
+            <select
+              className="input"
+              onChange={(e) => setForm((c) => ({ ...c, duration: e.target.value }))}
+              value={form.duration}
+            >
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
             </select>
           </label>
         </div>
@@ -493,7 +536,7 @@ export function CreateChartManager() {
                   <div className="min-w-0">
                     <p className="font-semibold">{chart.label}</p>
                     <p className="mt-0.5 text-xs text-[color:var(--muted)]">
-                      {chart.totalDays} {daysUnit} · {chart.monthKey}
+                      {chart.totalDays} {daysUnit} · {(chart.monthKeys || [chart.monthKey]).join(", ")}
                     </p>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1.5 sm:hidden">
@@ -502,7 +545,7 @@ export function CreateChartManager() {
                         {t("createChart.lockedBadge")}
                       </span>
                     ) : null}
-                    {chart.monthKey === currentMonthKey() && <span className="badge-accent !py-0.5 !text-[0.65rem]">{t("common.active")}</span>}
+                    {isChartActive(chart) && <span className="badge-accent !py-0.5 !text-[0.65rem]">{t("common.active")}</span>}
                   </div>
                 </div>
 
@@ -513,7 +556,7 @@ export function CreateChartManager() {
                         {t("createChart.lockedBadge")}
                       </span>
                     ) : null}
-                    {chart.monthKey === currentMonthKey() && <span className="badge-accent">{t("common.active")}</span>}
+                    {isChartActive(chart) && <span className="badge-accent">{t("common.active")}</span>}
                   </div>
                   <button
                     type="button"

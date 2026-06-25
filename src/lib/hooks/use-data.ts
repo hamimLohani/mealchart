@@ -20,7 +20,9 @@ import {
   listNoticesForChart,
   getMealsForMonth,
   getMealsForDate,
+  getMealsForChart,
 } from "@/lib/firebase/repositories";
+import type { Chart } from "@/types/domain";
 
 // ── Group ────────────────────────────────────────────────────────────────────
 
@@ -127,5 +129,15 @@ export function useMealsForDate(groupId: string | undefined, date: string | unde
   return useSWR(
     groupId && date ? ["mealsDate", groupId, date] : null,
     ([, gid, d]: [string, string, string]) => getMealsForDate(gid, d),
+  );
+}
+
+// ── Meals (chart) ─────────────────────────────────────────────────────────────
+
+export function useMealsForChart(groupId: string | undefined, chart: Chart | undefined | null) {
+  const cacheKey = groupId && chart ? ["mealsChart", groupId, chart.id, ...(chart.monthKeys || [chart.monthKey])] : null;
+  return useSWR(
+    cacheKey,
+    () => getMealsForChart(groupId!, chart!),
   );
 }

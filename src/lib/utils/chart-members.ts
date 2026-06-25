@@ -4,9 +4,9 @@ import type { MealEntry, Member } from "@/types/domain";
  * Row order: current members first, then any memberIds that appear in this month's meals
  * but are no longer in the group (so locked-month history stays visible after member delete).
  */
-export function memberIdsForChartRows(members: Member[], meals: MealEntry[], monthKey: string): string[] {
-  const inMonth = (m: MealEntry) => m.date >= `${monthKey}-01` && m.date <= `${monthKey}-31`;
-  const idsWithMeals = new Set(meals.filter(inMonth).map((m) => m.memberId.toLowerCase()));
+export function memberIdsForChartRows(members: Member[], meals: MealEntry[], monthKeys: string[]): string[] {
+  const inChart = (m: MealEntry) => monthKeys.includes(m.date.slice(0, 7));
+  const idsWithMeals = new Set(meals.filter(inChart).map((m) => m.memberId.toLowerCase()));
   const ordered: string[] = [];
   const seen = new Set<string>();
   for (const m of members) {
@@ -36,9 +36,9 @@ export function memberIdsForMoneyRows(
   members: Member[],
   meals: MealEntry[],
   depositMemberIds: string[],
-  monthKey: string,
+  monthKeys: string[],
 ): string[] {
-  const out = [...memberIdsForChartRows(members, meals, monthKey)];
+  const out = [...memberIdsForChartRows(members, meals, monthKeys)];
   const seen = new Set(out);
   for (const id of depositMemberIds) {
     if (!seen.has(id)) {

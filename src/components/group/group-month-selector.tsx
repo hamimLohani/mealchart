@@ -5,7 +5,7 @@ import type { Chart } from "@/types/domain";
 import { useT } from "@/i18n/use-t";
 import { useCharts } from "@/lib/hooks/use-data";
 import { useGroupSession } from "@/lib/hooks/use-group-session";
-import { currentMonthKey, pickCurrentMonthChart } from "@/lib/utils/date";
+import { currentMonthKey, pickCurrentMonthChart, isChartActive } from "@/lib/utils/date";
 
 const AUTO_SELECTED_CHART_KEY = "mc_auto_selected_chart";
 
@@ -29,7 +29,7 @@ export function GroupMonthSelector({
     const hasManuallyExited = sessionStorage.getItem("mc_manual_exit");
     const hasStoredChart = sessionStorage.getItem("mc_chart_id");
     const wasAutoSelected = sessionStorage.getItem(AUTO_SELECTED_CHART_KEY) !== "false";
-    const currentMonthChart = charts.find((monthChart) => monthChart.monthKey === activeMonthKey);
+    const currentMonthChart = charts.find((monthChart) => isChartActive(monthChart));
     const preferredChart = pickCurrentMonthChart(charts);
 
     if (hasManuallyExited) return;
@@ -37,7 +37,7 @@ export function GroupMonthSelector({
     if (
       !chart ||
       !hasStoredChart ||
-      (wasAutoSelected && currentMonthChart && chart.monthKey !== activeMonthKey)
+      (wasAutoSelected && currentMonthChart && !isChartActive(chart))
     ) {
       sessionStorage.setItem(AUTO_SELECTED_CHART_KEY, "true");
       selectChart(preferredChart);
@@ -64,7 +64,7 @@ export function GroupMonthSelector({
           <p className="group-kicker">{groupName ?? t("groupDash.selectMonth")}</p>
           <p className="group-title">{chart ? chart.label : t("groupDash.selectMonth")}</p>
           <p className="mt-2 inline-block rounded-lg bg-[color:var(--accent-dim)] px-2.5 py-1 text-sm font-medium text-[color:var(--accent)]">
-            {chart ? chart.monthKey : t("groupDash.selectMonthHelp")}
+            {chart ? (chart.monthKeys || [chart.monthKey]).join(", ") : t("groupDash.selectMonthHelp")}
           </p>
           {chart?.locked && (
             <p className="mt-2 inline-flex rounded-full border border-[color:var(--danger-border)] bg-[color:var(--danger-bg)] px-2 py-0.5 text-xs font-semibold text-[color:var(--danger)]">
@@ -98,9 +98,9 @@ export function GroupMonthSelector({
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="font-semibold">{monthChart.label}</p>
-                      {monthChart.monthKey === activeMonthKey && <span className="badge-accent">{t("common.active")}</span>}
+                      {isChartActive(monthChart) && <span className="badge-accent">{t("common.active")}</span>}
                     </div>
-                    <p className="mt-0.5 text-xs text-[color:var(--muted)]">{monthChart.monthKey}</p>
+                    <p className="mt-0.5 text-xs text-[color:var(--muted)]">{(monthChart.monthKeys || [monthChart.monthKey]).join(", ")}</p>
                   </div>
                   <span className="text-[color:var(--accent)]">→</span>
                 </button>

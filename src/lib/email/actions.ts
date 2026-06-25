@@ -25,7 +25,7 @@ function buildMealChartTable(member: Member, meals: MealEntry[]) {
     .sort((a, b) => a.date.localeCompare(b.date));
 
   if (memberMeals.length === 0) {
-    return `<p style="margin: 0; color: #64748b;">No meals were recorded for this member in the selected month.</p>`;
+    return `<p style="margin: 0; color: #64748b;">No meals were recorded for this member in this period.</p>`;
   }
 
   return `
@@ -54,7 +54,7 @@ function buildMealChartTable(member: Member, meals: MealEntry[]) {
 
 function buildCostBreakdown(costs: CostEntry[]) {
   if (costs.length === 0) {
-    return `<p style="margin: 0; color: #64748b;">No cost entries were recorded for this month.</p>`;
+    return `<p style="margin: 0; color: #64748b;">No cost entries were recorded for this period.</p>`;
   }
 
   return `
@@ -91,7 +91,7 @@ function buildDepositSummary(member: Member, deposits: DepositEntry[]) {
     .sort((a, b) => a.date.localeCompare(b.date));
 
   if (memberDeposits.length === 0) {
-    return `<p style="margin: 0; color: #64748b;">No money deposits were recorded for this member in this month.</p>`;
+    return `<p style="margin: 0; color: #64748b;">No money deposits were recorded for this member in this period.</p>`;
   }
 
   return `
@@ -328,7 +328,7 @@ export async function sendMoneyReceiptEmail(
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333; background-color: #f9f9f9; border-radius: 12px; border: 1px solid #eee;">
         <h1 style="color: #10b981; font-size: 24px; text-align: center; margin-bottom: 20px;">Money Receipt</h1>
         <p style="font-size: 16px; line-height: 1.6;">Hello <strong>${escapeHtml(fullName)}</strong>,</p>
-        <p style="font-size: 16px; line-height: 1.6;">We have successfully received your payment for the current month.</p>
+        <p style="font-size: 16px; line-height: 1.6;">We have successfully received your payment for the active chart period.</p>
 
         <div style="background-color: #fff; padding: 25px; border-radius: 8px; margin: 20px 0; border: 1px dashed #10b981; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
           <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
@@ -342,7 +342,7 @@ export async function sendMoneyReceiptEmail(
             >${amount.toFixed(2)} TK</span>
           </div>
           <div style="display: flex; justify-content: space-between; margin-bottom: 10px; padding-top: 10px; border-top: 1px solid #f1f5f9;">
-            <span style="color: #666;">Total Deposited (This Month):  </span>
+            <span style="color: #666;">Total Deposited (This Chart):  </span>
             <span 
               style="
                 font-size: 20px;
@@ -400,8 +400,9 @@ export async function sendMonthSummaryEmails(input: {
   meals: MealEntry[];
   costs: CostEntry[];
   deposits: DepositEntry[];
+  pdfAttachment?: string;
 }) {
-  const { groupName, chartLabel, members, meals, costs, deposits } = input;
+  const { groupName, chartLabel, members, meals, costs, deposits, pdfAttachment } = input;
   console.log(`[Email] Starting monthly summary batch for group "${groupName}" (${chartLabel}) to ${members.length} members.`);
 
   try {
@@ -428,7 +429,7 @@ export async function sendMonthSummaryEmails(input: {
         const html = `
           <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 650px; margin: 0 auto; padding: 25px; color: #333; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px;">
             <div style="text-align: center; margin-bottom: 30px;">
-              <h1 style="color: #1e293b; margin: 0; font-size: 28px;">Monthly Meal Summary</h1>
+              <h1 style="color: #1e293b; margin: 0; font-size: 28px;">Meal Accounts Summary</h1>
               <p style="color: #64748b; margin: 5px 0 0 0; font-size: 18px;">${escapeHtml(chartLabel)} • ${escapeHtml(groupName)}</p>
             </div>
 
@@ -500,23 +501,36 @@ export async function sendMonthSummaryEmails(input: {
             </div>
 
             <div style="margin-top: 30px; border-top: 1px solid #f1f5f9; padding-top: 20px;">
-              <p style="margin: 0 0 10px 0; font-weight: bold; font-size: 14px; color: #475569;">MONTHLY COSTS BREAKDOWN</p>
+              <p style="margin: 0 0 10px 0; font-weight: bold; font-size: 14px; color: #475569;">COSTS BREAKDOWN</p>
               ${buildCostBreakdown(costs)}
             </div>
 
             <div style="margin-top: 40px; text-align: center; color: #94a3b8; font-size: 12px;">
-              <p>This report was generated automatically when the month was locked by an admin.</p>
+              <p>This report was generated automatically when the chart was locked by an admin.</p>
               <p>© ${new Date().getFullYear()} Meal Chart App</p>
             </div>
           </div>
         `;
 
-        await transporter.sendMail({
+        const mailOptions: any = {
           from: fromEmail,
           to: member.email,
-          subject: `Monthly Report: ${chartLabel} - ${groupName}`,
+          subject: `Finalized Accounts Report: ${chartLabel} - ${groupName}`,
           html,
-        });
+        };
+
+        if (pdfAttachment) {
+          mailOptions.attachments = [
+            {
+              filename: `${chartLabel}_Report.pdf`,
+              content: pdfAttachment,
+              encoding: "base64",
+              contentType: "application/pdf"
+            }
+          ];
+        }
+
+        await transporter.sendMail(mailOptions);
 
         console.log(`[Email] Successfully sent report to ${member.email}`);
         results.push({ status: 'fulfilled', value: { email: member.email, success: true } });

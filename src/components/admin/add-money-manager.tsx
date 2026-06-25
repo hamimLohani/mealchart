@@ -14,10 +14,10 @@ import {
   listDepositRequestsForChart,
   listDepositsForChart,
   listMembers,
-  getMealsForMonth,
+  getMealsForChart,
   rejectDepositRequest,
 } from "@/lib/firebase/repositories";
-import { chartMonthDateBounds, currentMonthKey, pickCurrentMonthChart, toMonthKey, toDateInputValue } from "@/lib/utils/date";
+import { chartMonthDateBounds, currentMonthKey, pickCurrentMonthChart, toMonthKey, toDateInputValue, isChartActive } from "@/lib/utils/date";
 import { getMemberTotals, getMonthTotals, normalizeMealQuantity } from "@/lib/utils/meal-money";
 import type { AdminProfile, Chart, CostEntry, DepositEntry, DepositRequest, Member, MealEntry } from "@/types/domain";
 import { sendMoneyReceiptEmail } from "@/lib/email/actions";
@@ -139,7 +139,7 @@ export function AddMoneyManager() {
           listDepositsForChart(activeAdminProfile.groupId, selectedChart.id),
           listDepositRequestsForChart(activeAdminProfile.groupId, selectedChart.id),
           listCostsForChart(activeAdminProfile.groupId, selectedChart.id),
-          getMealsForMonth(activeAdminProfile.groupId, selectedChart.monthKey || toMonthKey(selectedChart.year, selectedChart.month)),
+          getMealsForChart(activeAdminProfile.groupId, selectedChart),
         ]);
         if (active) {
           setDeposits(dList);
@@ -346,9 +346,9 @@ export function AddMoneyManager() {
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="font-semibold">{chart.label}</p>
-                      {chart.monthKey === currentMonthKey() && <span className="badge-accent">{t("common.active")}</span>}
+                      {isChartActive(chart) && <span className="badge-accent">{t("common.active")}</span>}
                     </div>
-                    <p className="mt-0.5 text-xs text-[color:var(--muted)]">{chart.monthKey}</p>
+                    <p className="mt-0.5 text-xs text-[color:var(--muted)]">{(chart.monthKeys || [chart.monthKey]).join(", ")}</p>
                   </div>
                   <span className="text-[color:var(--accent)]">→</span>
                 </button>

@@ -129,23 +129,26 @@ service cloud.firestore {
         && c.month <= 12;
     }
 
-    /** YYYY-MM for the chart (stored monthKey or derived from year + month). */
-    function chartEffectiveMonthKey(groupId, chartId) {
+    /** List of YYYY-MM keys for the chart (stored monthKeys or derived from year + month). */
+    function chartEffectiveMonthKeys(groupId, chartId) {
       let c = get(/databases/$(database)/documents/groups/$(groupId)/charts/$(chartId)).data;
-      return c.monthKey is string && c.monthKey.matches("^\\d{4}-\\d{2}$")
-        ? c.monthKey
-        : (chartYearMonthPair(c)
-            ? string(int(c.year)) + "-" + (int(c.month) < 10 ? "0" : "") + string(int(c.month))
-            : "");
+      return c.keys().hasAll(['monthKeys']) && c.monthKeys is list && c.monthKeys.size() > 0
+        ? c.monthKeys
+        : [
+            c.keys().hasAll(['monthKey']) && c.monthKey is string && c.monthKey.matches("^\\d{4}-\\d{2}$")
+              ? c.monthKey
+              : (chartYearMonthPair(c)
+                  ? string(int(c.year)) + "-" + (int(c.month) < 10 ? "0" : "") + string(int(c.month))
+                  : "")
+          ];
     }
 
-    /** Cost/deposit date must fall in this chart's month (YYYY-MM) so edits never apply to another month. */
+    /** Cost/deposit date must fall in one of this chart's months (YYYY-MM) so edits never apply to another month. */
     function requestDateMatchesChartMonth(groupId, chartId) {
-      let mk = chartEffectiveMonthKey(groupId, chartId);
+      let mKeys = chartEffectiveMonthKeys(groupId, chartId);
       return exists(/databases/$(database)/documents/groups/$(groupId)/charts/$(chartId))
-        && mk != ""
         && isDateString(request.resource.data.date)
-        && request.resource.data.date.matches("^" + mk + "-\\d{2}$");
+        && (request.resource.data.date[0:7] in mKeys);
     }
 
     function isValidChartCostWrite(groupId, chartId) {

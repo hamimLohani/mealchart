@@ -12,11 +12,11 @@ import { auth } from "@/lib/firebase/client";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
 import { useGroupSession } from "@/lib/hooks/use-group-session";
-import { chartMonthDateBounds, daysInMonth, toDateInputValue } from "@/lib/utils/date";
+import { chartMonthDateBounds, getChartDates, toDateInputValue } from "@/lib/utils/date";
 import { formatMeal, getMemberTotals, getMonthTotals, normalizeMealQuantity } from "@/lib/utils/meal-money";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
-import { useGroup, useMembers, useMealsForMonth, useMealsForDate, useCosts, useDeposits, useCharts } from "@/lib/hooks/use-data";
+import { useGroup, useMembers, useMealsForChart, useMealsForDate, useCosts, useDeposits, useCharts } from "@/lib/hooks/use-data";
 import { mutate } from "swr";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 export default function MemberPage({
@@ -41,7 +41,7 @@ export default function MemberPage({
   // SWR fetching — shared cache
   const { data: group, isLoading: groupLoading } = useGroup(isFirebaseConfigured ? groupId : undefined);
   const { data: allMembers = [] } = useMembers(group?.id);
-  const { data: monthMeals = [], isLoading: monthLoading, mutate: mutateMonthMeals } = useMealsForMonth(group?.id, chart?.monthKey);
+  const { data: monthMeals = [], isLoading: monthLoading, mutate: mutateMonthMeals } = useMealsForChart(group?.id, chart || undefined);
   const { data: costs = [] } = useCosts(group?.id, chart?.id);
   const { data: deposits = [] } = useDeposits(group?.id, chart?.id);
   const { data: dateMeals = [], isLoading: dateMealLoading } = useMealsForDate(group?.id, selectedDate);
@@ -57,7 +57,7 @@ export default function MemberPage({
       d.setDate(baseDate.getDate() + i);
       const dateStr = toDateInputValue(d);
       // Only include dates in the currently selected chart's month
-      if (dateStr.startsWith(chart.monthKey)) {
+      if ((chart.monthKeys || [chart.monthKey]).includes(dateStr.slice(0, 7))) {
         dates.push({
           dateStr,
           dateObj: d,
@@ -161,8 +161,9 @@ export default function MemberPage({
     );
   }
 
-  const monthStart = `${chart.monthKey}-01`;
-  const monthEnd = `${chart.monthKey}-${String(daysInMonth(chart.year, chart.month)).padStart(2, "0")}`;
+  const dateBounds = chartMonthDateBounds(chart);
+  const monthStart = dateBounds.min;
+  const monthEnd = dateBounds.max;
   const { mealRate, totalMeals, totalCost: monthTotalCost, totalPaid: monthTotalPaid, remainingTaka } = getMonthTotals(monthMeals, costs, deposits);
   const myDeposits = deposits.filter((deposit) => deposit.memberId.toLowerCase() === normalizedMemberId);
   const memberTotals = getMemberTotals(normalizedMemberId, monthMeals, deposits, mealRate);
@@ -171,9 +172,8 @@ export default function MemberPage({
   const myTotalPaid = memberTotals.totalPaid;
   const myCost = memberTotals.totalCost;
   const myBalance = memberTotals.balance;
-  const days = Array.from({ length: daysInMonth(chart.year, chart.month) }, (_, i) => {
-    const day = i + 1;
-    const date = `${chart.monthKey}-${String(day).padStart(2, "0")}`;
+  const days = getChartDates(chart.monthKeys || [chart.monthKey]).map((date) => {
+    const day = parseInt(date.slice(8), 10);
     const meal = myMeals.find((entry) => entry.date === date);
     return { day, date, qty: meal?.quantity ?? 0 };
   });
@@ -184,10 +184,10 @@ export default function MemberPage({
   function isDateLocked(dateStr: string) {
     if (!canEdit) return true;
     const mKey = dateStr.slice(0, 7);
-    if (chart && mKey === chart.monthKey) {
+    if (chart && (chart.monthKeys || [chart.monthKey]).includes(mKey)) {
       return chart.locked;
     }
-    const targetChart = charts.find((c) => c.monthKey === mKey);
+    const targetChart = charts.find((c) => (c.monthKeys || [c.monthKey]).includes(mKey));
     if (targetChart) {
       return targetChart.locked;
     }
@@ -202,7 +202,7 @@ export default function MemberPage({
       saveChartReportPdf({
         groupName: group.name || "Group",
         chartLabel: chart.label,
-        monthKey: chart.monthKey,
+        monthKeys: chart.monthKeys || [chart.monthKey],
         members: allMembers,
         meals: monthMeals,
         costs,

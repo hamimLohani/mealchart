@@ -6,19 +6,19 @@ import { GroupMonthSelector } from "@/components/group/group-month-selector";
 import { useGroupSession } from "@/lib/hooks/use-group-session";
 
 import { memberDisplayName, memberIdsForChartRows } from "@/lib/utils/chart-members";
-import { daysInMonth } from "@/lib/utils/date";
+import { getChartDates, formatHeaderDate } from "@/lib/utils/date";
 import { formatMeal, getMonthTotals, normalizeMealQuantity } from "@/lib/utils/meal-money";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useGroup, useMembers, useMealsForMonth, useCosts, useDeposits } from "@/lib/hooks/use-data";
+import { useGroup, useMembers, useMealsForChart, useCosts, useDeposits } from "@/lib/hooks/use-data";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 
 export function GroupChartView({ groupId }: { groupId: string }) {
-  const { t } = useT();
+  const { t, language } = useT();
   const { chart } = useGroupSession();
 
   const { data: group, error: groupError, isLoading: groupLoading } = useGroup(isFirebaseConfigured ? groupId : undefined);
   const { data: members = [] } = useMembers(group?.id);
-  const { data: meals = [], isLoading: mealsLoading } = useMealsForMonth(group?.id, chart?.monthKey);
+  const { data: meals = [], isLoading: mealsLoading } = useMealsForChart(group?.id, chart || undefined);
   const { data: costs = [] } = useCosts(group?.id, chart?.id);
   const { data: deposits = [] } = useDeposits(group?.id, chart?.id);
 
@@ -63,8 +63,7 @@ export function GroupChartView({ groupId }: { groupId: string }) {
     );
   }
 
-  const totalDays = daysInMonth(chart.year, chart.month);
-  const days = Array.from({ length: totalDays }, (_, i) => `${chart.monthKey}-${String(i + 1).padStart(2, "0")}`);
+  const days = getChartDates(chart.monthKeys || [chart.monthKey]);
 
   const mealMap: Record<string, Record<string, number>> = {};
   meals.forEach((m) => {
@@ -73,9 +72,9 @@ export function GroupChartView({ groupId }: { groupId: string }) {
     mealMap[mid][m.date] = normalizeMealQuantity(m.quantity);
   });
 
-  const rowMemberIds = memberIdsForChartRows(members, meals, chart.monthKey);
+  const rowMemberIds = memberIdsForChartRows(members, meals, chart.monthKeys || [chart.monthKey]);
   const former = t("common.formerMember");
-  const memberTotal = (id: string) => Object.values(mealMap[id] ?? {}).reduce((s, v) => s + v, 0);
+  const memberTotal = (id: string) => days.reduce((sum, d) => sum + (mealMap[id]?.[d] ?? 0), 0);
   const { totalMeals: grandTotal, totalCost, totalPaid, mealRate, remainingTaka } = getMonthTotals(meals, costs, deposits);
   const totalMembers = rowMemberIds.length;
   const tk = t("common.tk");
@@ -125,7 +124,7 @@ export function GroupChartView({ groupId }: { groupId: string }) {
                 {t("groupChart.colMember")}
               </th>
               {days.map((d) => (
-                <th key={d} className="min-w-[36px] px-1 py-2.5 text-center text-xs font-semibold text-[color:var(--muted)]">{d.slice(8)}</th>
+                <th key={d} className="min-w-[36px] px-1 py-2.5 text-center text-xs font-semibold text-[color:var(--muted)]">{formatHeaderDate(d, language)}</th>
               ))}
               <th className="px-3 py-2.5 text-center text-xs font-bold uppercase tracking-[0.15em] text-[color:var(--accent)]">
                 {t("groupChart.colTotal")}

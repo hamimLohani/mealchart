@@ -5,14 +5,14 @@ import { auth } from "@/lib/firebase/client";
 import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import {
-  getMealsForMonth,
+  getMealsForChart,
   listCharts,
   listMembers,
   saveMealEntry,
   saveMealsBatch,
 } from "@/lib/firebase/repositories";
 import { normalizeMealQuantity, formatMeal } from "@/lib/utils/meal-money";
-import { currentMonthKey, pickCurrentMonthChart, toDateInputValue } from "@/lib/utils/date";
+import { currentMonthKey, pickCurrentMonthChart, toDateInputValue, getChartDates, formatHeaderDate, isChartActive } from "@/lib/utils/date";
 import type { AdminProfile, Chart, MealEntry, Member } from "@/types/domain";
 import { memberDisplayName, memberIdsForChartRows } from "@/lib/utils/chart-members";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
@@ -20,12 +20,10 @@ import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
 import { useToast } from "@/lib/hooks/use-toast";
 
-function daysInMonth(year: number, month: number) {
-  return new Date(year, month, 0).getDate();
-}
+
 
 export function EditMealsManager() {
-  const { t, tx } = useT();
+  const { t, tx, language } = useT();
   const { success: showSuccess } = useToast();
   const blocked = !isFirebaseConfigured || !auth;
 
@@ -110,7 +108,7 @@ export function EditMealsManager() {
       setTableLoading(true);
       setMeals({});
       try {
-        const mealList = await getMealsForMonth(adminProfile.groupId, selectedChart.monthKey);
+        const mealList = await getMealsForChart(adminProfile.groupId, selectedChart);
         if (!active) return;
         const map: Record<string, Record<string, number>> = {};
         mealList.forEach((m: MealEntry) => {
@@ -148,7 +146,7 @@ export function EditMealsManager() {
 
   const rowMemberIds = useMemo(() => {
     if (!selectedChart) return [];
-    return memberIdsForChartRows(members, mealsAsEntries, selectedChart.monthKey);
+    return memberIdsForChartRows(members, mealsAsEntries, selectedChart.monthKeys || [selectedChart.monthKey]);
   }, [members, mealsAsEntries, selectedChart]);
 
   const filteredRowMemberIds = useMemo(() => {
@@ -234,7 +232,7 @@ export function EditMealsManager() {
   }
 
   function memberTotal(memberId: string) {
-    return Object.values(meals[memberId] ?? {}).reduce((s, v) => s + v, 0);
+    return days.reduce((s, d) => s + (meals[memberId]?.[d] ?? 0), 0);
   }
 
   function dayTotal(date: string) {
@@ -274,9 +272,9 @@ export function EditMealsManager() {
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="font-semibold">{chart.label}</p>
-                      {chart.monthKey === currentMonthKey() && <span className="badge-accent">{t("common.active")}</span>}
+                      {isChartActive(chart) && <span className="badge-accent">{t("common.active")}</span>}
                     </div>
-                    <p className="mt-0.5 text-xs text-[color:var(--muted)]">{chart.monthKey}</p>
+                    <p className="mt-0.5 text-xs text-[color:var(--muted)]">{(chart.monthKeys || [chart.monthKey]).join(", ")}</p>
                   </div>
                   <span className="text-[color:var(--accent)]">→</span>
                 </button>
@@ -288,13 +286,9 @@ export function EditMealsManager() {
     );
   }
 
-  const totalDays = daysInMonth(selectedChart.year, selectedChart.month);
+  const days = getChartDates(selectedChart.monthKeys || [selectedChart.monthKey]);
   const currentDate = toDateInputValue(new Date());
-  const todayDate = currentDate.slice(0, 7) === selectedChart.monthKey ? currentDate : null;
-  const days = Array.from({ length: totalDays }, (_, i) => {
-    const d = String(i + 1).padStart(2, "0");
-    return `${selectedChart.monthKey}-${d}`;
-  });
+  const todayDate = (selectedChart.monthKeys || [selectedChart.monthKey]).includes(currentDate.slice(0, 7)) ? currentDate : null;
   const grandTotal = rowMemberIds.reduce((s, id) => s + memberTotal(id), 0);
 
   return (
@@ -355,7 +349,7 @@ export function EditMealsManager() {
                         isToday ? "bg-[color:var(--accent-dim)] text-[color:var(--accent)]" : "text-[color:var(--muted)]"
                       }`}
                     >
-                      {date.slice(8)}
+                      {formatHeaderDate(date, language)}
                     </th>
                   );
                 })}

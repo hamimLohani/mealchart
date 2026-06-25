@@ -40,6 +40,7 @@ import {
   formatChartLabel,
   monthKeyFromDate,
   toMonthKey,
+  getChartMonthKeys,
 } from "@/lib/utils/date";
 import {
   getMemberTotals,
@@ -67,8 +68,11 @@ async function assertDateBelongsToChart(groupId: string, chartId: string, date: 
     chartMk = toMonthKey(data.year, data.month);
   }
   if (!chartMk) throw new Error("Chart is missing month information.");
-  if (monthKeyFromDate(date) !== chartMk) {
-    throw new Error(`Date must fall within ${chartMk} for this month’s chart.`);
+  
+  const mKeys = Array.isArray(data.monthKeys) && data.monthKeys.length > 0 ? data.monthKeys : [chartMk];
+  const dateMk = monthKeyFromDate(date);
+  if (!mKeys.includes(dateMk)) {
+    throw new Error(`Date must fall within one of the chart's months (${mKeys.join(', ')}).`);
   }
 }
 
@@ -368,6 +372,8 @@ export async function listCharts(groupId: string) {
     return {
       ...normalizeDoc<Chart>(entry.id, data),
       monthKey,
+      duration: data.duration ?? 1,
+      monthKeys: Array.isArray(data.monthKeys) ? data.monthKeys : [monthKey],
       totalDays:
         typeof data.totalDays === "number"
           ? data.totalDays
@@ -398,6 +404,8 @@ export async function getChartById(groupId: string, chartId: string) {
   return {
     ...normalizeDoc<Chart>(snapshot.id, data),
     monthKey,
+    duration: data.duration ?? 1,
+    monthKeys: Array.isArray(data.monthKeys) ? data.monthKeys : [monthKey],
     totalDays:
       typeof data.totalDays === "number"
         ? data.totalDays
@@ -414,19 +422,24 @@ export async function createChart(input: {
   year: number;
   month: number;
   carryOver?: boolean;
+  duration?: number;
 }) {
   const database = ensureDb();
-  const monthKey = toMonthKey(input.year, input.month);
+  const duration = input.duration || 1;
+  const monthKeys = getChartMonthKeys(input.year, input.month, duration);
+  const monthKey = monthKeys[0];
 
-  const existing = await getDocs(
-    query(
-      collection(database, chartsCollection(input.groupId)),
-      where("monthKey", "==", monthKey),
-      limit(1),
-    ),
+  const existingChartsSnap = await getDocs(
+    collection(database, chartsCollection(input.groupId))
   );
-
-  if (!existing.empty) throw new Error("A chart for that month already exists.");
+  
+  for (const docSnap of existingChartsSnap.docs) {
+    const data = docSnap.data();
+    const existingKeys = Array.isArray(data.monthKeys) ? data.monthKeys : [data.monthKey];
+    if (monthKeys.some(mk => existingKeys.includes(mk))) {
+      throw new Error("A chart for one or more of these months already exists.");
+    }
+  }
 
   // --- Payment/Limit Check ---
   const groupSnap = await getDoc(doc(database, groupsCollection, input.groupId));
@@ -438,29 +451,44 @@ export async function createChart(input: {
   // Allow up to 3 free charts, then require paid slots------------------------------------------------------------------------------------------------------------------------------
   if (totalCreated >= 3) {// <--------------------------------------------------------------------------------------------------------------------------------------------------------
     const paidSlots = groupData.paidChartSlots || 0;
-    if (paidSlots <= 0) {
+    if (paidSlots < duration) {
       throw new Error("LIMIT_REACHED_CHART");
     }
-    // Deduct one paid slot and increment total count
+    // Deduct slots based on duration and increment total count
     await updateDoc(doc(database, groupsCollection, input.groupId), {
-      paidChartSlots: paidSlots - 1,
-      totalChartsCreated: totalCreated + 1
+      paidChartSlots: paidSlots - duration,
+      totalChartsCreated: totalCreated + duration
     });
   } else {
     // Increment total count for free slot
-    await updateDoc(doc(database, groupsCollection, input.groupId), {
-      totalChartsCreated: totalCreated + 1
-    });
+    let remainingFree = Math.max(0, 3 - totalCreated);
+    let slotsToPay = Math.max(0, duration - remainingFree);
+    
+    if (slotsToPay > 0) {
+      const paidSlots = groupData.paidChartSlots || 0;
+      if (paidSlots < slotsToPay) {
+        throw new Error("LIMIT_REACHED_CHART");
+      }
+      await updateDoc(doc(database, groupsCollection, input.groupId), {
+        paidChartSlots: paidSlots - slotsToPay,
+        totalChartsCreated: totalCreated + duration
+      });
+    } else {
+      await updateDoc(doc(database, groupsCollection, input.groupId), {
+        totalChartsCreated: totalCreated + duration
+      });
+    }
   }
   // ---------------------------
 
   const chartId = crypto.randomUUID();
   const record = buildChartRecord({
     id: chartId,
-    label: formatChartLabel(input.year, input.month),
+    label: formatChartLabel(input.year, input.month, duration),
     monthKey,
     year: input.year,
     month: input.month,
+    duration,
   });
 
   await setDoc(
@@ -471,13 +499,15 @@ export async function createChart(input: {
   // --- Carry Over Logic ---
   if (input.carryOver) {
     const charts = await listCharts(input.groupId);
-    // The newly created chart might be in the list, so we filter it out and take the next one
-    const previousChart = charts.find((c) => c.id !== chartId);
+    // Find the chronologically preceding chart
+    const previousChart = charts
+      .filter((c) => c.id !== chartId && c.monthKey < monthKey)
+      .sort((a, b) => b.monthKey.localeCompare(a.monthKey))[0];
 
     if (previousChart) {
       const [members, meals, costs, deposits] = await Promise.all([
         listMembers(input.groupId),
-        getMealsForMonth(input.groupId, previousChart.monthKey),
+        getMealsForChart(input.groupId, previousChart),
         listCostsForChart(input.groupId, previousChart.id),
         listDepositsForChart(input.groupId, previousChart.id),
       ]);
@@ -567,13 +597,17 @@ export async function updateChartLock(input: {
   }
   if (!monthKey) throw new Error("Chart is missing month information.");
 
-  const lockRef = doc(database, lockedMonthsCollection(input.groupId), monthKey);
+  const mKeys = Array.isArray(data.monthKeys) && data.monthKeys.length > 0 ? data.monthKeys : [monthKey];
+
   const batch = writeBatch(database);
   batch.update(chartRef, { locked: input.locked });
-  if (input.locked) {
-    batch.set(lockRef, { locked: true, chartId: input.chartId }, { merge: true });
-  } else {
-    batch.delete(lockRef);
+  for (const mk of mKeys) {
+    const lockRef = doc(database, lockedMonthsCollection(input.groupId), mk);
+    if (input.locked) {
+      batch.set(lockRef, { locked: true, chartId: input.chartId }, { merge: true });
+    } else {
+      batch.delete(lockRef);
+    }
   }
   await batch.commit();
 }
@@ -592,16 +626,20 @@ export async function syncLockedMonthDocsFromCharts(groupId: string) {
       monthKey = toMonthKey(data.year, data.month);
     }
     if (!monthKey) continue;
-    batch.set(
-      doc(database, lockedMonthsCollection(groupId), monthKey),
-      { locked: true, chartId: d.id },
-      { merge: true },
-    );
-    ops++;
-    if (ops >= 400) {
-      await batch.commit();
-      batch = writeBatch(database);
-      ops = 0;
+    
+    const mKeys = Array.isArray(data.monthKeys) && data.monthKeys.length > 0 ? data.monthKeys : [monthKey];
+    for (const mk of mKeys) {
+      batch.set(
+        doc(database, lockedMonthsCollection(groupId), mk),
+        { locked: true, chartId: d.id },
+        { merge: true },
+      );
+      ops++;
+      if (ops >= 400) {
+        await batch.commit();
+        batch = writeBatch(database);
+        ops = 0;
+      }
     }
   }
   if (ops > 0) await batch.commit();
@@ -862,6 +900,16 @@ export async function getMealsForMonth(groupId: string, monthKey: string) {
   return snapshot.docs.map((entry) => mapMealEntryDoc(entry.id, entry.data()));
 }
 
+export async function getMealsForChart(groupId: string, chart: Chart) {
+  const mKeys = chart.monthKeys && chart.monthKeys.length > 0 ? chart.monthKeys : [chart.monthKey];
+  const allMeals: MealEntry[] = [];
+  for (const mk of mKeys) {
+    const meals = await getMealsForMonth(groupId, mk);
+    allMeals.push(...meals);
+  }
+  return allMeals;
+}
+
 export async function saveMealEntry(input: {
   groupId: string;
   memberId: string;
@@ -1120,26 +1168,29 @@ export async function deleteChart(groupId: string, chartId: string) {
 
   // Delete meals for this month (stored globally under groups/{groupId}/meals)
   if (monthKey) {
-    const mealsSnap = await getDocs(
-      query(
-        collection(database, mealsCollection(groupId)),
-        where("date", ">=", `${monthKey}-01`),
-        where("date", "<=", `${monthKey}-31`),
-      ),
-    );
-    if (!mealsSnap.empty) {
-      let batch = writeBatch(database);
-      let ops = 0;
-      for (const d of mealsSnap.docs) {
-        batch.delete(d.ref);
-        ops++;
-        if (ops >= 400) {
-          await batch.commit();
-          batch = writeBatch(database);
-          ops = 0;
+    const mKeys = Array.isArray(data.monthKeys) && data.monthKeys.length > 0 ? data.monthKeys : [monthKey];
+    for (const mk of mKeys) {
+      const mealsSnap = await getDocs(
+        query(
+          collection(database, mealsCollection(groupId)),
+          where("date", ">=", `${mk}-01`),
+          where("date", "<=", `${mk}-31`),
+        ),
+      );
+      if (!mealsSnap.empty) {
+        let batch = writeBatch(database);
+        let ops = 0;
+        for (const d of mealsSnap.docs) {
+          batch.delete(d.ref);
+          ops++;
+          if (ops >= 400) {
+            await batch.commit();
+            batch = writeBatch(database);
+            ops = 0;
+          }
         }
+        if (ops > 0) await batch.commit();
       }
-      if (ops > 0) await batch.commit();
     }
   }
 
@@ -1148,10 +1199,13 @@ export async function deleteChart(groupId: string, chartId: string) {
 
   // Clean up lockedMonths mirror if it exists
   if (monthKey) {
-    try {
-      await deleteDoc(doc(database, lockedMonthsCollection(groupId), monthKey));
-    } catch {
-      // Ignore — may not exist
+    const mKeys = Array.isArray(data.monthKeys) && data.monthKeys.length > 0 ? data.monthKeys : [monthKey];
+    for (const mk of mKeys) {
+      try {
+        await deleteDoc(doc(database, lockedMonthsCollection(groupId), mk));
+      } catch {
+        // Ignore — may not exist
+      }
     }
   }
 

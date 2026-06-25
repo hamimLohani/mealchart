@@ -8,9 +8,9 @@ import { GroupMonthSelector } from "@/components/group/group-month-selector";
 import { useGroupSession } from "@/lib/hooks/use-group-session";
 
 import { memberDisplayName, memberIdsForMoneyRows } from "@/lib/utils/chart-members";
-import { formatMeal, getMonthTotals } from "@/lib/utils/meal-money";
+import { formatMeal, getMonthTotals, normalizeMealQuantity } from "@/lib/utils/meal-money";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useCharts, useGroup, useMembers, useMealsForMonth, useCosts, useDeposits } from "@/lib/hooks/use-data";
+import { useCharts, useGroup, useMembers, useMealsForChart, useCosts, useDeposits } from "@/lib/hooks/use-data";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { submitDepositRequest } from "@/lib/firebase/repositories";
 import { chartMonthDateBounds, toDateInputValue } from "@/lib/utils/date";
@@ -33,7 +33,7 @@ export function GroupMoneyView({ groupId }: { groupId: string }) {
       ?? null;
   }, [chart, charts]);
   const { data: members = [] } = useMembers(group?.id);
-  const { data: meals = [], isLoading: mealsLoading } = useMealsForMonth(group?.id, activeChart?.monthKey);
+  const { data: meals = [], isLoading: mealsLoading } = useMealsForChart(group?.id, activeChart || undefined);
   const { data: costs = [], isLoading: costsLoading } = useCosts(group?.id, activeChart?.id);
   const { data: deposits = [], isLoading: depositsLoading } = useDeposits(group?.id, activeChart?.id);
   const [amount, setAmount] = useState("");
@@ -109,7 +109,7 @@ export function GroupMoneyView({ groupId }: { groupId: string }) {
   const memberMeals: Record<string, number> = {};
   meals.forEach((m) => {
     const mid = m.memberId.toLowerCase();
-    memberMeals[mid] = (memberMeals[mid] ?? 0) + m.quantity;
+    memberMeals[mid] = (memberMeals[mid] ?? 0) + normalizeMealQuantity(m.quantity);
   });
 
   const memberDeposits: Record<string, number> = {};
@@ -124,7 +124,7 @@ export function GroupMoneyView({ groupId }: { groupId: string }) {
     members,
     meals,
     deposits.map((d) => d.memberId),
-    activeChart.monthKey,
+    activeChart.monthKeys || [activeChart.monthKey],
   );
   const dateBounds = chartMonthDateBounds(activeChart);
 

@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   useCharts,
   useMembers,
-  useMealsForMonth,
+  useMealsForChart,
   useCosts,
   useDeposits,
   useGroup
@@ -33,7 +33,7 @@ export function AdminMonthSummary({ groupId }: { groupId: string }) {
     return charts[0]; // Most recent by monthKey desc
   }, [charts, group]);
 
-  const { data: monthMeals = [], isLoading: mealsLoading } = useMealsForMonth(groupId, activeChart?.monthKey);
+  const { data: monthMeals = [], isLoading: mealsLoading } = useMealsForChart(groupId, activeChart || undefined);
   const { data: monthCosts = [], isLoading: costsLoading } = useCosts(groupId, activeChart?.id);
   const { data: monthDeposits = [], isLoading: depositsLoading } = useDeposits(groupId, activeChart?.id);
 
@@ -54,7 +54,7 @@ export function AdminMonthSummary({ groupId }: { groupId: string }) {
     if (!activeChart) return false;
     const now = new Date();
     const currentMonthKey = toMonthKey(now.getFullYear(), now.getMonth() + 1);
-    return activeChart.monthKey === currentMonthKey;
+    return (activeChart.monthKeys || [activeChart.monthKey]).includes(currentMonthKey);
   }, [activeChart]);
 
   if (!activeChart && !isLoading) {

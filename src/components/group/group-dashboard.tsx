@@ -12,7 +12,7 @@ import { saveChartReportPdf } from "@/lib/utils/pdf-report";
 import { formatMeal, getMonthTotals } from "@/lib/utils/meal-money";
 import { motion } from "framer-motion";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useGroup, useMembers, useMealsForMonth, useCosts, useDeposits } from "@/lib/hooks/use-data";
+import { useGroup, useMembers, useMealsForChart, useCosts, useDeposits } from "@/lib/hooks/use-data";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 
 export function GroupDashboard({ groupId }: { groupId: string }) {
@@ -25,7 +25,7 @@ export function GroupDashboard({ groupId }: { groupId: string }) {
   // SWR — shared cache, automatic dedup & background refresh
   const { data: group, error: groupError, isLoading: groupLoading } = useGroup(isFirebaseConfigured ? groupId : undefined);
   const { data: members = [] } = useMembers(group?.id);
-  const { data: monthMeals = [], isLoading: mealsLoading } = useMealsForMonth(group?.id, activeChart?.monthKey);
+  const { data: monthMeals = [], isLoading: mealsLoading } = useMealsForChart(group?.id, activeChart || undefined);
   const { data: monthCosts = [], isLoading: costsLoading } = useCosts(group?.id, activeChart?.id);
   const { data: monthDeposits = [], isLoading: depositsLoading } = useDeposits(group?.id, activeChart?.id);
 
@@ -47,7 +47,7 @@ export function GroupDashboard({ groupId }: { groupId: string }) {
       saveChartReportPdf({
         groupName: group.name || "Group",
         chartLabel: activeChart.label || "Report",
-        monthKey: activeChart.monthKey,
+        monthKeys: activeChart.monthKeys || [activeChart.monthKey],
         members,
         meals: monthMeals || [],
         costs: monthCosts || [],

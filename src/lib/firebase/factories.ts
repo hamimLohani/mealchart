@@ -9,7 +9,7 @@ import type {
   Notice,
   JoinRequest,
 } from "@/types/domain";
-import { daysInMonth } from "@/lib/utils/date";
+import { daysInMonth, getChartMonthKeys, toMonthKey } from "@/lib/utils/date";
 
 export function buildGroupRecord(input: {
   id: string;
@@ -37,17 +37,27 @@ export function buildChartRecord(input: {
   monthKey: string;
   year: number;
   month: number;
+  duration?: number;
 }): Chart {
+  const duration = input.duration ?? 1;
+  const monthKeys = getChartMonthKeys(input.year, input.month, duration);
+  let totalDays = 0;
+  for (let i = 0; i < duration; i++) {
+    const d = new Date(input.year, input.month - 1 + i, 1);
+    totalDays += daysInMonth(d.getFullYear(), d.getMonth() + 1);
+  }
   return {
     id: input.id,
     label: input.label,
     monthKey: input.monthKey,
     year: input.year,
     month: input.month,
-    totalDays: daysInMonth(input.year, input.month),
+    totalDays,
     active: true,
     locked: false,
     createdAt: new Date().toISOString(),
+    duration,
+    monthKeys,
   };
 }
 

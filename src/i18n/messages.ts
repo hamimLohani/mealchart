@@ -482,6 +482,7 @@ export const en = {
   "createChart.aboutBody":
     "Each chart is a monthly accounting sheet. A new chart becomes the active base for Chart View and money calculations.",
   "createChart.formTitle": "New Chart",
+  "createChart.duration": "Duration (Months)",
   "createChart.preview": "Preview",
   "createChart.createBtn": "Create new chart",
   "createChart.createBtnBusy": "Creating…",
@@ -1121,6 +1122,7 @@ export const bn: Record<MessageKey, string> = {
   "createChart.aboutBody":
     "প্রতিটি চার্ট একটি মাসিক হিসাব শিট। নতুন চার্ট চার্ট ভিউ ও টাকার হিসাবে সক্রিয় ভিত্তি হয়ে ওঠে।",
   "createChart.formTitle": "নতুন চার্ট",
+  "createChart.duration": "সময়কাল (মাস)",
   "createChart.preview": "প্রিভিউ",
   "createChart.createBtn": "নতুন চার্ট তৈরি",
   "createChart.createBtnBusy": "তৈরি হচ্ছে…",

@@ -31,6 +31,8 @@ export type Chart = {
   active: boolean;
   locked: boolean;
   createdAt: string;
+  duration?: number;
+  monthKeys?: string[];
 };
 
 export type Member = {
