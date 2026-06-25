@@ -16,6 +16,7 @@ import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
 import { AdminMonthSummary } from "@/components/admin/admin-month-summary";
 import { useCharts, useCosts, useDeposits, useMealsForChart, useMembers } from "@/lib/hooks/use-data";
 import { saveChartReportPdf } from "@/lib/utils/pdf-report";
+import { pickCurrentMonthChart } from "@/lib/utils/date";
 
 const navItemKeys = [
   { href: "/admin/members", labelKey: "adminNav.members" as const, hintKey: "adminNav.membersHint" as const, metric: "01" },
@@ -59,6 +60,8 @@ export default function AdminPage() {
   const { data: members = [] } = useMembers(visibleGroup?.id);
   const activeChart = useMemo(() => {
     if (!charts.length) return null;
+    const currentActive = pickCurrentMonthChart(charts);
+    if (currentActive) return currentActive;
     const currentChartId = visibleGroup?.currentChartId;
     if (currentChartId) {
       const found = charts.find((chart) => chart.id === currentChartId);

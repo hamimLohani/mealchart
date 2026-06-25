@@ -24,6 +24,7 @@ import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
 import { sendReminderEmails } from "@/lib/email/actions";
 import { getFriendlyEmailError } from "@/lib/utils/email-error";
 import { useToast } from "@/lib/hooks/use-toast";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 
 export function NoticesManager() {
   const { t, tx, language } = useT();
@@ -37,6 +38,7 @@ export function NoticesManager() {
   const [error, setError] = useState<string | null>(configError);
   const [isLoading, setIsLoading] = useState(false);
   const [isSendingReminders, setIsSendingReminders] = useState(false);
+  const [showSendConfirm, setShowSendConfirm] = useState(false);
 
   const [selectedChart, setSelectedChart] = useState<Chart | null>(null);
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
@@ -207,7 +209,11 @@ export function NoticesManager() {
     }
   }
 
-  async function handleSendReminders() {
+  function handleSendReminders() {
+    setShowSendConfirm(true);
+  }
+
+  async function actuallySendReminders() {
     if (!adminProfile || !selectedChart) return;
     setIsSendingReminders(true);
     setError(null);
@@ -245,6 +251,7 @@ export function NoticesManager() {
       showError(msg);
     } finally {
       setIsSendingReminders(false);
+      setShowSendConfirm(false);
     }
   }
 
@@ -294,110 +301,127 @@ export function NoticesManager() {
   }
 
   return (
-    <div className="mt-6 grid gap-5">
-      {resolvedError && <p className="alert-error">{tx(resolvedError)}</p>}
+    <>
+      <div className="mt-6 grid gap-5">
+        {resolvedError && <p className="alert-error">{tx(resolvedError)}</p>}
 
-      <div className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--panel)] px-4 py-3">
-        <div>
-          <p className="admin-section-label">{t("adminNav.notices")}</p>
-          <p className="mt-0.5 font-semibold">{selectedChart.label}</p>
-          {selectedChart.locked && (
-            <p className="mt-1 text-xs font-semibold text-[color:var(--danger)]">{t("noticeMgr.monthLocked")}</p>
-          )}
-        </div>
-        <div className="flex gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={handleSendReminders}
-            disabled={isSendingReminders}
-            className="button-primary"
-          >
-            {isSendingReminders ? t("notices.sendingReminders") : t("notices.sendReminders")}
-          </button>
-          <button
-            type="button"
-            onClick={() => { setIsMonthPickerOpen(true); setSelectedChart(null); setNotices([]); cancelEdit(); }}
-            className="button-secondary"
-          >
-            {t("costs.backMonths")}
-          </button>
-        </div>
-      </div>
-
-      <form
-        onSubmit={handleSubmit}
-        className="grid gap-4 rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]"
-      >
-        <p className="admin-section-label">{editingId ? t("noticeMgr.editFormTitle") : t("noticeMgr.addFormTitle")}</p>
-        <label className="grid gap-1.5 text-sm font-medium">
-          {t("admin.noticeTitle")}
-          <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("noticeMgr.placeholderTitle")} required />
-        </label>
-        <label className="grid gap-1.5 text-sm font-medium">
-          {t("admin.noticeBody")}
-          <textarea className="input min-h-[80px] resize-y" value={body} onChange={(e) => setBody(e.target.value)} placeholder={t("noticeMgr.placeholderBody")} required />
-        </label>
-        <div className="flex gap-3">
-          <button className="button-primary" disabled={!adminProfile || isSubmitting || selectedChart.locked} type="submit">
-            {isSubmitting ? t("admin.saving") : editingId ? t("common.update") : t("noticeMgr.submitAdd")}
-          </button>
-          {editingId && (
-            <button className="button-secondary" type="button" onClick={cancelEdit}>{t("common.cancel")}</button>
-          )}
-        </div>
-      </form>
-
-      <div className="grid gap-3">
-        {noticesLoading && (
-          <AdminLoadingState compact message={t("common.loading")} />
-        )}
-        {!noticesLoading && notices.length === 0 && (
-          <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">{t("noticeMgr.empty")}</p>
-        )}
-        {notices.map((notice) => (
-          <div
-            key={notice.id}
-            className="rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--panel)] p-4"
-          >
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="font-bold text-[color:var(--foreground)]">{tx(notice.title)}</p>
-                  {notice.systemGenerated && (
-                    <span className="badge-accent">{t("common.auto")}</span>
-                  )}
-                </div>
-                <p className="mt-1 whitespace-pre-wrap text-sm text-[color:var(--soft-foreground)]">
-                  {tx(notice.body)}
-                </p>
-                <p className="mt-1.5 text-xs text-[color:var(--muted)]">
-                  {formatNoticeDate(notice.createdAt)}
-                </p>
-              </div>
-              {!notice.systemGenerated && (
-                <div className="flex shrink-0 gap-2">
-                  <button
-                    onClick={() => startEdit(notice)}
-                    type="button"
-                    disabled={selectedChart.locked}
-                    className="rounded-full border border-[color:var(--border)] px-3 py-1 text-xs font-semibold text-[color:var(--soft-foreground)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)] disabled:opacity-50"
-                  >
-                    {t("memberMgr.edit")}
-                  </button>
-                  <button
-                    onClick={() => void handleDelete(notice.id)}
-                    type="button"
-                    disabled={selectedChart.locked}
-                    className="rounded-full border border-[color:var(--danger-border)] px-3 py-1 text-xs font-semibold text-[color:var(--danger)] transition hover:bg-[color:var(--danger)] hover:text-white disabled:opacity-50"
-                  >
-                    {t("admin.delete")}
-                  </button>
-                </div>
-              )}
-            </div>
+        <div className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--panel)] px-4 py-3">
+          <div>
+            <p className="admin-section-label">{t("adminNav.notices")}</p>
+            <p className="mt-0.5 font-semibold">{selectedChart.label}</p>
+            {selectedChart.locked && (
+              <p className="mt-1 text-xs font-semibold text-[color:var(--danger)]">{t("noticeMgr.monthLocked")}</p>
+            )}
           </div>
-        ))}
+          <div className="flex gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleSendReminders}
+              disabled={isSendingReminders}
+              className="button-primary"
+            >
+              {isSendingReminders ? t("notices.sendingReminders") : t("notices.sendReminders")}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setIsMonthPickerOpen(true); setSelectedChart(null); setNotices([]); cancelEdit(); }}
+              className="button-secondary"
+            >
+              {t("costs.backMonths")}
+            </button>
+          </div>
+        </div>
+
+        <form
+          onSubmit={handleSubmit}
+          className="grid gap-4 rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-5 shadow-[var(--shadow-sm)]"
+        >
+          <p className="admin-section-label">{editingId ? t("noticeMgr.editFormTitle") : t("noticeMgr.addFormTitle")}</p>
+          <label className="grid gap-1.5 text-sm font-medium">
+            {t("admin.noticeTitle")}
+            <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("noticeMgr.placeholderTitle")} required />
+          </label>
+          <label className="grid gap-1.5 text-sm font-medium">
+            {t("admin.noticeBody")}
+            <textarea className="input min-h-[80px] resize-y" value={body} onChange={(e) => setBody(e.target.value)} placeholder={t("noticeMgr.placeholderBody")} required />
+          </label>
+          <div className="flex gap-3">
+            <button className="button-primary" disabled={!adminProfile || isSubmitting || selectedChart.locked} type="submit">
+              {isSubmitting ? t("admin.saving") : editingId ? t("common.update") : t("noticeMgr.submitAdd")}
+            </button>
+            {editingId && (
+              <button className="button-secondary" type="button" onClick={cancelEdit}>{t("common.cancel")}</button>
+            )}
+          </div>
+        </form>
+
+        <div className="grid gap-3">
+          {noticesLoading && (
+            <AdminLoadingState compact message={t("common.loading")} />
+          )}
+          {!noticesLoading && notices.length === 0 && (
+            <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">{t("noticeMgr.empty")}</p>
+          )}
+          {notices.map((notice) => (
+            <div
+              key={notice.id}
+              className="rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--panel)] p-4"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="font-bold text-[color:var(--foreground)]">{tx(notice.title)}</p>
+                    {notice.systemGenerated && (
+                      <span className="badge-accent">{t("common.auto")}</span>
+                    )}
+                  </div>
+                  <p className="mt-1 whitespace-pre-wrap text-sm text-[color:var(--soft-foreground)]">
+                    {tx(notice.body)}
+                  </p>
+                  <p className="mt-1.5 text-xs text-[color:var(--muted)]">
+                    {formatNoticeDate(notice.createdAt)}
+                  </p>
+                </div>
+                {!notice.systemGenerated && (
+                  <div className="flex shrink-0 gap-2">
+                    <button
+                      onClick={() => startEdit(notice)}
+                      type="button"
+                      disabled={selectedChart.locked}
+                      className="rounded-full border border-[color:var(--border)] px-3 py-1 text-xs font-semibold text-[color:var(--soft-foreground)] transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)] disabled:opacity-50"
+                    >
+                      {t("memberMgr.edit")}
+                    </button>
+                    <button
+                      onClick={() => void handleDelete(notice.id)}
+                      type="button"
+                      disabled={selectedChart.locked}
+                      className="rounded-full border border-[color:var(--danger-border)] px-3 py-1 text-xs font-semibold text-[color:var(--danger)] transition hover:bg-[color:var(--danger)] hover:text-white disabled:opacity-50"
+                    >
+                      {t("admin.delete")}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
+      {showSendConfirm && (
+        <ConfirmModal
+          open={showSendConfirm}
+          title={t("notices.confirmSendTitle")}
+          description={t("notices.confirmSendDescription")}
+          confirmLabel={t("notices.sendReminders")}
+          cancelLabel={t("common.cancel")}
+          isProcessing={isSendingReminders}
+          processingLabel={t("notices.sendingReminders")}
+          onCancel={() => setShowSendConfirm(false)}
+          onConfirm={async () => {
+            await actuallySendReminders();
+          }}
+        />
+      )}
+    </>
   );
 }

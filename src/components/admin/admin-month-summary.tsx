@@ -2,7 +2,7 @@
 
 import { useT } from "@/i18n/use-t";
 import { formatMeal, getMemberTotals, getMonthTotals } from "@/lib/utils/meal-money";
-import { toMonthKey } from "@/lib/utils/date";
+import { toMonthKey, pickCurrentMonthChart } from "@/lib/utils/date";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   useCharts,
@@ -22,9 +22,11 @@ export function AdminMonthSummary({ groupId }: { groupId: string }) {
   const { data: charts = [], isLoading: chartsLoading } = useCharts(groupId);
   const { data: members = [], isLoading: membersLoading } = useMembers(groupId);
 
-  // Auto-detect active chart: group.currentChartId or the first from list
+  // Auto-detect active chart: current month first, then group.currentChartId, then first in list
   const activeChart = useMemo(() => {
     if (!charts.length) return null;
+    const currentActive = pickCurrentMonthChart(charts);
+    if (currentActive) return currentActive;
     const currentChartId = group?.currentChartId;
     if (currentChartId) {
       const found = charts.find((c) => c.id === currentChartId);

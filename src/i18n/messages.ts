@@ -661,8 +661,10 @@ export const en = {
   "toast.joinRequestApproved": "Join request approved!",
   "toast.joinRequestRejected": "Join request rejected.",
   "toast.genericError": "An error occurred. Please try again.",
-  "notices.sendReminders": "Send Reminders",
+  "notices.sendReminders": "Send Payment Reminders",
   "notices.sendingReminders": "Sending…",
+  "notices.confirmSendTitle": "Confirm Send Reminders",
+  "notices.confirmSendDescription": "Are you sure you want to send reminder emails to every member?",
   "createChart.deleteLockedChart": "Please unlock the month first before deleting.",
 } as const;
 
@@ -1303,8 +1305,10 @@ export const bn: Record<MessageKey, string> = {
   "toast.joinRequestApproved": "যোগদানের অনুরোধ সফলভাবে অনুমোদিত হয়েছে!",
   "toast.joinRequestRejected": "যোগদানের অনুরোধ প্রত্যাখ্যাত হয়েছে।",
   "toast.genericError": "একটি ত্রুটি ঘটেছে। দয়া করে আবার চেষ্টা করুন।",
-  "notices.sendReminders": "রিমাইন্ডার পাঠান",
+  "notices.sendReminders": "বকেয়া পরিশোধের অনুরোধ",
   "notices.sendingReminders": "পাঠানো হচ্ছে…",
+  "notices.confirmSendTitle": "বকেয়া পরিশোধের অনুরোধ ইমেইল নিশ্চয়তা",
+  "notices.confirmSendDescription": "আপনি কি নিশ্চিত যে প্রতিটি সদস্যকে বকেয়া পরিশোধের অনুরোধ ইমেল পাঠাতে চান?",
   "createChart.deleteLockedChart": "মুছে ফেলার আগে অনুগ্রহ করে মাসটি আনলক করুন।",
 };
 
