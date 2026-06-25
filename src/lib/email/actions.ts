@@ -564,6 +564,88 @@ export async function sendMonthSummaryEmails(input: {
   }
 }
 
+export async function sendVerificationEmail(
+  email: string,
+  fullName: string,
+  verificationUrl: string
+) {
+  try {
+    const html = `
+      <div style="font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333; background-color: #f9fafb; border-radius: 16px; border: 1px solid #e5e7eb;">
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0;">
+          <div style="display: inline-block; margin-bottom: 16px;">
+            <span style="font-size: 36px;">🍚</span>
+          </div>
+          <h1 style="margin: 0; font-size: 28px; font-weight: 800;">Welcome to Meal Chart!</h1>
+          <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.95;">Let's verify your email to get started.</p>
+        </div>
+
+        <!-- Content -->
+        <div style="padding: 40px 30px; background: white; border-radius: 0 0 12px 12px;">
+          <p style="font-size: 16px; line-height: 1.6; color: #475569; margin: 0 0 24px 0;">
+            Hi <strong style="color: #1f2937;">${escapeHtml(fullName)}</strong>,
+          </p>
+
+          <p style="font-size: 16px; line-height: 1.6; color: #475569; margin: 0 0 24px 0;">
+            Thanks for signing up! To complete your registration, please click the button below to verify your email address.
+          </p>
+
+          <!-- CTA Button -->
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${verificationUrl}" style="
+              display: inline-block;
+              background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+              color: white;
+              text-decoration: none;
+              font-size: 16px;
+              font-weight: 700;
+              padding: 16px 40px;
+              border-radius: 10px;
+              box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3);
+            ">
+              Verify My Email Address
+            </a>
+          </div>
+
+          <!-- Backup Link -->
+          <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin: 24px 0;">
+            <p style="margin: 0; font-size: 14px; color: #6b7280;">
+              If the button doesn't work, copy and paste this link in your browser:
+            </p>
+            <p style="margin: 8px 0 0 0; word-break: break-all; font-size: 13px; color: #6366f1;">
+              ${verificationUrl}
+            </p>
+          </div>
+
+          <div style="border-top: 1px solid #e5e7eb; margin: 32px 0 0 0; padding-top: 24px;">
+            <p style="margin: 0; font-size: 14px; color: #9ca3af;">
+              If you didn't sign up for Meal Chart, you can safely ignore this email.
+            </p>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="text-align: center; padding: 24px 0; color: #9ca3af; font-size: 13px;">
+          <p style="margin: 0;">© ${new Date().getFullYear()} Meal Chart. All rights reserved.</p>
+        </div>
+      </div>
+    `;
+
+    await transporter.sendMail({
+      from: fromEmail,
+      to: email,
+      subject: "Verify Your Email - Meal Chart",
+      html,
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to send verification email:", error);
+    return { success: false, error: getErrorMessage(error) };
+  }
+}
+
 export async function sendReminderEmails(input: {
   groupName: string;
   chartLabel: string;

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "firebase": "^12.13.0",
+    "firebase-admin": "^14.1.0",
     "framer-motion": "^12.38.0",
     "jspdf": "^2.5.1",
     "next": "16.2.5",
