@@ -26,8 +26,8 @@ export function GroupMonthSelector({
 
   useEffect(() => {
     if (!autoSelect || charts.length === 0) return;
-    const hasManuallyExited = sessionStorage.getItem("mc_manual_exit");
-    const hasStoredChart = sessionStorage.getItem("mc_chart_id");
+    const hasManuallyExited = localStorage.getItem("mc_manual_exit");
+    const hasStoredChart = localStorage.getItem("mc_chart_id");
     const wasAutoSelected = sessionStorage.getItem(AUTO_SELECTED_CHART_KEY) !== "false";
     const currentMonthChart = charts.find((monthChart) => isChartActive(monthChart));
     const preferredChart = pickCurrentMonthChart(charts);
