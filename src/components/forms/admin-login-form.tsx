@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { signInWithPopup, signInWithRedirect, GoogleAuthProvider, getRedirectResult } from "firebase/auth";
+import { signInWithPopup, signInWithRedirect, GoogleAuthProvider, getRedirectResult, onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
@@ -80,10 +80,18 @@ export function AdminLoginForm() {
     }
 
     void completeRedirectSignIn();
+
+    const unsubscribeAuth = onAuthStateChanged(firebaseAuth, (user) => {
+      if (user) {
+        void finishSignIn(user);
+      }
+    });
+
     return () => {
       active = false;
+      unsubscribeAuth();
     };
-  }, [finishSignIn, t, tx]);
+  }, [finishSignIn, isFirebaseConfigured, t, tx]);
 
   async function handleGoogleSignIn() {
     setError(null);

@@ -11,6 +11,7 @@ import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
   sendPasswordResetEmail,
+  onAuthStateChanged,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { useT } from "@/i18n/use-t";
@@ -125,10 +126,18 @@ export function EnterGroupForm() {
     }
 
     void completeRedirectSignIn();
+
+    const unsubscribeAuth = onAuthStateChanged(firebaseAuth, (user) => {
+      if (user) {
+        void finishSignIn(user);
+      }
+    });
+
     return () => {
       active = false;
+      unsubscribeAuth();
     };
-  }, [finishSignIn, t, tx]);
+  }, [finishSignIn, isFirebaseConfigured, t, tx]);
 
   async function handleGoogleSignIn() {
     setError(null);
