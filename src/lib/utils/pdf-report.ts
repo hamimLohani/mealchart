@@ -399,7 +399,11 @@ export function saveChartReportPdf(options: ChartReportOptions): string | void {
       detailLabel: "Member",
     };
     const sortedCosts = [...costs].sort((a, b) => a.date.localeCompare(b.date));
-    const sortedDeposits = [...deposits].sort((a, b) => a.date.localeCompare(b.date));
+    const carryDeposits = deposits.filter((deposit) => deposit.collectedByAdminId === "system-carryover");
+    const otherDeposits = deposits.filter((deposit) => deposit.collectedByAdminId !== "system-carryover");
+    const sortedCarryDeposits = [...carryDeposits].sort((a, b) => a.date.localeCompare(b.date));
+    const sortedOtherDeposits = [...otherDeposits].sort((a, b) => a.date.localeCompare(b.date));
+    const sortedDeposits = [...sortedCarryDeposits, ...sortedOtherDeposits];
     const maxHistoryRows = Math.max(sortedCosts.length, sortedDeposits.length);
 
     let costPageRowIndex = 0;
@@ -431,7 +435,10 @@ export function saveChartReportPdf(options: ChartReportOptions): string | void {
       if (deposit) {
         drawHistoryRow(paidTableLeft, currentY, paidPageRowIndex, paidColumns, {
           date: deposit.date,
-          detail: memberNameById(deposit.memberId),
+          detail:
+            deposit.collectedByAdminId === "system-carryover"
+              ? `${memberNameById(deposit.memberId)} (Carry Over)`
+              : memberNameById(deposit.memberId),
           amount: deposit.amount,
         });
         paidPageRowIndex += 1;
