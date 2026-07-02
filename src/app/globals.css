@@ -505,6 +505,7 @@ button:not(.no-motion):not(:disabled):active {
 }
 
 .admin-dashboard-hero {
+  position: relative;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -513,10 +514,13 @@ button:not(.no-motion):not(:disabled):active {
   border-radius: var(--radius);
   background: linear-gradient(135deg, var(--panel), color-mix(in srgb, var(--panel) 75%, var(--accent) 25%));
   box-shadow: var(--shadow);
-  padding: 1.25rem;
+  padding: 1.75rem 1.25rem 1.5rem;
 }
 
 .admin-dashboard-hero-actions {
+  position: absolute;
+  top: 1rem;
+  right: 1.25rem;
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
@@ -525,17 +529,18 @@ button:not(.no-motion):not(:disabled):active {
 
 @media (max-width: 639px) {
   .admin-dashboard-hero {
-    flex-direction: column;
-    align-items: stretch;
+    padding: 1.5rem 1rem 1.25rem;
+    min-height: 7.5rem;
   }
 
   .admin-dashboard-hero-actions {
-    width: 100%;
-    justify-content: flex-start;
+    top: 0.9rem;
+    right: 1rem;
+    width: auto;
   }
 
   .admin-dashboard-hero-actions > * {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     min-width: 0;
   }
 

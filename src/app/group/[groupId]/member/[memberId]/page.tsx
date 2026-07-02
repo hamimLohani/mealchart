@@ -256,21 +256,31 @@ export default function MemberPage({
       <div className="min-w-0 flex-1 pb-20 md:pb-0">
         <GroupMonthSelector groupId={group.id} groupName={group.name} autoSelect />
         <div className="py-6 grid gap-4">
-        <div className="group-hero">
-          <div className="min-w-0">
-            <p className="group-kicker">{group.name} · {chart.label}</p>
-            <p className="group-title">{member.fullName}</p>
-            <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">{t("memberPage.monthInfoSubtitle")}</p>
-            {chart.locked && (
-              <p className="mt-1 inline-flex rounded-full border border-[color:var(--danger-border)] bg-[color:var(--danger-bg)] px-2 py-0.5 text-xs font-semibold text-[color:var(--danger)]">
-                {t("memberPage.monthLocked")}
-              </p>
-            )}
+          <div className="group-hero flex items-start justify-between gap-3 sm:items-center">
+            <div className="min-w-0">
+              <p className="group-kicker">{group.name} · {chart.label}</p>
+              <p className="group-title">{member.fullName}</p>
+              <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">{t("memberPage.monthInfoSubtitle")}</p>
+              {chart.locked && (
+                <p className="mt-1 inline-flex rounded-full border border-[color:var(--danger-border)] bg-[color:var(--danger-bg)] px-2 py-0.5 text-xs font-semibold text-[color:var(--danger)]">
+                  {t("memberPage.monthLocked")}
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={handleDownloadPDF}
+              className="button-secondary rounded-full p-2"
+              aria-label={t("groupDash.exportCSV", { defaultValue: "Export PDF" })}
+              title={t("groupDash.exportCSV", { defaultValue: "Export PDF" })}
+            >
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            </button>
           </div>
-          <button type="button" onClick={handleDownloadPDF} className="button-secondary shrink-0">
-            {t("groupDash.exportCSV", { defaultValue: "Export PDF" })}
-          </button>
-        </div>
 
         {monthLoading ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

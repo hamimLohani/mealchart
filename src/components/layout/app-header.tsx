@@ -3,14 +3,28 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useT } from "@/i18n/use-t";
 import { useUiStore } from "@/store/ui-store";
 import { PWAInstallButton } from "./pwa-install-button";
+import { auth } from "@/lib/firebase/client";
+import { signOut } from "firebase/auth";
 
 export function AppHeader() {
+  const router = useRouter();
   const { language, setLanguage, theme, setTheme, startLoading } = useUiStore();
   const { t } = useT();
   const [mounted, setMounted] = useState(false);
+  const [isSignedIn, setIsSignedIn] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+    const unsubscribe = auth?.onAuthStateChanged((user) => {
+      setIsSignedIn(!!user);
+    }) ?? (() => undefined);
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -82,6 +96,24 @@ export function AppHeader() {
               <div className="h-4 w-4" />
             )}
           </button>
+          {isSignedIn && (
+            <button
+              className="rounded-full border border-[color:var(--border)] bg-[color:var(--background)] p-1.5 transition hover:border-[color:var(--accent)] hover:text-[color:var(--accent)]"
+              onClick={async () => {
+                if (!auth) return;
+                await signOut(auth);
+                router.push("/enter-group");
+              }}
+              type="button"
+              aria-label={t("adminNav.signOut")}
+              title={t("adminNav.signOut")}
+            >
+              <svg className="h-4 w-4 text-[color:var(--soft-foreground)]" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7 8v8" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
     </header>
