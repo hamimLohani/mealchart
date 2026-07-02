@@ -24,6 +24,55 @@ import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
 import { useToast } from "@/lib/hooks/use-toast";
 
+function parseAmountInput(value: string, messages: { invalidCharacters: string; invalidFormula: string }) {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return { value: null as number | null, isValid: false, isFormula: false, message: "" };
+  }
+
+  const expression = trimmed.startsWith("=") ? trimmed.slice(1).trim() : trimmed;
+  const isFormula = trimmed.startsWith("=") || /[+\-*/()]/.test(expression);
+
+  if (!expression) {
+    return { value: null as number | null, isValid: false, isFormula: false, message: "" };
+  }
+
+  const numericPattern = /^[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?$/;
+  if (numericPattern.test(expression)) {
+    const numericValue = Number(expression);
+    return {
+      value: Number.isFinite(numericValue) ? numericValue : null,
+      isValid: Number.isFinite(numericValue),
+      isFormula: false,
+      message: "",
+    };
+  }
+
+  if (!/^[0-9+\-*/().\s]+$/.test(expression)) {
+    return {
+      value: null as number | null,
+      isValid: false,
+      isFormula: true,
+      message: messages.invalidCharacters,
+    };
+  }
+
+  try {
+    const result = Function(`"use strict"; return (${expression});`)();
+    if (!Number.isFinite(result)) {
+      throw new Error("Invalid expression");
+    }
+    return { value: Number(result), isValid: true, isFormula, message: "" };
+  } catch {
+    return {
+      value: null as number | null,
+      isValid: false,
+      isFormula: true,
+      message: messages.invalidFormula,
+    };
+  }
+}
+
 export function CostsManager() {
   const { t, tx } = useT();
   const { mutate } = useSWRConfig();
@@ -144,14 +193,31 @@ export function CostsManager() {
     c.itemName.toLowerCase().includes(search.trim().toLowerCase())
   );
   const tk = t("common.tk");
+  const parsedAmountInput = parseAmountInput(amount, {
+    invalidCharacters: t("costs.amountHintInvalidCharacters"),
+    invalidFormula: t("costs.amountHintInvalidFormula"),
+  });
+  const amountHintClassName = !amount.trim()
+    ? "text-xs text-[color:var(--muted)]"
+    : parsedAmountInput.isValid
+      ? "text-xs text-[color:var(--success-text)]"
+      : "text-xs text-[color:var(--danger)]";
+  const amountHintText = !amount.trim()
+    ? t("costs.amountHintEmpty")
+    : parsedAmountInput.isValid && parsedAmountInput.value !== null
+      ? `${t("costs.amountHintResult")} ${parsedAmountInput.value.toFixed(2)} ${tk}`
+      : parsedAmountInput.message;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!adminProfile || !selectedChart) return;
     if (selectedChart.locked) { setError("This month is locked."); return; }
-    const amt = Number(amount);
-    if (!itemName.trim() || isNaN(amt) || amt <= 0) {
-      setError("Item name and a valid amount are required.");
+    const parsedAmount = parseAmountInput(amount, {
+      invalidCharacters: t("costs.amountHintInvalidCharacters"),
+      invalidFormula: t("costs.amountHintInvalidFormula"),
+    });
+    if (!itemName.trim() || !parsedAmount.isValid || parsedAmount.value === null || parsedAmount.value <= 0) {
+      setError(parsedAmount.message || "Item name and a valid amount are required.");
       return;
     }
     setError(null); setIsSubmitting(true);
@@ -160,7 +226,7 @@ export function CostsManager() {
         groupId: adminProfile.groupId,
         chartId: selectedChart.id,
         itemName: itemName.trim(),
-        amount: amt,
+        amount: parsedAmount.value,
         date,
       });
       setCosts((prev) => {
@@ -337,7 +403,16 @@ export function CostsManager() {
           </label>
           <label className="grid gap-1.5 text-sm font-medium">
             {t("admin.amountTk")}
-            <input className="input" type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="250" required />
+            <input
+              className="input"
+              type="text"
+              inputMode="decimal"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="250 or =122+1243+1234"
+              required
+            />
+            <p className={amountHintClassName}>{amountHintText}</p>
           </label>
           <label className="grid gap-1.5 text-sm font-medium">
             {t("admin.date")}
