@@ -305,7 +305,7 @@ export function NoticesManager() {
       <div className="mt-6 grid gap-5">
         {resolvedError && <p className="alert-error">{tx(resolvedError)}</p>}
 
-        <div className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--panel)] px-4 py-3">
+        <div className="flex flex-col gap-3 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--panel)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="admin-section-label">{t("adminNav.notices")}</p>
             <p className="mt-0.5 font-semibold">{selectedChart.label}</p>
@@ -313,19 +313,19 @@ export function NoticesManager() {
               <p className="mt-1 text-xs font-semibold text-[color:var(--danger)]">{t("noticeMgr.monthLocked")}</p>
             )}
           </div>
-          <div className="flex gap-2 shrink-0">
+          <div className="flex flex-col gap-2 sm:flex-row sm:shrink-0">
             <button
               type="button"
               onClick={handleSendReminders}
               disabled={isSendingReminders}
-              className="button-primary"
+              className="button-primary w-full sm:w-auto"
             >
               {isSendingReminders ? t("notices.sendingReminders") : t("notices.sendReminders")}
             </button>
             <button
               type="button"
               onClick={() => { setIsMonthPickerOpen(true); setSelectedChart(null); setNotices([]); cancelEdit(); }}
-              className="button-secondary"
+              className="button-secondary w-full sm:w-auto"
             >
               {t("costs.backMonths")}
             </button>
@@ -345,12 +345,12 @@ export function NoticesManager() {
             {t("admin.noticeBody")}
             <textarea className="input min-h-[80px] resize-y" value={body} onChange={(e) => setBody(e.target.value)} placeholder={t("noticeMgr.placeholderBody")} required />
           </label>
-          <div className="flex gap-3">
-            <button className="button-primary" disabled={!adminProfile || isSubmitting || selectedChart.locked} type="submit">
+          <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+            <button className="button-primary w-full sm:w-auto" disabled={!adminProfile || isSubmitting || selectedChart.locked} type="submit">
               {isSubmitting ? t("admin.saving") : editingId ? t("common.update") : t("noticeMgr.submitAdd")}
             </button>
             {editingId && (
-              <button className="button-secondary" type="button" onClick={cancelEdit}>{t("common.cancel")}</button>
+              <button className="button-secondary w-full sm:w-auto" type="button" onClick={cancelEdit}>{t("common.cancel")}</button>
             )}
           </div>
         </form>
@@ -383,7 +383,7 @@ export function NoticesManager() {
                   </p>
                 </div>
                 {!notice.systemGenerated && (
-                  <div className="flex shrink-0 gap-2">
+                  <div className="mt-2 flex w-full flex-col gap-2 sm:mt-0 sm:w-auto sm:flex-row sm:shrink-0">
                     <button
                       onClick={() => startEdit(notice)}
                       type="button"
