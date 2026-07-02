@@ -40,11 +40,11 @@ export function GroupDashboard({ groupId }: { groupId: string }) {
     router.push(`/group/${groupId}/member/${member.id}`);
   }
 
-  function handleDownloadPDF() {
+  async function handleDownloadPDF() {
     if (!activeChart || !group || members.length === 0) return;
 
     try {
-      saveChartReportPdf({
+      await saveChartReportPdf({
         groupName: group.name || "Group",
         chartLabel: activeChart.label || "Report",
         monthKeys: activeChart.monthKeys || [activeChart.monthKey],

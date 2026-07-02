@@ -196,10 +196,10 @@ export default function MemberPage({
 
   const isLocked = isDateLocked(selectedDate);
 
-  function handleDownloadPDF() {
+  async function handleDownloadPDF() {
     if (!chart || !group) return;
     try {
-      saveChartReportPdf({
+      await saveChartReportPdf({
         groupName: group.name || "Group",
         chartLabel: chart.label,
         monthKeys: chart.monthKeys || [chart.monthKey],

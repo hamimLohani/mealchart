@@ -16,7 +16,7 @@ type ChartReportOptions = {
   outputType?: "save" | "base64";
 };
 
-export function saveChartReportPdf(options: ChartReportOptions): string | void {
+export async function saveChartReportPdf(options: ChartReportOptions): Promise<string | void> {
   const { groupName, chartLabel, monthKeys, members, meals, costs, deposits, fileName, outputType = "save" } = options;
 
   if (!monthKeys || monthKeys.length === 0) {
@@ -48,18 +48,70 @@ export function saveChartReportPdf(options: ChartReportOptions): string | void {
     return value;
   };
 
+  // Bangla (Bengali) unicode range check
+  const hasBangla = (text: string) => /[\u0980-\u09FF]/.test(text);
+
+  // Load Bengali fonts from public/fonts if available and register with jsPDF VFS.
+  // Filenames expected: /fonts/NotoSansBengali-Regular.ttf and /fonts/NotoSansBengali-Bold.ttf
+  let fontsRegistered = false;
+  async function ensureBengaliFonts() {
+    if (fontsRegistered) return;
+    try {
+      const regularResp = await fetch("/fonts/NotoSansBengali-Regular.ttf");
+      if (!regularResp.ok) throw new Error("Bengali font not found");
+      const regularBuf = await regularResp.arrayBuffer();
+      const boldResp = await fetch("/fonts/NotoSansBengali-Bold.ttf");
+      const boldBuf = boldResp.ok ? await boldResp.arrayBuffer() : null;
+
+      const toBase64 = (buf: ArrayBuffer) => {
+        let binary = "";
+        const bytes = new Uint8Array(buf);
+        const chunk = 0x8000;
+        for (let i = 0; i < bytes.length; i += chunk) {
+          binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunk)) as unknown as number[]);
+        }
+        return btoa(binary);
+      };
+
+      const regularBase64 = toBase64(regularBuf);
+      (doc as any).addFileToVFS("NotoSansBengali-Regular.ttf", regularBase64);
+      (doc as any).addFont("NotoSansBengali-Regular.ttf", "NotoSansBengali", "normal");
+      if (boldBuf) {
+        const boldBase64 = toBase64(boldBuf);
+        (doc as any).addFileToVFS("NotoSansBengali-Bold.ttf", boldBase64);
+        (doc as any).addFont("NotoSansBengali-Bold.ttf", "NotoSansBengali", "bold");
+      }
+      fontsRegistered = true;
+    } catch (e) {
+      // If fonts are not available, continue silently and fallback to builtin fonts (latin only)
+      console.warn("Bengali fonts not available for PDF export. Install fonts at /public/fonts to enable Bengali text.", e);
+    }
+  }
+
+  const setFontFor = async (text: string, weight: "normal" | "bold" = "normal") => {
+    if (hasBangla(text)) {
+      await ensureBengaliFonts();
+      if (fontsRegistered) {
+        doc.setFont("NotoSansBengali", weight === "bold" ? "bold" : "normal");
+        return;
+      }
+    }
+    // fallback to helvetica for Latin scripts
+    doc.setFont("helvetica", weight === "bold" ? "bold" : "normal");
+  };
+
   const money = (value: number, decimals = 2) => `${value.toFixed(decimals)} Tk`;
   const memberNameById = (memberId: string) => memberDisplayName(memberId.toLowerCase(), members, "Former member");
 
-  const drawPageHeader = (title = "Meal Chart Report") => {
+  const drawPageHeader = async (title = "Meal Chart Report") => {
     doc.setFillColor(30, 64, 175);
     doc.rect(0, 0, pageWidth, 88, "F");
     doc.setFontSize(22);
-    doc.setFont("helvetica", "bold");
+    await setFontFor(title, "bold");
     doc.setTextColor(255, 255, 255);
     doc.text(title, margin, 38);
 
-    doc.setFont("helvetica", "normal");
+    await setFontFor(groupName, "normal");
     doc.setFontSize(10);
     doc.setTextColor(226, 232, 240);
     doc.text(`Group: ${groupName}`, margin, 62);
@@ -78,7 +130,7 @@ export function saveChartReportPdf(options: ChartReportOptions): string | void {
   });
 
   // Page 1 Setup
-  drawPageHeader();
+  await drawPageHeader();
 
   // Summary Cards
   const summaryTop = 108;
@@ -95,20 +147,20 @@ export function saveChartReportPdf(options: ChartReportOptions): string | void {
     { label: "Members", value: String(rowMemberIds.length) },
   ];
 
-  summaryItems.forEach((item, index) => {
+  for (const [index, item] of summaryItems.entries()) {
     const left = margin + index * (cardWidth + cardGap);
     doc.setFillColor(248, 250, 252);
     doc.setDrawColor(...borderColor);
     doc.roundedRect(left, summaryTop, cardWidth, cardHeight, 6, 6, "FD");
-    doc.setFont("helvetica", "normal");
+    await setFontFor(item.label.toUpperCase(), "normal");
     doc.setFontSize(8);
     doc.setTextColor(...textColor.muted);
     doc.text(item.label.toUpperCase(), left + 10, summaryTop + 19);
-    doc.setFont("helvetica", "bold");
+    await setFontFor(item.value, "bold");
     doc.setFontSize(13);
     doc.setTextColor(...textColor.dark);
     doc.text(fitText(item.value, cardWidth - 20), left + 10, summaryTop + 40);
-  });
+  }
 
   let currentY = summaryTop + cardHeight + 28; // ~194
 
@@ -131,7 +183,7 @@ export function saveChartReportPdf(options: ChartReportOptions): string | void {
     const tableSectionHeight = 22 + headerHeight + (rowMemberIds.length * bodyRowHeight) + bodyRowHeight + 20;
     if (currentY + tableSectionHeight > bottomLimit) {
       doc.addPage();
-      drawPageHeader();
+      await drawPageHeader();
       currentY = 108;
     }
 
@@ -139,7 +191,7 @@ export function saveChartReportPdf(options: ChartReportOptions): string | void {
     const [y, m] = monthKey.split("-").map(Number);
     const monthLabel = new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
     
-    doc.setFont("helvetica", "bold");
+    await setFontFor(monthLabel, "bold");
     doc.setFontSize(12);
     doc.setTextColor(...textColor.dark);
     doc.text(monthLabel, margin, currentY + 12);
@@ -148,7 +200,7 @@ export function saveChartReportPdf(options: ChartReportOptions): string | void {
     // Draw Month Table Header
     doc.setFillColor(...headerColor);
     doc.rect(tableLeft, currentY, tableWidth, headerHeight, "F");
-    doc.setFont("helvetica", "bold");
+    await setFontFor("Member", "bold");
     doc.setFontSize(8);
     doc.setTextColor(255, 255, 255);
     doc.text("Member", tableLeft + 8, currentY + 14);
@@ -163,7 +215,8 @@ export function saveChartReportPdf(options: ChartReportOptions): string | void {
     currentY += headerHeight;
 
     // Draw Month Table Body
-    rowMemberIds.forEach((memberId, rowIndex) => {
+    for (let rowIndex = 0; rowIndex < rowMemberIds.length; rowIndex += 1) {
+      const memberId = rowMemberIds[rowIndex];
       if (rowIndex % 2 === 0) {
         doc.setFillColor(...rowAltColor);
         doc.rect(tableLeft, currentY, tableWidth, bodyRowHeight, "F");
@@ -172,7 +225,7 @@ export function saveChartReportPdf(options: ChartReportOptions): string | void {
       doc.line(tableLeft, currentY + bodyRowHeight, tableLeft + tableWidth, currentY + bodyRowHeight);
 
       const memberName = memberDisplayName(memberId, members, "Former member");
-      doc.setFont("helvetica", "normal");
+      await setFontFor(memberName, "normal");
       doc.setFontSize(8);
       doc.setTextColor(...textColor.dark);
       doc.text(fitText(memberName, nameWidth - 12), tableLeft + 8, currentY + 12);
@@ -191,16 +244,16 @@ export function saveChartReportPdf(options: ChartReportOptions): string | void {
       // Month total meals
       const monthMealsTotal = daysOfMonth.reduce((sum, d) => sum + (mealMap[memberId]?.[d] ?? 0), 0);
       doc.setFontSize(8);
-      doc.setFont("helvetica", "bold");
+      await setFontFor(formatMeal(monthMealsTotal), "bold");
       doc.text(formatMeal(monthMealsTotal), dx + totalWidth / 2, currentY + 12, { align: "center" });
 
       currentY += bodyRowHeight;
-    });
+    }
 
     // Draw Month Table Footer
     doc.setFillColor(...headerColor);
     doc.rect(tableLeft, currentY, tableWidth, bodyRowHeight, "F");
-    doc.setFont("helvetica", "bold");
+    await setFontFor("Total", "bold");
     doc.setFontSize(8);
     doc.setTextColor(255, 255, 255);
     doc.text("Total", tableLeft + 8, currentY + 12);
@@ -231,7 +284,7 @@ export function saveChartReportPdf(options: ChartReportOptions): string | void {
     currentY = 108;
   }
 
-  doc.setFont("helvetica", "bold");
+  await setFontFor("Overall Member Accounts Summary", "bold");
   doc.setFontSize(12);
   doc.setTextColor(...textColor.dark);
   doc.text("Overall Member Accounts Summary", margin, currentY + 12);
@@ -247,7 +300,7 @@ export function saveChartReportPdf(options: ChartReportOptions): string | void {
 
   doc.setFillColor(...headerColor);
   doc.rect(margin, currentY, balTableWidth, headerHeight, "F");
-  doc.setFont("helvetica", "bold");
+  await setFontFor("Member", "bold");
   doc.setFontSize(9);
   doc.setTextColor(255, 255, 255);
   doc.text("Member", margin + 8, currentY + 14);
@@ -263,7 +316,8 @@ export function saveChartReportPdf(options: ChartReportOptions): string | void {
   currentY += headerHeight;
 
   // Table Body
-  rowMemberIds.forEach((memberId, rowIndex) => {
+  for (let rowIndex = 0; rowIndex < rowMemberIds.length; rowIndex += 1) {
+    const memberId = rowMemberIds[rowIndex];
     if (rowIndex % 2 === 0) {
       doc.setFillColor(...rowAltColor);
       doc.rect(margin, currentY, balTableWidth, bodyRowHeight, "F");
@@ -272,7 +326,7 @@ export function saveChartReportPdf(options: ChartReportOptions): string | void {
     doc.line(margin, currentY + bodyRowHeight, margin + balTableWidth, currentY + bodyRowHeight);
 
     const memberName = memberDisplayName(memberId, members, "Former member");
-    doc.setFont("helvetica", "normal");
+    await setFontFor(memberName, "normal");
     doc.setFontSize(8.5);
     doc.setTextColor(...textColor.dark);
     doc.text(fitText(memberName, balNameWidth - 12), margin + 8, currentY + 12);
@@ -293,16 +347,17 @@ export function saveChartReportPdf(options: ChartReportOptions): string | void {
     } else if (balance > 0) {
       doc.setTextColor(21, 128, 61); // Green
     }
+    await setFontFor((balance >= 0 ? "+" : "") + balance.toFixed(2), "normal");
     doc.text((balance >= 0 ? "+" : "") + balance.toFixed(2), dbx + balWidth / 2, currentY + 12, { align: "center" });
     doc.setTextColor(...textColor.dark); // Reset
 
     currentY += bodyRowHeight;
-  });
+  }
 
   // Table Footer
   doc.setFillColor(...headerColor);
   doc.rect(margin, currentY, balTableWidth, bodyRowHeight, "F");
-  doc.setFont("helvetica", "bold");
+  await setFontFor("Total", "bold");
   doc.setFontSize(9);
   doc.setTextColor(255, 255, 255);
   doc.text("Total", margin + 8, currentY + 12);
@@ -322,7 +377,7 @@ export function saveChartReportPdf(options: ChartReportOptions): string | void {
   if (costs.length > 0 || deposits.length > 0) {
     if (currentY + 120 > bottomLimit) {
       doc.addPage();
-      drawPageHeader("Transaction History");
+      await drawPageHeader("Transaction History");
       currentY = 108;
     }
 
@@ -338,14 +393,14 @@ export function saveChartReportPdf(options: ChartReportOptions): string | void {
     doc.text("Paid History", paidTableLeft, currentY + 12);
     currentY += 22;
 
-    const drawHistoryHeader = (
+    const drawHistoryHeader = async (
       left: number,
       top: number,
       columns: { dateWidth: number; detailWidth: number; amountWidth: number; detailLabel: string },
     ) => {
       doc.setFillColor(...headerColor);
       doc.rect(left, top, historyTableWidth, headerHeight, "F");
-      doc.setFont("helvetica", "bold");
+      await setFontFor("Date", "bold");
       doc.setFontSize(8.5);
       doc.setTextColor(255, 255, 255);
       doc.text("Date", left + 8, top + 13);
@@ -353,7 +408,7 @@ export function saveChartReportPdf(options: ChartReportOptions): string | void {
       doc.text("Amount", left + columns.dateWidth + columns.detailWidth + columns.amountWidth - 8, top + 13, { align: "right" });
     };
 
-    const drawHistoryRow = (
+    const drawHistoryRow = async (
       left: number,
       top: number,
       index: number,
@@ -364,21 +419,23 @@ export function saveChartReportPdf(options: ChartReportOptions): string | void {
         doc.setFillColor(...rowAltColor);
         doc.rect(left, top, historyTableWidth, bodyRowHeight, "F");
       }
-      doc.setFont("helvetica", "normal");
+      await setFontFor(row.date, "normal");
       doc.setFontSize(8);
       doc.setTextColor(...textColor.dark);
       doc.text(row.date, left + 8, top + 12);
+      await setFontFor(fitText(row.detail, columns.detailWidth - 16), "normal");
       doc.text(fitText(row.detail, columns.detailWidth - 16), left + columns.dateWidth + 8, top + 12);
+      await setFontFor(money(row.amount), "normal");
       doc.text(money(row.amount), left + columns.dateWidth + columns.detailWidth + columns.amountWidth - 8, top + 12, { align: "right" });
       doc.setDrawColor(...borderColor);
       doc.line(left, top + bodyRowHeight, left + historyTableWidth, top + bodyRowHeight);
     };
 
-    const drawHistoryPageHeader = () => {
+    const drawHistoryPageHeader = async () => {
       doc.addPage();
-      drawPageHeader("Transaction History");
+      await drawPageHeader("Transaction History");
       currentY = 108;
-      doc.setFont("helvetica", "bold");
+      await setFontFor("Cost History", "bold");
       doc.setFontSize(13);
       doc.setTextColor(...textColor.dark);
       doc.text("Cost History", costTableLeft, currentY + 12);
@@ -410,13 +467,13 @@ export function saveChartReportPdf(options: ChartReportOptions): string | void {
     let paidPageRowIndex = 0;
     for (let rowIndex = 0; rowIndex < maxHistoryRows; rowIndex += 1) {
       if (rowIndex === 0) {
-        if (costs.length > 0) drawHistoryHeader(costTableLeft, currentY, costColumns);
-        if (deposits.length > 0) drawHistoryHeader(paidTableLeft, currentY, paidColumns);
+        if (costs.length > 0) await drawHistoryHeader(costTableLeft, currentY, costColumns);
+        if (deposits.length > 0) await drawHistoryHeader(paidTableLeft, currentY, paidColumns);
         currentY += headerHeight;
       } else if (currentY + bodyRowHeight > bottomLimit) {
-        drawHistoryPageHeader();
-        if (costs.length > rowIndex) drawHistoryHeader(costTableLeft, currentY, costColumns);
-        if (deposits.length > rowIndex) drawHistoryHeader(paidTableLeft, currentY, paidColumns);
+        await drawHistoryPageHeader();
+        if (costs.length > rowIndex) await drawHistoryHeader(costTableLeft, currentY, costColumns);
+        if (deposits.length > rowIndex) await drawHistoryHeader(paidTableLeft, currentY, paidColumns);
         currentY += headerHeight;
         costPageRowIndex = 0;
         paidPageRowIndex = 0;
@@ -425,7 +482,7 @@ export function saveChartReportPdf(options: ChartReportOptions): string | void {
       const cost = sortedCosts[rowIndex];
       const deposit = sortedDeposits[rowIndex];
       if (cost) {
-        drawHistoryRow(costTableLeft, currentY, costPageRowIndex, costColumns, {
+        await drawHistoryRow(costTableLeft, currentY, costPageRowIndex, costColumns, {
           date: cost.date,
           detail: cost.itemName,
           amount: cost.amount,
@@ -433,7 +490,7 @@ export function saveChartReportPdf(options: ChartReportOptions): string | void {
         costPageRowIndex += 1;
       }
       if (deposit) {
-        drawHistoryRow(paidTableLeft, currentY, paidPageRowIndex, paidColumns, {
+        await drawHistoryRow(paidTableLeft, currentY, paidPageRowIndex, paidColumns, {
           date: deposit.date,
           detail:
             deposit.collectedByAdminId === "system-carryover"

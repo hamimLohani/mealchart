@@ -110,11 +110,11 @@ export default function AdminPage() {
     router.push("/?noredirect=1");
   }
 
-  function handleDownloadPDF() {
+  async function handleDownloadPDF() {
     if (!visibleGroup || !activeChart || members.length === 0) return;
 
     try {
-      saveChartReportPdf({
+      await saveChartReportPdf({
         groupName: visibleGroup.name || "Group",
         chartLabel: activeChart.label || "Report",
         monthKeys: activeChart.monthKeys || [activeChart.monthKey],

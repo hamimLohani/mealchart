@@ -213,7 +213,7 @@ export function CreateChartManager() {
 
         let pdfAttachment: string | undefined;
         try {
-          const generatedPdf = saveChartReportPdf({
+          const generatedPdf = await saveChartReportPdf({
             groupName: group.name || "Group",
             chartLabel: chart.label || "Report",
             monthKeys: chart.monthKeys || [chart.monthKey],
@@ -334,7 +334,7 @@ export function CreateChartManager() {
         throw new Error("Failed to load chart data - invalid response format");
       }
 
-      saveChartReportPdf({
+      await saveChartReportPdf({
         groupName: group.name || "Group",
         chartLabel: chart.label || "Report",
         monthKeys: chart.monthKeys || [chart.monthKey],
