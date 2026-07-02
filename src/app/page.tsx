@@ -1,6 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "@/lib/firebase/client";
+import { resolveSignInDestination } from "@/lib/auth/sign-in-routing";
 import { useT } from "@/i18n/use-t";
 
 const featureKeys = [
@@ -32,7 +37,44 @@ const stepKeys = [
 const tutorialVideoId = process.env.NEXT_PUBLIC_TUTORIAL_VIDEO_ID || "REPLACE_WITH_YOUTUBE_ID";
 
 export default function Home() {
+  const router = useRouter();
+  const [checkedAuth, setCheckedAuth] = useState(false);
   const { t } = useT();
+
+  useEffect(() => {
+    if (!auth) {
+      setCheckedAuth(true);
+      return;
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const destination = await resolveSignInDestination(user);
+        if (destination.kind === "member") {
+          router.replace(`/group/${destination.groupId}/member/${encodeURIComponent(destination.memberId)}`);
+          return;
+        }
+
+        if (destination.kind === "admin") {
+          router.replace("/admin");
+          return;
+        }
+      }
+      setCheckedAuth(true);
+    });
+
+    return () => unsubscribe();
+  }, [router]);
+
+  if (!checkedAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[color:var(--background)]">
+        <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-6 shadow-[var(--shadow-sm)]">
+          <p className="text-sm text-[color:var(--soft-foreground)]">{t("common.loading")}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 pb-16 pt-6 sm:px-8 sm:pt-10">
