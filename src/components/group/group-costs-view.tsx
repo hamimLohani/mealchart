@@ -138,16 +138,16 @@ export function GroupCostsView({ groupId }: { groupId: string }) {
     invalidCharacters: t("costs.amountHintInvalidCharacters"),
     invalidFormula: t("costs.amountHintInvalidFormula"),
   });
+  const amountLabelStatus = !amount.trim()
+    ? ""
+    : parsedAmountInput.isValid && parsedAmountInput.value !== null
+      ? `= ${parsedAmountInput.value.toFixed(2)} ${tk}`
+      : "ERROR";
   const amountHintClassName = !amount.trim()
     ? "text-xs text-[color:var(--muted)]"
     : parsedAmountInput.isValid
       ? "text-xs text-[color:var(--success-text)]"
       : "text-xs text-[color:var(--danger)]";
-  const amountHintText = !amount.trim()
-    ? t("costs.amountHintEmpty")
-    : parsedAmountInput.isValid && parsedAmountInput.value !== null
-      ? `${t("costs.amountHintResult")} ${parsedAmountInput.value.toFixed(2)} ${tk}`
-      : parsedAmountInput.message;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -236,17 +236,22 @@ export function GroupCostsView({ groupId }: { groupId: string }) {
             <input className="input" value={itemName} onChange={(e) => setItemName(e.target.value)} placeholder={t("costs.placeholderItem")} required />
           </label>
           <label className="grid gap-1.5 text-sm font-medium">
-            {t("admin.amountTk")}
+            <span className={amountHintClassName}>
+              {amountLabelStatus
+                ? `${t("admin.amountTk")} ${amountLabelStatus}`
+                : t("admin.amountTk")}
+            </span>
             <input
               className="input"
               type="text"
-              inputMode="decimal"
+              inputMode="text"
+              autoCorrect="off"
+              autoComplete="off"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="250 or =122+1243+1234"
               required
             />
-            <p className={amountHintClassName}>{amountHintText}</p>
           </label>
           <label className="grid gap-1.5 text-sm font-medium">
             {t("admin.date")}
