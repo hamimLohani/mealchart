@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, type User } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { resolveSignInDestination } from "@/lib/auth/sign-in-routing";
 import { useT } from "@/i18n/use-t";
@@ -47,9 +47,19 @@ export default function Home() {
       return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
+    let active = true;
+
+    const handleUser = async (user: User | null) => {
+      if (!active) return;
+      if (!user) {
+        setCheckedAuth(true);
+        return;
+      }
+
+      try {
         const destination = await resolveSignInDestination(user);
+        if (!active) return;
+
         if (destination.kind === "member") {
           router.replace(`/group/${destination.groupId}/member/${encodeURIComponent(destination.memberId)}`);
           return;
@@ -59,11 +69,23 @@ export default function Home() {
           router.replace("/admin");
           return;
         }
+      } catch (error) {
+        console.warn("Failed to resolve sign-in destination:", error);
       }
-      setCheckedAuth(true);
-    });
 
-    return () => unsubscribe();
+      if (active) setCheckedAuth(true);
+    };
+
+    if (auth.currentUser) {
+      void handleUser(auth.currentUser);
+      return;
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, handleUser);
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, [router]);
 
   if (!checkedAuth) {
