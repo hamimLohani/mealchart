@@ -292,6 +292,12 @@ export async function createMember(input: {
     throw new Error("EMAIL_ALREADY_ADMIN");
   }
 
+  // Check if email is already a member in any group
+  const existingMember = await findMemberGroupByEmail(input.email);
+  if (existingMember) {
+    throw new Error("EMAIL_ALREADY_MEMBER");
+  }
+
   // --- Payment/Limit Check ---
   const groupSnap = await getDoc(doc(database, groupsCollection, input.groupId));
   if (!groupSnap.exists()) throw new Error("Group not found.");

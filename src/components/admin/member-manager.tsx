@@ -236,6 +236,10 @@ export function MemberManager() {
         const msg = t("errors.emailAlreadyAdmin");
         setError(msg);
         showError(msg);
+      } else if (e instanceof Error && e.message === "EMAIL_ALREADY_MEMBER") {
+        const msg = t("errors.emailAlreadyMember");
+        setError(msg);
+        showError(msg);
       } else {
         const msg = e instanceof Error ? e.message : t("toast.genericError");
         setError(msg);
@@ -424,6 +428,10 @@ export function MemberManager() {
         showError(t("toast.limitReachedMember"));
       } else if (e instanceof Error && e.message === "EMAIL_ALREADY_ADMIN") {
         const msg = t("errors.emailAlreadyAdmin");
+        setError(msg);
+        showError(msg);
+      } else if (e instanceof Error && e.message === "EMAIL_ALREADY_MEMBER") {
+        const msg = t("errors.emailAlreadyMember");
         setError(msg);
         showError(msg);
       } else {
