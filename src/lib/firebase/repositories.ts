@@ -18,6 +18,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import {
+  buildAdminProfile,
   buildChartRecord,
   buildDepositRecord,
   buildMemberRecord,
@@ -178,6 +179,58 @@ export async function updateAdminProfile(adminId: string, payload: Partial<Admin
   await updateDoc(doc(database, adminsCollection, adminId), payload);
 }
 
+export async function deleteAdminProfile(adminId: string) {
+  const database = ensureDb();
+  await deleteDoc(doc(database, adminsCollection, adminId));
+}
+
+export async function createAdminProfile(input: {
+  groupId: string;
+  email: string;
+  fullName?: string;
+  role?: "owner" | "admin";
+}) {
+  const database = ensureDb();
+  const normalizedEmail = input.email.trim().toLowerCase();
+  const profileId = `${input.groupId}:${normalizedEmail}`;
+  const profileRef = doc(database, adminsCollection, profileId);
+  const existingSnap = await getDoc(profileRef);
+  if (existingSnap.exists()) {
+    throw new Error("ADMIN_ALREADY_EXISTS");
+  }
+
+  // Check if email is already an admin in any group
+  const existingAdmin = await findAdminProfileByEmail(input.email);
+  if (existingAdmin) {
+    throw new Error("ADMIN_ALREADY_EXISTS");
+  }
+
+  // Check if email is already a member in any group
+  const existingMember = await findMemberGroupByEmail(input.email);
+  if (existingMember) {
+    throw new Error("EMAIL_ALREADY_MEMBER");
+  }
+
+  const payload = buildAdminProfile({
+    id: profileId,
+    email: normalizedEmail,
+    fullName: input.fullName?.trim() || undefined,
+    groupId: input.groupId,
+    role: input.role ?? "admin",
+  });
+
+  await setDoc(profileRef, payload);
+  return payload;
+}
+
+export async function listAdminProfiles(groupId: string) {
+  const database = ensureDb();
+  const snapshot = await getDocs(query(collection(database, adminsCollection), where("groupId", "==", groupId)));
+  return snapshot.docs.map((entry) => ({
+    ...normalizeDoc<AdminProfile>(entry.id, entry.data()),
+    createdAt: serializeDate(entry.data().createdAt),
+  }));
+}
 
 export async function migrateAdminProfile(oldUid: string, newUid: string) {
   const database = ensureDb();
@@ -191,13 +244,21 @@ export async function migrateAdminProfile(oldUid: string, newUid: string) {
   const groupId = typeof data.groupId === "string" ? data.groupId : "";
   if (!groupId) throw new Error("Admin profile is missing a group.");
 
+  const groupRef = doc(database, groupsCollection, groupId);
+  const groupSnap = await getDoc(groupRef);
+  const groupData = groupSnap.exists() ? groupSnap.data() : null;
+  const currentAdminId = typeof groupData?.adminId === "string" ? groupData.adminId : "";
+  const shouldUpdateGroupAdmin = !currentAdminId || currentAdminId === oldUid;
+
   const batch = writeBatch(database);
   batch.set(newRef, {
     ...data,
     id: newUid,
     email: typeof data.email === "string" ? data.email.trim().toLowerCase() : data.email,
   });
-  batch.update(doc(database, groupsCollection, groupId), { adminId: newUid });
+  if (shouldUpdateGroupAdmin) {
+    batch.update(groupRef, { adminId: newUid });
+  }
   await batch.commit();
 }
 
@@ -219,11 +280,16 @@ export async function createMember(input: {
 }) {
   const database = ensureDb();
   const memberId = input.email.trim().toLowerCase();
-  
   const memberRef = doc(database, membersCollection(input.groupId), memberId);
   const snap = await getDoc(memberRef);
   if (snap.exists()) {
     throw new Error("A member with this email already exists.");
+  }
+
+  // Check if email is already an admin in any group
+  const existingAdmin = await findAdminProfileByEmail(input.email);
+  if (existingAdmin) {
+    throw new Error("EMAIL_ALREADY_ADMIN");
   }
 
   // --- Payment/Limit Check ---
@@ -260,7 +326,6 @@ export async function createMember(input: {
   });
 
   await setDoc(memberRef, record);
-
   return record;
 }
 
@@ -341,6 +406,7 @@ export async function rejectJoinRequest(groupId: string, requestId: string) {
 
 export async function approveJoinRequest(groupId: string, requestId: string, fullName: string, email: string) {
   const database = ensureDb();
+
   // We can just call createMember for simplicity, then delete the request
   await createMember({
     groupId,
@@ -349,6 +415,7 @@ export async function approveJoinRequest(groupId: string, requestId: string, ful
     email,
   });
   await deleteDoc(doc(database, `groups/${groupId}/joinRequests`, requestId));
+
 }
 
 
@@ -461,8 +528,8 @@ export async function createChart(input: {
     });
   } else {
     // Increment total count for free slot
-    let remainingFree = Math.max(0, 3 - totalCreated);
-    let slotsToPay = Math.max(0, duration - remainingFree);
+    const remainingFree = Math.max(0, 3 - totalCreated);
+    const slotsToPay = Math.max(0, duration - remainingFree);
     
     if (slotsToPay > 0) {
       const paidSlots = groupData.paidChartSlots || 0;

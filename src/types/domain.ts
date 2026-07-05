@@ -3,6 +3,7 @@ export type AdminProfile = {
   email: string;
   fullName?: string;
   groupId: string;
+  role?: "owner" | "admin";
   createdAt: string;
 };
 

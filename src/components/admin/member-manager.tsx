@@ -5,21 +5,27 @@ import { useSWRConfig } from "swr";
 import { auth } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { useT } from "@/i18n/use-t";
-import { createMember, deleteMember, listMembers, updateMember, listJoinRequests, approveJoinRequest, rejectJoinRequest, getGroupById } from "@/lib/firebase/repositories";
+import { createAdminProfile, createMember, deleteMember, listMembers, updateMember, listJoinRequests, approveJoinRequest, rejectJoinRequest, getGroupById, listAdminProfiles, deleteAdminProfile } from "@/lib/firebase/repositories";
 import { toDateInputValue } from "@/lib/utils/date";
-import type { AdminProfile, Member, JoinRequest } from "@/types/domain";
-import { sendWelcomeEmail, sendRemovalEmail, verifyEmailExistence } from "@/lib/email/actions";
+import type { AdminProfile, Member, JoinRequest, Group } from "@/types/domain";
+import { sendWelcomeEmail, sendRemovalEmail, verifyEmailExistence, sendAdminWelcomeEmail } from "@/lib/email/actions";
 import { getFriendlyEmailError } from "@/lib/utils/email-error";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
+import { useAuthStore } from "@/store/auth-store";
 import { useToast } from "@/lib/hooks/use-toast";
 
 type MemberFormState = { fullName: string; joinDate: string; email: string };
+type AdminInviteFormState = { fullName: string; email: string };
 const initialForm: MemberFormState = {
   fullName: "",
   joinDate: toDateInputValue(new Date()),
+  email: "",
+};
+const initialAdminInviteForm: AdminInviteFormState = {
+  fullName: "",
   email: "",
 };
 
@@ -34,24 +40,31 @@ export function MemberManager() {
       : null;
 
   const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null);
+  const [adminProfiles, setAdminProfiles] = useState<AdminProfile[]>([]);
   const [groupName, setGroupName] = useState("");
+  const [group, setGroup] = useState<Group | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [paidMemberSlots, setPaidMemberSlots] = useState(0);
   const [totalMembersCreated, setTotalMembersCreated] = useState(0);
   const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
   const [form, setForm] = useState<MemberFormState>(initialForm);
+  const [adminInviteForm, setAdminInviteForm] = useState<AdminInviteFormState>(initialAdminInviteForm);
   const [search, setSearch] = useState("");
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(configurationError);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isInvitingAdmin, setIsInvitingAdmin] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
+  const [adminToDelete, setAdminToDelete] = useState<AdminProfile | null>(null);
   const [requestAction, setRequestAction] = useState<"approve" | "reject" | null>(null);
   const [copiedGroupId, setCopiedGroupId] = useState(false);
+  const { admin, isLoaded } = useAuthStore();
   const { adminProfile: currentAdminProfile, isLoading: profileLoading, error: profileError } = useCurrentAdminProfile();
   const activeAdminProfile =
     currentAdminProfile && adminProfile?.id === currentAdminProfile.id ? adminProfile : null;
+  const isGroupOwner = group && admin && group.adminId === admin.uid;
   const visibleMembers = useMemo(
     () => (activeAdminProfile ? members : []),
     [activeAdminProfile, members],
@@ -76,13 +89,15 @@ export function MemberManager() {
       : t("memberMgr.submittingReject")
     : isRemoving
       ? t("memberMgr.submittingRemove")
-      : editingMemberId
-        ? t("memberMgr.submittingUpdate")
-        : t("memberMgr.submittingAdd");
+      : isInvitingAdmin
+        ? t("memberMgr.invitingAdmin")
+        : editingMemberId
+          ? t("memberMgr.submittingUpdate")
+          : t("memberMgr.submittingAdd");
 
   useGlobalLoading(
     "member-manager",
-    isLoading || profileLoading || isSubmitting || isRemoving || !!requestAction,
+    isLoading || profileLoading || isSubmitting || isRemoving || !!requestAction || isInvitingAdmin,
     isLoading ? t("memberMgr.loadingList") : requestLoadingMessage,
   );
 
@@ -97,15 +112,18 @@ export function MemberManager() {
         if (!active) return;
         setIsLoading(true);
         setError(null);
-        const [currentMembers, currentRequests, group] = await Promise.all([
+        const [currentMembers, currentRequests, group, currentAdminProfiles] = await Promise.all([
           listMembers(currentAdminProfile.groupId),
           listJoinRequests(currentAdminProfile.groupId),
           getGroupById(currentAdminProfile.groupId),
+          listAdminProfiles(currentAdminProfile.groupId),
         ]);
         if (!active) return;
         setAdminProfile(currentAdminProfile);
         setGroupName(group?.name ?? "");
+        setGroup(group);
         setMembers(currentMembers);
+        setAdminProfiles(currentAdminProfiles);
         setPaidMemberSlots(group?.paidMemberSlots ?? 0);
         setTotalMembersCreated(group?.totalMembersCreated ?? 0);
         setJoinRequests(currentRequests);
@@ -159,7 +177,7 @@ export function MemberManager() {
         const errorKey = verification.error === "The email domain does not exist." 
           ? "errors.emailDomainNotExist" 
           : "errors.emailNotExist";
-          
+        
         setError(`ERR_TRANS:${JSON.stringify({ 
           key: "errors.emailValidationFailed", 
           vars: { error: t(errorKey) } 
@@ -214,6 +232,10 @@ export function MemberManager() {
       if (e instanceof Error && e.message === "LIMIT_REACHED_MEMBER") {
         setError("LIMIT_REACHED_MEMBER");
         showError(t("toast.limitReachedMember"));
+      } else if (e instanceof Error && e.message === "EMAIL_ALREADY_ADMIN") {
+        const msg = t("errors.emailAlreadyAdmin");
+        setError(msg);
+        showError(msg);
       } else {
         const msg = e instanceof Error ? e.message : t("toast.genericError");
         setError(msg);
@@ -221,6 +243,73 @@ export function MemberManager() {
       }
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleInviteAdmin() {
+    setError(null);
+
+    if (!activeAdminProfile) {
+      setError("Admin profile is required before managing members.");
+      return;
+    }
+
+    const fullNameTrim = adminInviteForm.fullName.trim();
+    const emailTrim = adminInviteForm.email.trim();
+    if (!fullNameTrim || !emailTrim) {
+      setError("Full name and email are required.");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailTrim)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    setIsInvitingAdmin(true);
+    try {
+      await createAdminProfile({
+        groupId: activeAdminProfile.groupId,
+        fullName: fullNameTrim,
+        email: emailTrim,
+        role: "admin",
+      });
+      setAdminInviteForm(initialAdminInviteForm);
+      showSuccess(t("toast.adminAdded"));
+      
+      // Refresh admin list
+      const updatedAdminProfiles = await listAdminProfiles(activeAdminProfile.groupId);
+      setAdminProfiles(updatedAdminProfiles);
+      
+      // Send admin welcome email
+      const emailResult = await sendAdminWelcomeEmail(
+        emailTrim,
+        fullNameTrim,
+        groupName || activeAdminProfile.groupId,
+      );
+      if (!emailResult.success) {
+        const friendlyError = getFriendlyEmailError(emailResult.error || "");
+        setError(`ERR_TRANS:${JSON.stringify({ 
+          key: "errors.emailWelcomeFailed", 
+          vars: { error: friendlyError } 
+        })}`);
+      }
+    } catch (e) {
+      let msg;
+      if (e instanceof Error && e.message === "ADMIN_ALREADY_EXISTS") {
+        msg = t("errors.adminAlreadyExists");
+      } else if (e instanceof Error && e.message === "EMAIL_ALREADY_MEMBER") {
+        msg = t("errors.emailAlreadyMember");
+      } else {
+        msg = e instanceof Error
+          ? e.message
+          : t("toast.genericError");
+      }
+      setError(msg);
+      showError(msg);
+    } finally {
+      setIsInvitingAdmin(false);
     }
   }
 
@@ -241,6 +330,24 @@ export function MemberManager() {
           setError(`ERR_TRANS:${JSON.stringify({ key: "errors.emailRemovalFailed", vars: { error: friendlyError } })}`);
         }
       }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : t("toast.genericError");
+      setError(msg);
+      showError(msg);
+    } finally {
+      setIsRemoving(false);
+    }
+  }
+
+  async function performDeleteAdmin(admin: AdminProfile) {
+    if (!activeAdminProfile || !group) return;
+    setError(null);
+    setIsRemoving(true);
+    try {
+      await deleteAdminProfile(admin.id);
+      const updatedAdminProfiles = await listAdminProfiles(activeAdminProfile.groupId);
+      setAdminProfiles(updatedAdminProfiles);
+      showSuccess(t("toast.memberRemoved"));
     } catch (e) {
       const msg = e instanceof Error ? e.message : t("toast.genericError");
       setError(msg);
@@ -315,6 +422,10 @@ export function MemberManager() {
       if (e instanceof Error && e.message === "LIMIT_REACHED_MEMBER") {
         setError("LIMIT_REACHED_MEMBER");
         showError(t("toast.limitReachedMember"));
+      } else if (e instanceof Error && e.message === "EMAIL_ALREADY_ADMIN") {
+        const msg = t("errors.emailAlreadyAdmin");
+        setError(msg);
+        showError(msg);
       } else {
         const msg = e instanceof Error ? e.message : t("toast.genericError");
         setError(msg);
@@ -463,6 +574,85 @@ export function MemberManager() {
         </div>
       </form>
 
+      {isGroupOwner && (
+        <>
+          <div className="grid gap-4 rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-3.5 sm:p-4 shadow-[var(--shadow-sm)]">
+            <div className="space-y-1">
+              <p className="admin-section-label">{t("memberMgr.inviteAdminTitle")}</p>
+              <p className="text-sm text-[color:var(--soft-foreground)]">{t("memberMgr.adminHelper")}</p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="grid gap-1.5 text-sm font-medium">
+                {t("memberMgr.fullName")}
+                <input
+                  className="input"
+                  onChange={(e) => setAdminInviteForm((c) => ({ ...c, fullName: e.target.value }))}
+                  placeholder="Md. Rahim"
+                  value={adminInviteForm.fullName}
+                />
+              </label>
+              <label className="grid gap-1.5 text-sm font-medium">
+                {t("memberMgr.email")}
+                <input
+                  className="input"
+                  onChange={(e) => setAdminInviteForm((c) => ({ ...c, email: e.target.value }))}
+                  placeholder="admin@example.com"
+                  type="email"
+                  value={adminInviteForm.email}
+                />
+              </label>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button
+                className="button-secondary"
+                disabled={!activeAdminProfile || isInvitingAdmin}
+                onClick={() => void handleInviteAdmin()}
+                type="button"
+              >
+                {isInvitingAdmin ? t("memberMgr.invitingAdmin") : t("memberMgr.inviteAdmin")}
+              </button>
+            </div>
+          </div>
+
+          <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-4 shadow-[var(--shadow-sm)]">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="admin-section-label">Admins</p>
+                <p className="mt-1.5 text-lg font-semibold">
+                  Showing {adminProfiles.length} {adminProfiles.length === 1 ? "admin" : "admins"}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-2.5">
+              {adminProfiles.map((admin) => (
+                <article
+                  key={admin.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3"
+                >
+                  <div className="min-w-0">
+                    <p className="font-semibold">{admin.fullName || admin.email}</p>
+                    <p className="mt-0.5 text-xs text-[color:var(--muted)]">
+                      {admin.email}
+                      {admin.role && (
+                        <span className="ml-2 px-2 py-0.5 rounded-full bg-[color:var(--accent)] text-white text-xs">
+                          {admin.role}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  {admin.id !== group?.adminId && (
+                    <button className="button-danger" onClick={() => setAdminToDelete(admin)} type="button">
+                      {t("memberMgr.remove")}
+                    </button>
+                  )}
+                </article>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
       {visibleJoinRequests.length > 0 && (
         <div className="rounded-[var(--radius)] border-2 border-[color:var(--accent)] bg-[color:var(--panel)] p-4 shadow-[0_0_0_4px_var(--accent-dim)]">
           <p className="admin-section-label">{t("memberMgr.pendingRequests")}</p>
@@ -567,6 +757,22 @@ export function MemberManager() {
           if (!memberToDelete) return;
           await performDeleteMember(memberToDelete);
           setMemberToDelete(null);
+        }}
+      />
+    )}
+    {adminToDelete && (
+      <ConfirmModal
+        open={!!adminToDelete}
+        title={t("memberMgr.remove")}
+        description={t("memberMgr.removeConfirm", { member: adminToDelete.fullName || adminToDelete.email })}
+        confirmLabel={t("memberMgr.remove")}
+        cancelLabel={t("common.cancel")}
+        isProcessing={isRemoving}
+        onCancel={() => setAdminToDelete(null)}
+        onConfirm={async () => {
+          if (!adminToDelete) return;
+          await performDeleteAdmin(adminToDelete);
+          setAdminToDelete(null);
         }}
       />
     )}

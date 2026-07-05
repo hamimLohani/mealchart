@@ -15,8 +15,12 @@ service cloud.firestore {
 
     function isGroupAdmin(groupId) {
       return isSignedIn()
-        && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
-        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.groupId == groupId;
+        && (
+          (exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+            && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.groupId == groupId)
+          || (exists(/databases/$(database)/documents/admins/$(groupId + ":" + signedInEmail()))
+            && get(/databases/$(database)/documents/admins/$(groupId + ":" + signedInEmail())).data.groupId == groupId)
+        );
     }
 
     function hasOnlyFields(fields) {
@@ -42,14 +46,14 @@ service cloud.firestore {
     }
 
     function isValidAdminUpdate(adminId) {
+      let allowedKeys = ["id", "email", "fullName", "groupId", "createdAt"];
       return isSignedIn()
-        && request.auth.uid == adminId
-        && hasOnlyFields(["id", "email", "fullName", "groupId", "createdAt"])
-        && request.resource.data.id == resource.data.id
-        && request.resource.data.groupId == resource.data.groupId
-        && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.email is string
-        && request.resource.data.email == signedInEmail();
+        && (request.auth.uid == adminId || resource.data.email == signedInEmail())
+        && request.resource.data.keys().hasOnly(allowedKeys)
+        && (!("id" in request.resource.data) || request.resource.data.id == resource.data.id)
+        && (!("groupId" in request.resource.data) || request.resource.data.groupId == resource.data.groupId)
+        && (!("createdAt" in request.resource.data) || request.resource.data.createdAt == resource.data.createdAt)
+        && (!("email" in request.resource.data) || (request.resource.data.email is string && request.resource.data.email == signedInEmail()));
     }
 
     function isMonthKeyLocked(groupId, monthKey) {
@@ -265,11 +269,28 @@ service cloud.firestore {
       allow delete: if isGroupAdmin(groupId);
     }
 
+    function isEmailAlreadyMember(groupId, emailLower) {
+      // First check if memberId is the email
+      if (exists(/databases/$(database)/documents/groups/$(groupId)/members/$(emailLower))) {
+        return true;
+      }
+      // To check all members for matching email field, we'd need to use a collection group query
+      // But since Firestore security rules can't do that, we'll rely on the frontend check and the memberId check
+      return false;
+    }
+
     match /admins/{adminId} {
       allow read: if true;
-      allow create: if isValidAdminCreate(adminId);
+      allow create: if isValidAdminCreate(adminId) 
+        || (isSignedIn() 
+            && hasOnlyFields(["id", "email", "fullName", "groupId", "role", "createdAt"])
+            && request.resource.data.id == adminId
+            && request.resource.data.email is string
+            && request.resource.data.groupId is string
+            && isGroupOwner(request.resource.data.groupId)
+            && !isEmailAlreadyMember(request.resource.data.groupId, request.resource.data.email.lower()));
       allow update: if isValidAdminUpdate(adminId);
-      allow delete: if false;
+      allow delete: if isGroupOwner(resource.data.groupId);
     }
 
     match /groups/{groupId}/members/{memberId} {

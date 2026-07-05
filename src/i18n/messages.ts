@@ -445,6 +445,10 @@ export const en = {
   "memberMgr.reject": "Reject",
   "memberMgr.submittingApprove": "Approving request…",
   "memberMgr.submittingReject": "Rejecting request…",
+  "memberMgr.inviteAdminTitle": "Invite a new admin",
+  "memberMgr.inviteAdmin": "Invite admin",
+  "memberMgr.invitingAdmin": "Inviting admin…",
+  "memberMgr.adminHelper": "This adds the person as an admin for this group. They can sign in with this email to manage the group.",
 
   // Notices manager (admin)
   "noticeMgr.addFormTitle": "Add Notice",
@@ -630,6 +634,9 @@ export const en = {
   "errors.logInMembers": "Log in as an admin to manage members.",
   "errors.loadMembersFailed": "Failed to load members.",
   "errors.adminRequiredMembers": "Admin profile is required before managing members.",
+  "errors.adminAlreadyExists": "This email is already an admin for this group.",
+  "errors.emailAlreadyMember": "This email is already a group member.",
+  "errors.emailAlreadyAdmin": "This email is already an admin.",
   "errors.memberFieldsRequired": "Full name, join date, and email are required.",
   "errors.memberExists": "A member with this email already exists.",
   "errors.invalidEmail": "Please enter a valid email address.",
@@ -668,6 +675,7 @@ export const en = {
 
   // Toasts
   "toast.memberAdded": "Member added successfully!",
+  "toast.adminAdded": "Admin added successfully!",
   "toast.memberUpdated": "Member updated successfully!",
   "toast.memberRemoved": "Member removed successfully!",
   "toast.chartCreated": "New chart created successfully!",
@@ -1122,6 +1130,10 @@ export const bn: Record<MessageKey, string> = {
   "memberMgr.reject": "প্রত্যাখ্যান করুন",
   "memberMgr.submittingApprove": "অনুরোধ অনুমোদন করা হচ্ছে…",
   "memberMgr.submittingReject": "অনুরোধ প্রত্যাখ্যান করা হচ্ছে…",
+  "memberMgr.inviteAdminTitle": "নতুন অ্যাডমিন আমন্ত্রণ",
+  "memberMgr.inviteAdmin": "অ্যাডমিন আমন্ত্রণ",
+  "memberMgr.invitingAdmin": "অ্যাডমিন আমন্ত্রণ পাঠানো হচ্ছে…",
+  "memberMgr.adminHelper": "এটি ব্যবহারকারীকে এই গ্রুপের অ্যাডমিন হিসেবে যোগ করবে। তারা এই ইমেইল দিয়ে সাইন ইন করে গ্রুপ পরিচালনা করতে পারবে।",
 
   "noticeMgr.addFormTitle": "নোটিশ যোগ",
   "noticeMgr.editFormTitle": "নোটিশ সম্পাদনা",
@@ -1289,6 +1301,9 @@ export const bn: Record<MessageKey, string> = {
   "errors.logInMembers": "সদস্য পরিচালনার জন্য অ্যাডমিন হিসেবে লগইন করুন।",
   "errors.loadMembersFailed": "সদস্য লোড ব্যর্থ।",
   "errors.adminRequiredMembers": "সদস্য পরিচালনার আগে অ্যাডমিন প্রোফাইল দরকার।",
+  "errors.adminAlreadyExists": "এই ইমেইলটি ইতিমধ্যে এই গ্রুপের অ্যাডমিন।",
+  "errors.emailAlreadyMember": "এই ইমেইলটি ইতিমধ্যে গ্রুপের সদস্য।",
+  "errors.emailAlreadyAdmin": "এই ইমেইলটি ইতিমধ্যে অ্যাডমিন।",
   "errors.memberFieldsRequired": "পূর্ণ নাম, যোগদানের তারিখ ও ইমেইল দরকার।",
   "errors.memberExists": "এই ইমেইল দিয়ে ইতিমধ্যে একজন সদস্য আছেন।",
   "errors.invalidEmail": "অনুগ্রহ করে একটি সঠিক ইমেইল এড্রেস দিন।",
@@ -1342,6 +1357,7 @@ export const bn: Record<MessageKey, string> = {
 
   // Toasts
   "toast.memberAdded": "সদস্য সফলভাবে যোগ করা হয়েছে!",
+  "toast.adminAdded": "অ্যাডমিন সফলভাবে যোগ করা হয়েছে!",
   "toast.memberUpdated": "সদস্যের তথ্য সফলভাবে আপডেট করা হয়েছে!",
   "toast.memberRemoved": "সদস্য সফলভাবে সরানো হয়েছে!",
   "toast.chartCreated": "নতুন চার্ট সফলভাবে তৈরি হয়েছে!",

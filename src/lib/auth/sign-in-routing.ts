@@ -30,16 +30,7 @@ export async function getAdminProfileForUser(user: User) {
   } else {
     profile = await getAdminProfile(user.uid);
     if (!profile) {
-      const emailProfile = await findAdminProfileByEmail(user.email);
-      if (emailProfile) {
-        try {
-          await migrateAdminProfile(emailProfile.id, user.uid);
-          profile = await getAdminProfile(user.uid);
-        } catch (error) {
-          console.warn("Failed to migrate admin profile:", error);
-          throw new Error("Admin profile was found for this email, but account repair failed.");
-        }
-      }
+      profile = await findAdminProfileByEmail(user.email);
     }
   }
 

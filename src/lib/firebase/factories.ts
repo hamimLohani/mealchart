@@ -9,7 +9,7 @@ import type {
   Notice,
   JoinRequest,
 } from "@/types/domain";
-import { daysInMonth, getChartMonthKeys, toMonthKey } from "@/lib/utils/date";
+import { daysInMonth, getChartMonthKeys } from "@/lib/utils/date";
 
 export function buildGroupRecord(input: {
   id: string;
@@ -66,12 +66,14 @@ export function buildAdminProfile(input: {
   email: string;
   fullName?: string;
   groupId: string;
+  role?: "owner" | "admin";
 }): AdminProfile {
   return {
     id: input.id,
     email: input.email.trim().toLowerCase(),
     fullName: input.fullName,
     groupId: input.groupId,
+    role: input.role ?? "owner",
     createdAt: new Date().toISOString(),
   };
 }
