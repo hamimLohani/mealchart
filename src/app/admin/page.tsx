@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { signOut } from "firebase/auth";
 import { auth, db } from "@/lib/firebase/client";
 import { doc, getDoc } from "firebase/firestore";
 import { useT } from "@/i18n/use-t";
@@ -11,12 +10,14 @@ import { groupsCollection } from "@/lib/firebase/paths";
 import { useAuthStore } from "@/store/auth-store";
 import type { Group } from "@/types/domain";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
+import { useToast } from "@/lib/hooks/use-toast";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
 import { AdminMonthSummary } from "@/components/admin/admin-month-summary";
 import { useCharts, useCosts, useDeposits, useMealsForChart, useMembers } from "@/lib/hooks/use-data";
 import { saveChartReportPdf } from "@/lib/utils/pdf-report";
 import { pickCurrentMonthChart } from "@/lib/utils/date";
+import { handleAdminLogout } from "@/lib/auth/admin-logout";
 
 const navItemKeys = [
   { href: "/admin/members", labelKey: "adminNav.members" as const, hintKey: "adminNav.membersHint" as const, metric: "01" },
@@ -51,6 +52,7 @@ export default function AdminPage() {
   const { admin, isLoaded } = useAuthStore();
   const router = useRouter();
   const { t, tx } = useT();
+  const { toast } = useToast();
   const [group, setGroup] = useState<Group | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isSignOutInProgress, setIsSignOutInProgress] = useState(false);
@@ -105,9 +107,9 @@ export default function AdminPage() {
     };
   }, [adminProfile, t, tx]);
   async function handleLogout() {
-    setIsSignOutInProgress(true);
-    if (auth) await signOut(auth);
-    router.push("/?noredirect=1");
+    await handleAdminLogout(auth, router, setIsSignOutInProgress, (error) => {
+      toast(error.message || "Failed to sign out. Please try again.", "error");
+    });
   }
 
   async function handleDownloadPDF() {
@@ -124,10 +126,11 @@ export default function AdminPage() {
         deposits: monthDeposits || [],
         fileName: `${visibleGroup.name}_${activeChart.label}_Report.pdf`,
       });
+      toast("Report exported successfully", "success");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to generate PDF";
       console.error("PDF export error:", msg);
-      setLoadError(tx(msg));
+      toast(tx(msg), "error");
     }
   }
 
@@ -171,8 +174,8 @@ export default function AdminPage() {
             type="button"
             className="button-secondary rounded-full p-2"
             disabled={!visibleGroup || !activeChart || members.length === 0}
-            aria-label={t("groupDash.exportCSV", { defaultValue: "Export PDF" })}
-            title={t("groupDash.exportCSV", { defaultValue: "Export PDF" })}
+            aria-label="Export report as PDF"
+            title="Export report as PDF"
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -185,7 +188,7 @@ export default function AdminPage() {
 
       {visibleGroup && <AdminMonthSummary groupId={visibleGroup.id} />}
 
-      <div className="hidden gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {navItemKeys.map((item) => (
           <Link key={item.href} href={item.href} className="admin-panel-card">
             <span className="admin-panel-card-index">{item.metric}</span>

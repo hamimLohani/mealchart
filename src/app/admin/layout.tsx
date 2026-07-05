@@ -1,5 +1,6 @@
 import { AdminNav } from "@/components/admin/admin-nav";
 import { AdminMobileBar } from "@/components/admin/admin-mobile-bar";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 export default function AdminLayout({
   children,
@@ -21,7 +22,9 @@ export default function AdminLayout({
         <div className="mb-4 md:hidden">
           <AdminMobileBar />
         </div>
-        {children}
+        <ErrorBoundary>
+          {children}
+        </ErrorBoundary>
       </main>
     </div>
   );

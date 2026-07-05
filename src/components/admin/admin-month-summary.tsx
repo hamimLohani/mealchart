@@ -13,10 +13,12 @@ import {
   useGroup
 } from "@/lib/hooks/use-data";
 import { useMemo, useState } from "react";
+import { useDebounce } from "@/lib/hooks/use-debounce";
 
 export function AdminMonthSummary({ groupId }: { groupId: string }) {
   const { t } = useT();
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
 
   const { data: group } = useGroup(groupId);
   const { data: charts = [], isLoading: chartsLoading } = useCharts(groupId);
@@ -33,7 +35,7 @@ export function AdminMonthSummary({ groupId }: { groupId: string }) {
       if (found) return found;
     }
     return charts[0]; // Most recent by monthKey desc
-  }, [charts, group]);
+  }, [charts, group?.currentChartId]);
 
   const { data: monthMeals = [], isLoading: mealsLoading } = useMealsForChart(groupId, activeChart || undefined);
   const { data: monthCosts = [], isLoading: costsLoading } = useCosts(groupId, activeChart?.id);
@@ -47,10 +49,10 @@ export function AdminMonthSummary({ groupId }: { groupId: string }) {
   );
 
   const filteredMembers = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = debouncedSearch.trim().toLowerCase();
     if (!q) return members;
     return members.filter(m => m.fullName.toLowerCase().includes(q) || m.email.toLowerCase().includes(q));
-  }, [members, search]);
+  }, [members, debouncedSearch]);
 
   const isCurrentMonth = useMemo(() => {
     if (!activeChart) return false;
@@ -125,40 +127,46 @@ export function AdminMonthSummary({ groupId }: { groupId: string }) {
           />
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredMembers.map((member) => {
-            const mid = member.id.toLowerCase();
-            const totals = getMemberTotals(mid, monthMeals, monthDeposits, mealRate);
-            const paid = totals.totalPaid;
-            const eaten = totals.totalCost;
-            const balance = totals.balance;
-            const mealsCount = totals.totalMeals;
-            
-            return (
-              <div key={member.id} className="group-card !p-3">
-                <p className="font-bold text-sm border-b border-[color:var(--border)] pb-2 mb-2">{member.fullName}</p>
-                <div className="grid grid-cols-2 gap-y-2 gap-x-4">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] uppercase font-bold text-[color:var(--muted)] tracking-wider">{t("admin.paid")}</span>
-                    <span className="text-xs font-bold text-[color:var(--success-text)]">{paid.toFixed(2)} {t("common.tk")}</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[10px] uppercase font-bold text-[color:var(--muted)] tracking-wider">{t("admin.meals")}</span>
-                    <span className="text-xs font-bold text-[color:var(--foreground)]">{formatMeal(mealsCount)}</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[10px] uppercase font-bold text-[color:var(--muted)] tracking-wider">{t("admin.owed")}</span>
-                    <span className="text-xs font-bold text-[color:var(--danger)]">{eaten.toFixed(2)} {t("common.tk")}</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[10px] uppercase font-bold text-[color:var(--muted)] tracking-wider">{t("groupDash.statRemaining")}</span>
-                    <span className={`text-xs font-bold ${balance >= 0 ? "text-[color:var(--success-text)]" : "text-[color:var(--danger)]"}`}>
-                      {balance.toFixed(2)} {t("common.tk")}
-                    </span>
+          {filteredMembers.length === 0 && debouncedSearch.trim() !== "" ? (
+            <div className="col-span-full rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-6 text-center">
+              <p className="text-sm text-[color:var(--muted)]">No members match your search</p>
+            </div>
+          ) : (
+            filteredMembers.map((member) => {
+              const mid = member.id.toLowerCase();
+              const totals = getMemberTotals(mid, monthMeals, monthDeposits, mealRate);
+              const paid = totals.totalPaid;
+              const eaten = totals.totalCost;
+              const balance = totals.balance;
+              const mealsCount = totals.totalMeals;
+              
+              return (
+                <div key={member.id} className="group-card !p-3">
+                  <p className="font-bold text-sm border-b border-[color:var(--border)] pb-2 mb-2">{member.fullName}</p>
+                  <div className="grid grid-cols-2 gap-y-2 gap-x-4">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] uppercase font-bold text-[color:var(--muted)] tracking-wider">{t("admin.paid")}</span>
+                      <span className="text-xs font-bold text-[color:var(--success-text)]">{paid.toFixed(2)} {t("common.tk")}</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] uppercase font-bold text-[color:var(--muted)] tracking-wider">{t("admin.meals")}</span>
+                      <span className="text-xs font-bold text-[color:var(--foreground)]">{formatMeal(mealsCount)}</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] uppercase font-bold text-[color:var(--muted)] tracking-wider">{t("admin.owed")}</span>
+                      <span className="text-xs font-bold text-[color:var(--danger)]">{eaten.toFixed(2)} {t("common.tk")}</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] uppercase font-bold text-[color:var(--muted)] tracking-wider">{t("groupDash.statRemaining")}</span>
+                      <span className={`text-xs font-bold ${balance >= 0 ? "text-[color:var(--success-text)]" : "text-[color:var(--danger)]"}`}>
+                        {balance.toFixed(2)} {t("common.tk")}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </div>
     </div>
