@@ -4,17 +4,19 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 import { useT } from "@/i18n/use-t";
+import { useToast } from "@/lib/hooks/use-toast";
 import { useAuthStore } from "@/store/auth-store";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { useAdminRequestCounts, type AdminRequestCountKey } from "@/lib/hooks/use-admin-request-counts";
+import { handleAdminLogout } from "@/lib/auth/admin-logout";
 
 export function AdminNav() {
   const pathname = usePathname();
   const router = useRouter();
-  const { t } = useT();
+  const { t, tx } = useT();
+  const { toast } = useToast();
   const { admin, isLoaded } = useAuthStore();
   const requestCounts = useAdminRequestCounts();
   const [isSignOutInProgress, setIsSignOutInProgress] = useState(false);
@@ -64,9 +66,9 @@ export function AdminNav() {
   ];
 
   async function handleLogout() {
-    setIsSignOutInProgress(true);
-    if (auth) await signOut(auth);
-    router.push("/?noredirect=1");
+    await handleAdminLogout(auth, router, setIsSignOutInProgress, (error) => {
+      toast(error.message || "Failed to sign out. Please try again.", "error");
+    });
   }
 
   return (
