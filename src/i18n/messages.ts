@@ -964,6 +964,7 @@ export const bn: Record<MessageKey, string> = {
   "groupMoney.requestSubmitting": "পাঠানো হচ্ছে…",
   "groupMoney.signInRequired": "টাকার অনুরোধ করতে গ্রুপ সদস্য হিসেবে সাইন ইন করুন।",
 
+
   "groupCosts.title": "খরচ",
   "groupCosts.totalApproved": "অনুমোদিত খরচ",
   "groupCosts.requestTitle": "খরচের অনুরোধ",
