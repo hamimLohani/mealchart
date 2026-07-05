@@ -19,6 +19,8 @@ import { motion } from "framer-motion";
 import { useGroup, useMembers, useMealsForChart, useMealsForDate, useCosts, useDeposits, useCharts } from "@/lib/hooks/use-data";
 import { mutate } from "swr";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
+import { useToast } from "@/lib/hooks/use-toast";
+
 export default function MemberPage({
   params,
 }: {
@@ -28,6 +30,7 @@ export default function MemberPage({
   const router = useRouter();
   const { chart } = useGroupSession();
   const { t, language } = useT();
+  const { toast } = useToast();
   const locale = language === "bn" ? "bn-BD" : undefined;
 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -86,31 +89,18 @@ export default function MemberPage({
 
   // Sync mealCount from SWR date data
   useEffect(() => {
-    let active = true;
     const current = dateMeals.find((e) => e.memberId.toLowerCase() === normalizedMemberId);
-    setTimeout(() => {
-      if (!active) return;
-      setMealCount(current?.quantity ?? 0);
-      setSaved(false);
-    }, 0);
-    return () => {
-      active = false;
-    };
+    setMealCount(current?.quantity ?? 0);
+    setSaved(false);
   }, [dateMeals, normalizedMemberId]);
 
   // Clamp selected date to chart bounds when chart changes
   useEffect(() => {
     if (!chart) return;
-    let active = true;
     const bounds = chartMonthDateBounds(chart);
     const today = toDateInputValue(new Date());
     const clamped = today < bounds.min ? bounds.min : today > bounds.max ? bounds.max : today;
-    setTimeout(() => {
-      if (active) setSelectedDate(clamped);
-    }, 0);
-    return () => {
-      active = false;
-    };
+    setSelectedDate(clamped);
   }, [chart]);
 
   // Auth state — needed for permission checks
@@ -209,9 +199,11 @@ export default function MemberPage({
         deposits,
         fileName: `${group.name}_${chart.label}_Report.pdf`,
       });
+      toast("Report exported successfully", "success");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to generate PDF.";
       console.error("PDF export failed:", message);
+      toast(message, "error");
     }
   }
 
@@ -271,8 +263,8 @@ export default function MemberPage({
               type="button"
               onClick={handleDownloadPDF}
               className="button-secondary rounded-full p-2"
-              aria-label={t("groupDash.exportCSV", { defaultValue: "Export PDF" })}
-              title={t("groupDash.exportCSV", { defaultValue: "Export PDF" })}
+              aria-label="Export member report as PDF"
+              title="Export member report as PDF"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -321,6 +313,7 @@ export default function MemberPage({
                   <input
                     type="date"
                     className="input"
+                    aria-label="Select date for meal entry"
                     min={monthStart}
                     max={monthEnd}
                     placeholder={toDateInputValue(new Date())}
@@ -368,9 +361,9 @@ export default function MemberPage({
                 ) : (
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
-                      <button className="meal-stepper-button" disabled={mealCount <= 0 || isLocked} onClick={() => handleMealChange(mealCount - 0.25)} type="button">−</button>
+                      <button className="meal-stepper-button" disabled={mealCount <= 0 || isLocked} onClick={() => handleMealChange(mealCount - 0.25)} type="button" aria-label="Decrease meal count">−</button>
                       <span className="w-24 px-2 text-center text-4xl font-bold tabular-nums">{formatMeal(mealCount)}</span>
-                      <button className="meal-stepper-button" disabled={isLocked} onClick={() => handleMealChange(mealCount + 0.25)} type="button">+</button>
+                      <button className="meal-stepper-button" disabled={isLocked} onClick={() => handleMealChange(mealCount + 0.25)} type="button" aria-label="Increase meal count">+</button>
                     </div>
                     <p className={`text-sm font-semibold ${chart.locked ? "text-[color:var(--danger)]" : "text-[color:var(--muted)]"}`}>
                       {statusLine}

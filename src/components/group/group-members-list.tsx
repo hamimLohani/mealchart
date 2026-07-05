@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
+import { useDebounce } from "@/lib/hooks/use-debounce";
 
 import { GroupMonthSelector } from "@/components/group/group-month-selector";
 import { getGroupById, listMembers } from "@/lib/firebase/repositories";
@@ -18,6 +19,7 @@ export function GroupMembersList({ groupId }: { groupId: string }) {
   const [group, setGroup] = useState<Group | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [memberSearch, setMemberSearch] = useState("");
+  const debouncedSearch = useDebounce(memberSearch, 300);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -64,7 +66,7 @@ export function GroupMembersList({ groupId }: { groupId: string }) {
   if (!group) return null;
 
   const filtered = members.filter((m) => {
-    const q = memberSearch.trim().toLowerCase();
+    const q = debouncedSearch.trim().toLowerCase();
     return !q || 
       m.fullName.toLowerCase().includes(q) ||
       m.email.toLowerCase().includes(q);
@@ -104,10 +106,12 @@ export function GroupMembersList({ groupId }: { groupId: string }) {
         />
         <div className="mt-3 grid gap-2">
           {filtered.map((member) => (
-            <div
+            <button
               key={member.id}
               onClick={() => router.push(`/group/${groupId}/member/${member.id}`)}
               className="member-row"
+              type="button"
+              aria-label={`View ${member.fullName}'s details`}
             >
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold">{member.fullName}</p>
@@ -116,7 +120,7 @@ export function GroupMembersList({ groupId }: { groupId: string }) {
                 </p>
               </div>
               <span className="text-[color:var(--accent)]">→</span>
-            </div>
+            </button>
           ))}
           {filtered.length === 0 && (
             <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">{t("groupMembers.searchNoMatch")}</p>

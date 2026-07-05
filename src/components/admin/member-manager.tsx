@@ -178,10 +178,11 @@ export function MemberManager() {
           ? "errors.emailDomainNotExist" 
           : "errors.emailNotExist";
         
-        setError(`ERR_TRANS:${JSON.stringify({ 
+        const formattedError = `ERR_TRANS:${JSON.stringify({ 
           key: "errors.emailValidationFailed", 
           vars: { error: t(errorKey) } 
-        })}`);
+        })}`;
+        setError(tx(formattedError));
         setIsSubmitting(false);
         return;
       }
@@ -363,13 +364,15 @@ export function MemberManager() {
   }
 
   async function handleCopyGroupId() {
-    if (!activeAdminProfile?.groupId) return;
+    if (!activeAdminProfile) return;
     try {
       await navigator.clipboard.writeText(activeAdminProfile.groupId);
       setCopiedGroupId(true);
+      showSuccess("Group ID copied to clipboard");
       setTimeout(() => setCopiedGroupId(false), 2000);
     } catch (err) {
       console.error("Failed to copy:", err);
+      showError("Failed to copy group ID");
     }
   }
 
