@@ -48,22 +48,28 @@ export function GroupMemberDashboard({ groupId }: { groupId: string }) {
       <div className="group-card">
         <p className="group-kicker">{t("groupMembers.groupListTitle")}</p>
         <div className="mt-3 grid gap-2">
-          {members.map((member) => (
-            <div
-              key={member.id}
-              onClick={() => router.push(`/group/${groupId}/member/${member.id}`)}
-              className="member-row"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold">{member.fullName}</p>
-                <p className="group-stat-label">
-                  {t("groupDash.joined")}{" "}
-                  {new Date(member.joinDate).toLocaleDateString(language === "bn" ? "bn-BD" : undefined)}
-                </p>
-              </div>
-              <span className="text-[color:var(--accent)]">→</span>
-            </div>
-          ))}
+          {members.length === 0 ? (
+            <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">No members in this group yet</p>
+          ) : (
+            members.map((member) => (
+              <button
+                key={member.id}
+                onClick={() => router.push(`/group/${groupId}/member/${member.id}`)}
+                className="member-row"
+                type="button"
+                aria-label={`View ${member.fullName}'s details`}
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">{member.fullName}</p>
+                  <p className="group-stat-label">
+                    {t("groupDash.joined")}{" "}
+                    {new Date(member.joinDate).toLocaleDateString(language === "bn" ? "bn-BD" : undefined)}
+                  </p>
+                </div>
+                <span className="text-[color:var(--accent)]">→</span>
+              </button>
+            ))
+          )}
         </div>
       </div>
     </div>
