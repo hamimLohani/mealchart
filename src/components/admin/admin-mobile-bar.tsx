@@ -1,12 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useRef, type TouchEvent } from "react";
 import { useT } from "@/i18n/use-t";
 import { useAdminRequestCounts, type AdminRequestCountKey } from "@/lib/hooks/use-admin-request-counts";
 
 export function AdminMobileBar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
   const { t } = useT();
   const requestCounts = useAdminRequestCounts();
 
@@ -20,8 +24,39 @@ export function AdminMobileBar() {
     { href: "/admin/notices", icon: <NoticesIcon />, labelKey: "adminNav.notices" as const },
   ];
 
+  const swipeThreshold = 40;
+
+  const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    touchStartX.current = touch.clientX;
+    touchStartY.current = touch.clientY;
+  };
+
+  const handleTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - touchStartX.current;
+    const deltaY = touch.clientY - touchStartY.current;
+    touchStartX.current = null;
+    touchStartY.current = null;
+
+    if (Math.abs(deltaX) < swipeThreshold || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+
+    const currentIndex = navItems.findIndex((item) => item.href === pathname);
+    if (currentIndex === -1) return;
+
+    const nextIndex = deltaX < 0 ? currentIndex + 1 : currentIndex - 1;
+    if (nextIndex < 0 || nextIndex >= navItems.length) return;
+    router.push(navItems[nextIndex].href);
+  };
+
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-[60] flex items-center justify-around border-t border-[color:var(--border)] bg-[color:var(--panel)] px-1 py-1.5 pb-safe shadow-[0_-4px_12px_rgba(0,0,0,0.05)] md:hidden">
+    <div
+      className="fixed bottom-0 left-0 right-0 z-[60] flex items-center justify-around border-t border-[color:var(--border)] bg-[color:var(--panel)] px-1 py-1.5 pb-safe shadow-[0_-4px_12px_rgba(0,0,0,0.05)] md:hidden"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {navItems.map((item) => {
         const isActive = pathname === item.href;
         const requestCountKey: AdminRequestCountKey | undefined =

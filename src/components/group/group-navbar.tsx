@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState, type TouchEvent } from "react";
 import { motion } from "framer-motion";
 import { useT } from "@/i18n/use-t";
 import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
@@ -74,6 +74,49 @@ export function GroupNavbar({
     return "home";
   }, [pathname]);
 
+  const router = useRouter();
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const swipeThreshold = 40;
+
+  const bottomNavItems = useMemo(
+    () => [
+      { key: "home" as const, href: memberHomeHref, icon: <HomeIcon />, label: t("groupNav.home") },
+      ...navItems.map((item) => ({
+        key: item.key,
+        href: `/group/${groupId}/${item.key}`,
+        icon: item.icon,
+        label: item.label,
+      })),
+    ],
+    [groupId, memberHomeHref, navItems, t],
+  );
+
+  const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    touchStartX.current = touch.clientX;
+    touchStartY.current = touch.clientY;
+  };
+
+  const handleTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - touchStartX.current;
+    const deltaY = touch.clientY - touchStartY.current;
+    touchStartX.current = null;
+    touchStartY.current = null;
+
+    if (Math.abs(deltaX) < swipeThreshold || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+
+    const currentIndex = bottomNavItems.findIndex((item) => item.href === pathname);
+    if (currentIndex === -1) return;
+
+    const nextIndex = deltaX < 0 ? currentIndex + 1 : currentIndex - 1;
+    if (nextIndex < 0 || nextIndex >= bottomNavItems.length) return;
+    router.push(bottomNavItems[nextIndex].href);
+  };
+
   return (
     <>
       <aside className="hidden shrink-0 md:block md:w-56 lg:w-64">
@@ -128,13 +171,17 @@ export function GroupNavbar({
         </div>
       </aside>
 
-      <div className="fixed bottom-0 left-0 right-0 z-[60] flex items-center justify-around border-t border-[color:var(--border)] bg-[color:var(--panel)] px-1 py-1.5 pb-safe shadow-[0_-4px_12px_rgba(0,0,0,0.05)] md:hidden">
-        {[{ key: "home" as const, icon: <HomeIcon />, label: t("groupNav.home") }, ...navItems].map((item) => {
+      <div
+        className="fixed bottom-0 left-0 right-0 z-[60] flex items-center justify-around border-t border-[color:var(--border)] bg-[color:var(--panel)] px-1 py-1.5 pb-safe shadow-[0_-4px_12px_rgba(0,0,0,0.05)] md:hidden"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
+        {bottomNavItems.map((item) => {
           const isActive = item.key === activeKey;
           return (
             <Link
               key={item.key}
-              href={item.key === "home" ? memberHomeHref : `/group/${groupId}/${item.key}`}
+              href={item.href}
               className={`flex flex-1 flex-col items-center gap-1 py-1 transition-colors ${
                 isActive ? "text-[color:var(--accent)]" : "text-[color:var(--muted)]"
               }`}
