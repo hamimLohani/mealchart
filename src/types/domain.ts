@@ -22,6 +22,13 @@ export type Group = {
   totalMembersCreated?: number;
 };
 
+export type WhatsappConfig = {
+  whatsappPhoneNumberId: string;
+  whatsappAccessToken: string;
+  whatsappRecipientPhone: string;
+  whatsappEnabled: boolean;
+};
+
 export type Chart = {
   id: string;
   label: string;

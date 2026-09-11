@@ -15,9 +15,10 @@ import {
   listCostsForChart,
   listDepositsForChart,
   getGroupById,
+  getGroupWhatsappConfig,
 } from "@/lib/firebase/repositories";
 import { currentMonthKey, pickCurrentMonthChart } from "@/lib/utils/date";
-import type { AdminProfile, Chart, Notice } from "@/types/domain";
+import type { AdminProfile, Chart, Group, Notice, WhatsappConfig } from "@/types/domain";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
@@ -25,6 +26,7 @@ import { sendReminderEmails } from "@/lib/email/actions";
 import { getFriendlyEmailError } from "@/lib/utils/email-error";
 import { useToast } from "@/lib/hooks/use-toast";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { WhatsAppSettings } from "@/components/admin/whatsapp-settings";
 
 export function NoticesManager() {
   const { t, tx, language } = useT();
@@ -33,12 +35,14 @@ export function NoticesManager() {
   const configError = !isFirebaseConfigured || !auth ? "Firebase is not configured yet." : null;
 
   const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null);
+  const [whatsappConfig, setWhatsappConfig] = useState<WhatsappConfig | null>(null);
   const [groupName, setGroupName] = useState("");
   const [charts, setCharts] = useState<Chart[]>([]);
   const [error, setError] = useState<string | null>(configError);
   const [isLoading, setIsLoading] = useState(false);
   const [isSendingReminders, setIsSendingReminders] = useState(false);
   const [showSendConfirm, setShowSendConfirm] = useState(false);
+  const [isSendingWA, setIsSendingWA] = useState<string | null>(null); // holds noticeId being sent
 
   const [selectedChart, setSelectedChart] = useState<Chart | null>(null);
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
@@ -101,13 +105,15 @@ export function NoticesManager() {
       try {
         if (!active) return;
         setIsLoading(true);
-        const [currentCharts, group] = await Promise.all([
+        const [currentCharts, g, wConfig] = await Promise.all([
           listCharts(currentAdminProfile.groupId),
-          getGroupById(currentAdminProfile.groupId)
+          getGroupById(currentAdminProfile.groupId),
+          getGroupWhatsappConfig(currentAdminProfile.groupId),
         ]);
         if (!active) return;
         setAdminProfile(currentAdminProfile);
-        setGroupName(group?.name ?? "");
+        setWhatsappConfig(wConfig);
+        setGroupName(g?.name ?? "");
         setCharts(currentCharts);
       } catch (e) {
         if (!active) return;
@@ -191,10 +197,44 @@ export function NoticesManager() {
           return [created, ...prev];
         });
         setTitle(""); setBody("");
+
+        // Auto-send to WhatsApp if integration is configured & enabled
+        if (whatsappConfig?.whatsappEnabled) {
+          void sendNoticeToWhatsApp(
+            whatsappConfig,
+            title.trim(),
+            body.trim(),
+            null,  // no noticeId spinner needed for auto-send
+            true,  // isAutoSend — show auto-sent toast
+          );
+        }
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : t("errors.saveNoticeFailed"));
     } finally { setIsSubmitting(false); }
+  }
+
+  async function sendNoticeToWhatsApp(
+    config: WhatsappConfig,
+    noticeTitle: string,
+    noticeBody: string,
+    noticeId: string | null,
+    isAutoSend = false,
+  ) {
+    if (noticeId) setIsSendingWA(noticeId);
+    try {
+      const { sendWhatsAppNoticeAction } = await import("@/lib/whatsapp/actions");
+      const data = await sendWhatsAppNoticeAction(config, noticeTitle, noticeBody);
+      if (data.success) {
+        showSuccess(isAutoSend ? t("whatsapp.autoSent") : t("whatsapp.sendSuccess"));
+      } else {
+        showError(data.error ?? t("whatsapp.testError"));
+      }
+    } catch (e) {
+      showError(e instanceof Error ? e.message : t("whatsapp.testError"));
+    } finally {
+      if (noticeId) setIsSendingWA(null);
+    }
   }
 
   async function handleDelete(noticeId: string) {
@@ -305,6 +345,11 @@ export function NoticesManager() {
       <div className="mt-6 grid gap-5">
         {resolvedError && <p className="alert-error">{tx(resolvedError)}</p>}
 
+        {/* WhatsApp Integration Settings */}
+        {adminProfile && (
+          <WhatsAppSettings groupId={adminProfile.groupId} />
+        )}
+
         <div className="flex flex-col gap-3 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--panel)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="admin-section-label">{t("adminNav.notices")}</p>
@@ -392,6 +437,25 @@ export function NoticesManager() {
                     >
                       {t("memberMgr.edit")}
                     </button>
+                    {whatsappConfig?.whatsappEnabled && (
+                      <button
+                        type="button"
+                        disabled={isSendingWA === notice.id}
+                        onClick={() =>
+                          void sendNoticeToWhatsApp(
+                            whatsappConfig,
+                            notice.title,
+                            notice.body,
+                            notice.id,
+                          )
+                        }
+                        className="rounded-full border border-[color:var(--accent-border,var(--accent))] px-3 py-1 text-xs font-semibold text-[color:var(--accent)] transition hover:bg-[color:var(--accent)] hover:text-white disabled:opacity-50"
+                      >
+                        {isSendingWA === notice.id
+                          ? t("whatsapp.sendingNotice")
+                          : t("whatsapp.resend")}
+                      </button>
+                    )}
                     <button
                       onClick={() => void handleDelete(notice.id)}
                       type="button"

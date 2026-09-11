@@ -267,16 +267,15 @@ service cloud.firestore {
         && request.resource.data.totalMembersCreated == 0;
       allow update: if isGroupAdmin(groupId) || isAdminAccountMigration(groupId);
       allow delete: if isGroupAdmin(groupId);
+
+      match /settings/whatsapp {
+        allow read, write: if isGroupAdmin(groupId);
+      }
     }
 
     function isEmailAlreadyMember(groupId, emailLower) {
-      // First check if memberId is the email
-      if (exists(/databases/$(database)/documents/groups/$(groupId)/members/$(emailLower))) {
-        return true;
-      }
-      // To check all members for matching email field, we'd need to use a collection group query
-      // But since Firestore security rules can't do that, we'll rely on the frontend check and the memberId check
-      return false;
+      // Check if memberId is the email (Firestore rules do not support 'if' blocks, only expressions)
+      return exists(/databases/$(database)/documents/groups/$(groupId)/members/$(emailLower));
     }
 
     match /admins/{adminId} {

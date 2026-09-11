@@ -134,6 +134,37 @@ export async function listGroups() {
   }));
 }
 
+export async function updateGroupWhatsappConfig(
+  groupId: string,
+  config: {
+    whatsappPhoneNumberId: string;
+    whatsappAccessToken: string;
+    whatsappRecipientPhone: string;
+    whatsappEnabled: boolean;
+  }
+): Promise<void> {
+  const database = ensureDb();
+  await setDoc(doc(database, groupsCollection, groupId, "settings", "whatsapp"), {
+    whatsappPhoneNumberId: config.whatsappPhoneNumberId.trim(),
+    whatsappAccessToken: config.whatsappAccessToken.trim(),
+    whatsappRecipientPhone: config.whatsappRecipientPhone.trim(),
+    whatsappEnabled: config.whatsappEnabled,
+  });
+}
+
+export async function getGroupWhatsappConfig(groupId: string) {
+  const database = ensureDb();
+  const snapshot = await getDoc(doc(database, groupsCollection, groupId, "settings", "whatsapp"));
+  if (!snapshot.exists()) return null;
+  const data = snapshot.data();
+  return {
+    whatsappPhoneNumberId: (data.whatsappPhoneNumberId as string | undefined) ?? "",
+    whatsappAccessToken: (data.whatsappAccessToken as string | undefined) ?? "",
+    whatsappRecipientPhone: (data.whatsappRecipientPhone as string | undefined) ?? "",
+    whatsappEnabled: (data.whatsappEnabled as boolean | undefined) ?? false,
+  };
+}
+
 
 // ── Admins ────────────────────────────────────────────────────────────
 
