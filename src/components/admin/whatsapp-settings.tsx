@@ -167,7 +167,18 @@ export function WhatsAppSettings({ groupId }: WhatsAppSettingsProps) {
               <div className="rounded-[var(--radius-sm)] bg-[color:var(--accent-dim)] px-4 py-3 text-xs text-[color:var(--soft-foreground)]">
                 <p className="font-semibold mb-1">{t("whatsapp.setupTitle")}</p>
                 <ol className="list-decimal list-inside space-y-0.5">
-                  <li>{t("whatsapp.setupStep1")}</li>
+                  <li>
+                    {t("whatsapp.setupStep1").split("developers.facebook.com").map((part, i, arr) => (
+                      <span key={i}>
+                        {part}
+                        {i < arr.length - 1 && (
+                          <a href="https://developers.facebook.com" target="_blank" rel="noopener noreferrer" className="text-[color:var(--accent)] hover:underline font-medium">
+                            developers.facebook.com
+                          </a>
+                        )}
+                      </span>
+                    ))}
+                  </li>
                   <li>{t("whatsapp.setupStep2")}</li>
                   <li>{t("whatsapp.setupStep3")}</li>
                   <li>{t("whatsapp.setupStep4")}</li>
