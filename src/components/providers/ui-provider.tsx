@@ -93,8 +93,10 @@ export function UiProvider({ children }: { children: React.ReactNode }) {
         revalidateOnFocus: false,
         revalidateOnReconnect: true,
         shouldRetryOnError: () => isOnline,
-        dedupingInterval: 10000,
-        focusThrottleInterval: 15000,
+        // Deduplicate requests within 60s — prevents waterfall re-fetches
+        // when navigating between pages or switching tabs quickly.
+        dedupingInterval: 60_000,
+        focusThrottleInterval: 60_000,
       }}
     >
       <>

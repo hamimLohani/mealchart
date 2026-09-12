@@ -533,16 +533,16 @@ export async function createChart(input: {
   const monthKeys = getChartMonthKeys(input.year, input.month, duration);
   const monthKey = monthKeys[0];
 
-  const existingChartsSnap = await getDocs(
-    collection(database, chartsCollection(input.groupId))
+  // Use array-contains-any to avoid downloading all charts — only fetch those
+  // whose monthKeys array overlaps with the new chart's month keys.
+  const overlapSnap = await getDocs(
+    query(
+      collection(database, chartsCollection(input.groupId)),
+      where("monthKeys", "array-contains-any", monthKeys),
+    )
   );
-  
-  for (const docSnap of existingChartsSnap.docs) {
-    const data = docSnap.data();
-    const existingKeys = Array.isArray(data.monthKeys) ? data.monthKeys : [data.monthKey];
-    if (monthKeys.some(mk => existingKeys.includes(mk))) {
-      throw new Error("A chart for one or more of these months already exists.");
-    }
+  if (!overlapSnap.empty) {
+    throw new Error("A chart for one or more of these months already exists.");
   }
 
   // --- Payment/Limit Check ---
@@ -994,24 +994,34 @@ export async function getMealsForDate(groupId: string, date: string) {
 
 export async function getMealsForMonth(groupId: string, monthKey: string) {
   const database = ensureDb();
-  const snapshot = await getDocs(
-    query(
-      collection(database, mealsCollection(groupId)),
-      where("date", ">=", `${monthKey}-01`),
-      where("date", "<=", `${monthKey}-31`),
-    ),
-  );
-  return snapshot.docs.map((entry) => mapMealEntryDoc(entry.id, entry.data()));
+  // Use monthKey equality filter — much faster than a date range query.
+  // Falls back to date range if monthKey index is unavailable.
+  try {
+    const snapshot = await getDocs(
+      query(
+        collection(database, mealsCollection(groupId)),
+        where("monthKey", "==", monthKey),
+      ),
+    );
+    return snapshot.docs.map((entry) => mapMealEntryDoc(entry.id, entry.data()));
+  } catch {
+    // Fallback for older documents that don't have monthKey set yet
+    const snapshot = await getDocs(
+      query(
+        collection(database, mealsCollection(groupId)),
+        where("date", ">=", `${monthKey}-01`),
+        where("date", "<=", `${monthKey}-31`),
+      ),
+    );
+    return snapshot.docs.map((entry) => mapMealEntryDoc(entry.id, entry.data()));
+  }
 }
 
 export async function getMealsForChart(groupId: string, chart: Chart) {
   const mKeys = chart.monthKeys && chart.monthKeys.length > 0 ? chart.monthKeys : [chart.monthKey];
-  const allMeals: MealEntry[] = [];
-  for (const mk of mKeys) {
-    const meals = await getMealsForMonth(groupId, mk);
-    allMeals.push(...meals);
-  }
-  return allMeals;
+  // Fetch all months in parallel instead of sequentially
+  const results = await Promise.all(mKeys.map((mk) => getMealsForMonth(groupId, mk)));
+  return results.flat();
 }
 
 export async function saveMealEntry(input: {

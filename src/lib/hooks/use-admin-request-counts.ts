@@ -13,12 +13,16 @@ export function useAdminRequestCounts(): Record<AdminRequestCountKey, number> {
 
   const { data: joinRequests } = useJoinRequests(groupId);
   const { data: charts } = useCharts(groupId);
-  const chartIds = charts?.map((chart) => chart.id) ?? [];
+
+  // Only query unlocked charts — locked charts can't receive new pending requests,
+  // so querying them wastes Firestore reads. This reduces reads from 2×N to 2×active.
+  const activeChartIds = charts?.filter((c) => !c.locked).map((c) => c.id) ?? [];
+
   const { data: chartRequestCounts } = useSWR(
-    groupId && chartIds.length > 0 ? ["adminChartRequestCounts", groupId, ...chartIds] : null,
-    async ([, activeGroupId, ...activeChartIds]: [string, string, ...string[]]) => {
+    groupId && activeChartIds.length > 0 ? ["adminChartRequestCounts", groupId, ...activeChartIds] : null,
+    async ([, activeGroupId, ...ids]: [string, string, ...string[]]) => {
       const requestGroups = await Promise.all(
-        activeChartIds.map(async (chartId) => {
+        ids.map(async (chartId) => {
           const [depositRequests, costRequests] = await Promise.all([
             listDepositRequestsForChart(activeGroupId, chartId),
             listCostRequestsForChart(activeGroupId, chartId),
