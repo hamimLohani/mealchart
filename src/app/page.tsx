@@ -14,7 +14,6 @@ const featureKeys = [
   { title: "features.mealsTitle", body: "features.mealsDesc", icon: "🍛" },
   { title: "features.financeTitle", body: "features.financeDesc", icon: "📈" },
   { title: "features.exportTitle", body: "features.exportDesc", icon: "📥" },
-  { title: "features.noticesTitle", body: "features.noticesDesc", icon: "🔔" },
   { title: "features.bilingualTitle", body: "features.bilingualDesc", icon: "🌐" },
   { title: "features.fastTitle", body: "features.fastDesc", icon: "⚡" },
   { title: "features.themeTitle", body: "features.themeDesc", icon: "🌙" },
@@ -31,7 +30,6 @@ const stepKeys = [
   { title: "about.step5Title", body: "about.step5Body", icon: "💰" },
   { title: "about.step6Title", body: "about.step6Body", icon: "📊" },
   { title: "about.step7Title", body: "about.step7Body", icon: "🔒" },
-  { title: "about.step8Title", body: "about.step8Body", icon: "📢" },
 ] as const;
 
 const tutorialVideoId = process.env.NEXT_PUBLIC_TUTORIAL_VIDEO_ID || "REPLACE_WITH_YOUTUBE_ID";

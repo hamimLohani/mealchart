@@ -2,10 +2,10 @@
 
 import type { WhatsappConfig } from "@/types/domain";
 
-export async function sendWhatsAppNoticeAction(
+export async function sendWhatsAppMessageAction(
   config: WhatsappConfig,
-  noticeTitle: string,
-  noticeBody: string
+  title: string,
+  body: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
     if (!config.whatsappEnabled) {
@@ -16,7 +16,7 @@ export async function sendWhatsAppNoticeAction(
       return { success: false, error: "WhatsApp is not fully configured." };
     }
 
-    const messageText = `📢 *${noticeTitle}*\n\n${noticeBody}`;
+    const messageText = `📢 *${title}*\n\n${body}`;
     const metaUrl = `https://graph.facebook.com/v19.0/${config.whatsappPhoneNumberId}/messages`;
 
     const metaResponse = await fetch(metaUrl, {

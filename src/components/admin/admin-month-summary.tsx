@@ -12,10 +12,17 @@ import {
   useDeposits,
   useGroup
 } from "@/lib/hooks/use-data";
+import type { Chart } from "@/types/domain";
 import { useMemo, useState } from "react";
 import { useDebounce } from "@/lib/hooks/use-debounce";
 
-export function AdminMonthSummary({ groupId }: { groupId: string }) {
+export function AdminMonthSummary({
+  groupId,
+  selectedChart,
+}: {
+  groupId: string;
+  selectedChart?: Chart | null;
+}) {
   const { t } = useT();
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
@@ -24,8 +31,9 @@ export function AdminMonthSummary({ groupId }: { groupId: string }) {
   const { data: charts = [], isLoading: chartsLoading } = useCharts(groupId);
   const { data: members = [], isLoading: membersLoading } = useMembers(groupId);
 
-  // Auto-detect active chart: current month first, then group.currentChartId, then first in list
+  // Auto-detect active chart: selectedChart first, current month second, then group.currentChartId, then first in list
   const activeChart = useMemo(() => {
+    if (selectedChart) return selectedChart;
     if (!charts.length) return null;
     const currentActive = pickCurrentMonthChart(charts);
     if (currentActive) return currentActive;
@@ -35,7 +43,7 @@ export function AdminMonthSummary({ groupId }: { groupId: string }) {
       if (found) return found;
     }
     return charts[0]; // Most recent by monthKey desc
-  }, [charts, group?.currentChartId]);
+  }, [selectedChart, charts, group?.currentChartId]);
 
   const { data: monthMeals = [], isLoading: mealsLoading } = useMealsForChart(groupId, activeChart || undefined);
   const { data: monthCosts = [], isLoading: costsLoading } = useCosts(groupId, activeChart?.id);

@@ -33,4 +33,4 @@ export const transporter = nodemailer.createTransport(transportOptions);
 export const resend = new Resend(process.env.RESEND_API_KEY);
 */
 
-export const fromEmail = process.env.SMTP_FROM || (user ? `Meal Chart <${user}>` : "Meal Chart <noreply@example.com>");
+export const fromEmail = process.env.SMTP_FROM || (user ? `মিল চার্ট <${user}>` : "মিল চার্ট <noreply@example.com>");

@@ -68,9 +68,9 @@ export function AdminNav() {
           hintKey: "adminNav.createChartHint" as const,
         },
         {
-          href: "/admin/notices",
-          labelKey: "adminNav.notices" as const,
-          hintKey: "adminNav.noticesHint" as const,
+          href: "/admin/settings",
+          labelKey: "adminNav.settings" as const,
+          hintKey: "adminNav.settingsHint" as const,
         },
       ],
     },

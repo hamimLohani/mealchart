@@ -94,16 +94,16 @@ export function WhatsAppSettings({ groupId }: WhatsAppSettingsProps) {
     // Save first if there are unsaved changes, then test
     setIsTesting(true);
     try {
-      const { sendWhatsAppNoticeAction } = await import("@/lib/whatsapp/actions");
+      const { sendWhatsAppMessageAction } = await import("@/lib/whatsapp/actions");
       const config = {
         whatsappPhoneNumberId: phoneNumberId.trim(),
         whatsappAccessToken: accessToken.trim(),
         whatsappRecipientPhone: recipientPhone.trim(),
         whatsappEnabled: enabled,
       };
-      const data = await sendWhatsAppNoticeAction(
+      const data = await sendWhatsAppMessageAction(
         config,
-        "Test Notice",
+        "Test Message",
         "✅ WhatsApp integration is working correctly for your Meal Chart group!"
       );
       if (data.success) {

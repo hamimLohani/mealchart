@@ -22,7 +22,6 @@ import {
   buildChartRecord,
   buildDepositRecord,
   buildMemberRecord,
-  buildNoticeRecord,
 } from "@/lib/firebase/factories";
 import {
   adminsCollection,
@@ -33,7 +32,6 @@ import {
   chartDepositsCollection,
   mealsCollection,
   membersCollection,
-  chartNoticesCollection,
   groupsCollection,
   lockedMonthsCollection,
 } from "@/lib/firebase/paths";
@@ -48,7 +46,7 @@ import {
   getMonthTotals,
   normalizeMealQuantity,
 } from "@/lib/utils/meal-money";
-import type { AdminProfile, Chart, CostEntry, CostRequest, DepositEntry, DepositRequest, Group, MealEntry, Member, Notice } from "@/types/domain";
+import type { AdminProfile, Chart, CostEntry, CostRequest, DepositEntry, DepositRequest, Group, MealEntry, Member } from "@/types/domain";
 
 function ensureDb() {
   if (!db) throw new Error("Firebase is not configured yet.");
@@ -647,21 +645,6 @@ export async function createChart(input: {
             doc(database, chartDepositsCollection(input.groupId, chartId), depositId),
             carryRecord,
           );
-
-          await addDoc(collection(database, chartNoticesCollection(input.groupId, chartId)), {
-            ...buildNoticeRecord({
-              title: `ERR_TRANS:${JSON.stringify({ key: "groupNotices.carryOverTitle" })}`,
-              body: `ERR_TRANS:${JSON.stringify({
-                key: "groupNotices.carryOverBody",
-                vars: {
-                  member: member.fullName,
-                  amount: balance.toFixed(2),
-                },
-              })}`,
-              systemGenerated: true,
-            }),
-            createdAt: serverTimestamp(),
-          });
         }
       }
     }
@@ -760,73 +743,6 @@ export async function syncLockedMonthDocsFromCharts(groupId: string) {
   if (ops > 0) await batch.commit();
 }
 
-/** Converts old plain-text system notices to the new translatable JSON format. */
-export async function backfillSystemNotices(groupId: string) {
-  const database = ensureDb();
-  const charts = await listCharts(groupId);
-  let batch = writeBatch(database);
-  let ops = 0;
-
-  for (const chart of charts) {
-    const noticesRef = collection(database, chartNoticesCollection(groupId, chart.id));
-    const snap = await getDocs(query(noticesRef, where("systemGenerated", "==", true)));
-    
-    for (const d of snap.docs) {
-      const data = d.data();
-      const title = String(data.title || "");
-      const body = String(data.body || "");
-
-      // Already in the new format
-      if (title.startsWith("ERR_TRANS:")) continue;
-
-      let newTitle = title;
-      let newBody = body;
-
-      // Identify deposit notices
-      if (title === "Money added") {
-        newTitle = `ERR_TRANS:${JSON.stringify({ key: "groupNotices.depositAddedTitle" })}`;
-        // Extract amount and member from old body: "A deposit of 500.00 tk was added for Member Name."
-        const match = body.match(/deposit of ([\d.]+) tk was added for (.*)\./);
-        if (match) {
-          newBody = `ERR_TRANS:${JSON.stringify({
-            key: "groupNotices.depositAddedBody",
-            vars: { amount: match[1], member: match[2] }
-          })}`;
-        }
-      } else if (title === "Money deducted") {
-        newTitle = `ERR_TRANS:${JSON.stringify({ key: "groupNotices.depositDeductedTitle" })}`;
-        const match = body.match(/amount of ([\d.]+) tk was deducted\/returned for (.*)\./);
-        if (match) {
-          newBody = `ERR_TRANS:${JSON.stringify({
-            key: "groupNotices.depositDeductedBody",
-            vars: { amount: match[1], member: match[2] }
-          })}`;
-        }
-      } else if (title === "Cost added") {
-        newTitle = `ERR_TRANS:${JSON.stringify({ key: "groupNotices.costAddedTitle" })}`;
-        // "Item Name — 250.00 tk on 2024-05-15."
-        const match = body.match(/(.*) — ([\d.]+) tk on ([\d-]+)\./);
-        if (match) {
-          newBody = `ERR_TRANS:${JSON.stringify({
-            key: "groupNotices.costAddedBody",
-            vars: { item: match[1], amount: match[2], date: match[3] }
-          })}`;
-        }
-      }
-
-      if (newTitle !== title) {
-        batch.update(d.ref, { title: newTitle, body: newBody });
-        ops++;
-        if (ops >= 400) {
-          await batch.commit();
-          batch = writeBatch(database);
-          ops = 0;
-        }
-      }
-    }
-  }
-  if (ops > 0) await batch.commit();
-}
 
 /** Adds monthKey to older meal docs (YYYY-MM from date) so lock rules and deletes work. */
 export async function backfillMealMonthKeys(groupId: string) {
@@ -939,23 +855,6 @@ export async function createDeposit(input: {
     doc(database, chartDepositsCollection(input.groupId, input.chartId), depositId),
     record,
   );
-
-  await addDoc(collection(database, chartNoticesCollection(input.groupId, input.chartId)), {
-    ...buildNoticeRecord({
-      title: `ERR_TRANS:${JSON.stringify({ 
-        key: input.amount < 0 ? "groupNotices.depositDeductedTitle" : "groupNotices.depositAddedTitle" 
-      })}`,
-      body: `ERR_TRANS:${JSON.stringify({ 
-        key: input.amount < 0 ? "groupNotices.depositDeductedBody" : "groupNotices.depositAddedBody",
-        vars: { 
-          amount: Math.abs(input.amount).toFixed(2), 
-          member: input.memberName || 'a member' 
-        }
-      })}`,
-      systemGenerated: true,
-    }),
-    createdAt: serverTimestamp(),
-  });
 
   return record;
 }
@@ -1204,22 +1103,6 @@ export async function createCost(input: {
     payload,
   );
 
-  await addDoc(collection(database, chartNoticesCollection(input.groupId, input.chartId)), {
-    ...buildNoticeRecord({
-      title: `ERR_TRANS:${JSON.stringify({ key: "groupNotices.costAddedTitle" })}`,
-      body: `ERR_TRANS:${JSON.stringify({ 
-        key: "groupNotices.costAddedBody",
-        vars: { 
-          item: input.itemName, 
-          amount: input.amount.toFixed(2),
-          date: input.date 
-        }
-      })}`,
-      systemGenerated: true,
-    }),
-    createdAt: serverTimestamp(),
-  });
-
   return payload as CostEntry;
 }
 
@@ -1289,7 +1172,6 @@ export async function deleteChart(groupId: string, chartId: string) {
   await deleteSubcollection(database, chartDepositRequestsCollection(groupId, chartId));
   await deleteSubcollection(database, chartCostsCollection(groupId, chartId));
   await deleteSubcollection(database, chartCostRequestsCollection(groupId, chartId));
-  await deleteSubcollection(database, chartNoticesCollection(groupId, chartId));
 
   // Delete meals for this month (stored globally under groups/{groupId}/meals)
   if (monthKey) {
@@ -1346,50 +1228,136 @@ export async function deleteChart(groupId: string, chartId: string) {
 
 
 
-// ── Notices ───────────────────────────────────────────────────────────
 
-export async function listNoticesForChart(groupId: string, chartId: string) {
+/**
+ * Permanently deletes an entire group and all associated records:
+ * - All charts and their subcollections (deposits, depositRequests, costs, costRequests, notices)
+ * - All global meals
+ * - All members
+ * - All lockedMonths mirrors
+ * - All joinRequests
+ * - Group settings (e.g. WhatsApp)
+ * - The group document itself
+ * - All admin profiles for this group (including owner and temporary admins)
+ */
+export async function deleteEntireGroupAndAccount(groupId: string, ownerAdminId?: string) {
   const database = ensureDb();
-  const snapshot = await getDocs(
-    query(
-      collection(database, chartNoticesCollection(groupId, chartId)),
-      orderBy("createdAt", "desc"),
-    ),
+
+  // 1. Delete all charts and their subcollections
+  const chartsSnap = await getDocs(collection(database, chartsCollection(groupId)));
+  for (const chartDoc of chartsSnap.docs) {
+    const chartId = chartDoc.id;
+    await deleteSubcollection(database, chartDepositsCollection(groupId, chartId));
+    await deleteSubcollection(database, chartDepositRequestsCollection(groupId, chartId));
+    await deleteSubcollection(database, chartCostsCollection(groupId, chartId));
+    await deleteSubcollection(database, chartCostRequestsCollection(groupId, chartId));
+    await deleteDoc(chartDoc.ref);
+  }
+
+  // 2. Delete all global meals
+  const mealsSnap = await getDocs(collection(database, mealsCollection(groupId)));
+  if (!mealsSnap.empty) {
+    let batch = writeBatch(database);
+    let ops = 0;
+    for (const d of mealsSnap.docs) {
+      batch.delete(d.ref);
+      ops++;
+      if (ops >= 400) {
+        await batch.commit();
+        batch = writeBatch(database);
+        ops = 0;
+      }
+    }
+    if (ops > 0) await batch.commit();
+  }
+
+  // 3. Delete all members
+  const membersSnap = await getDocs(collection(database, membersCollection(groupId)));
+  if (!membersSnap.empty) {
+    let batch = writeBatch(database);
+    let ops = 0;
+    for (const d of membersSnap.docs) {
+      batch.delete(d.ref);
+      ops++;
+      if (ops >= 400) {
+        await batch.commit();
+        batch = writeBatch(database);
+        ops = 0;
+      }
+    }
+    if (ops > 0) await batch.commit();
+  }
+
+  // 4. Delete lockedMonths mirrors
+  const lockedSnap = await getDocs(collection(database, lockedMonthsCollection(groupId)));
+  if (!lockedSnap.empty) {
+    let batch = writeBatch(database);
+    let ops = 0;
+    for (const d of lockedSnap.docs) {
+      batch.delete(d.ref);
+      ops++;
+      if (ops >= 400) {
+        await batch.commit();
+        batch = writeBatch(database);
+        ops = 0;
+      }
+    }
+    if (ops > 0) await batch.commit();
+  }
+
+  // 5. Delete joinRequests
+  const joinRequestsSnap = await getDocs(collection(database, `groups/${groupId}/joinRequests`));
+  if (!joinRequestsSnap.empty) {
+    let batch = writeBatch(database);
+    let ops = 0;
+    for (const d of joinRequestsSnap.docs) {
+      batch.delete(d.ref);
+      ops++;
+      if (ops >= 400) {
+        await batch.commit();
+        batch = writeBatch(database);
+        ops = 0;
+      }
+    }
+    if (ops > 0) await batch.commit();
+  }
+
+  // 6. Delete group settings
+  try {
+    await deleteDoc(doc(database, groupsCollection, groupId, "settings", "whatsapp"));
+  } catch {
+    // Ignore if not present
+  }
+
+  // 7. Delete all admins for this group
+  const adminsSnap = await getDocs(
+    query(collection(database, adminsCollection), where("groupId", "==", groupId)),
   );
-  return snapshot.docs.map((entry) => {
-    const data = entry.data();
-    return {
-      ...normalizeDoc<Notice>(entry.id, data),
-      createdAt: serializeDate(data.createdAt),
-    };
-  });
+  if (!adminsSnap.empty) {
+    let batch = writeBatch(database);
+    let ops = 0;
+    for (const d of adminsSnap.docs) {
+      batch.delete(d.ref);
+      ops++;
+      if (ops >= 400) {
+        await batch.commit();
+        batch = writeBatch(database);
+        ops = 0;
+      }
+    }
+    if (ops > 0) await batch.commit();
+  }
+
+  // Also make sure owner's admin doc by UID is deleted if it wasn't caught in query
+  if (ownerAdminId) {
+    try {
+      await deleteDoc(doc(database, adminsCollection, ownerAdminId));
+    } catch {
+      // Ignore if already deleted
+    }
+  }
+
+  // 8. Delete the group document itself
+  await deleteDoc(doc(database, groupsCollection, groupId));
 }
 
-export async function createNotice(input: { groupId: string; chartId: string; title: string; body: string }) {
-  const database = ensureDb();
-  const record = buildNoticeRecord({ title: input.title, body: input.body, systemGenerated: false });
-  const ref = await addDoc(collection(database, chartNoticesCollection(input.groupId, input.chartId)), {
-    ...record,
-    createdAt: serverTimestamp(),
-  });
-  return { ...record, id: ref.id, createdAt: new Date().toISOString() };
-}
-
-export async function updateNotice(input: {
-  groupId: string;
-  chartId: string;
-  noticeId: string;
-  title: string;
-  body: string;
-}) {
-  const database = ensureDb();
-  await updateDoc(doc(database, chartNoticesCollection(input.groupId, input.chartId), input.noticeId), {
-    title: input.title,
-    body: input.body,
-  });
-}
-
-export async function deleteNotice(groupId: string, chartId: string, noticeId: string) {
-  const database = ensureDb();
-  await deleteDoc(doc(database, chartNoticesCollection(groupId, chartId), noticeId));
-}

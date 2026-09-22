@@ -126,7 +126,7 @@ export function GroupMembersList({ groupId }: { groupId: string }) {
                   <div className="flex items-center gap-2">
                     <p className="truncate text-sm font-semibold">{member.fullName}</p>
                     {isMemberAdmin && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-[color:var(--panel-solid)] border border-[color:var(--border-strong)] text-[color:var(--accent)] px-2 py-0.5 text-[10px] font-bold">
+                      <span className="inline-flex items-center whitespace-nowrap gap-1 rounded-full bg-[color:var(--panel-solid)] border border-[color:var(--border-strong)] text-[color:var(--accent)] px-2 py-0.5 text-[10px] font-bold">
                         {isOwnerAdmin ? `👑 ${t("memberMgr.owner")}` : `🛡️ ${t("memberMgr.temporaryAdmin")}`}
                       </span>
                     )}

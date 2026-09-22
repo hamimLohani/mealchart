@@ -18,10 +18,7 @@ export default function AdminLayout({
 
       {/* Content */}
       <main className="min-w-0 flex-1 pb-20 md:pb-0">
-        {/* Mobile top bar — back + panel label */}
-        <div className="mb-4 md:hidden">
-          <AdminMobileBar />
-        </div>
+        <AdminMobileBar />
         <ErrorBoundary>
           {children}
         </ErrorBoundary>

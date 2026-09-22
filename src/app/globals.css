@@ -495,6 +495,28 @@ button:not(.no-motion):not(:disabled):active {
   background: var(--danger-bg);
 }
 
+/* ── Mobile Sticky Admin Banner ─────────────────────── */
+.mobile-sticky-admin-banner {
+  background: rgba(246, 252, 249, 0.82);
+  backdrop-filter: blur(14px) saturate(180%);
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
+  box-shadow: 0 4px 16px rgba(10, 122, 99, 0.08);
+}
+
+[data-theme="dark"] .mobile-sticky-admin-banner {
+  background: rgba(10, 28, 22, 0.82);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+}
+
+@supports not (backdrop-filter: blur(14px)) {
+  .mobile-sticky-admin-banner {
+    background: rgba(246, 252, 249, 0.96);
+  }
+  [data-theme="dark"] .mobile-sticky-admin-banner {
+    background: rgba(10, 28, 22, 0.96);
+  }
+}
+
 /* ── Admin dashboard ───────────────────────────────── */
 .admin-section-label {
   font-size: 0.68rem;

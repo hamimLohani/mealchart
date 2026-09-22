@@ -6,7 +6,6 @@ import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { useT } from "@/i18n/use-t";
 import {
   backfillMealMonthKeys,
-  backfillSystemNotices,
   createChart,
   deleteChart,
   listCharts,
@@ -292,7 +291,6 @@ export function CreateChartManager() {
     setIsRepairingData(true);
     try {
       await backfillMealMonthKeys(activeAdminProfile.groupId);
-      await backfillSystemNotices(activeAdminProfile.groupId);
       await syncLockedMonthDocsFromCharts(activeAdminProfile.groupId);
       const currentCharts = await listCharts(activeAdminProfile.groupId);
       setCharts(currentCharts);

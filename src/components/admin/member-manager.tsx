@@ -8,7 +8,7 @@ import { useT } from "@/i18n/use-t";
 import { createAdminProfile, createMember, deleteMember, listMembers, updateMember, listJoinRequests, approveJoinRequest, rejectJoinRequest, getGroupById, listAdminProfiles, deleteAdminProfile } from "@/lib/firebase/repositories";
 import { toDateInputValue } from "@/lib/utils/date";
 import type { AdminProfile, Member, JoinRequest, Group } from "@/types/domain";
-import { sendWelcomeEmail, sendRemovalEmail, verifyEmailExistence, sendAdminWelcomeEmail } from "@/lib/email/actions";
+import { sendWelcomeEmail, sendRemovalEmail, verifyEmailExistence, sendAdminWelcomeEmail, sendAdminRemovalEmail } from "@/lib/email/actions";
 import { getFriendlyEmailError } from "@/lib/utils/email-error";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
@@ -393,6 +393,14 @@ export function MemberManager() {
       const updatedAdminProfiles = await listAdminProfiles(activeAdminProfile.groupId);
       setAdminProfiles(updatedAdminProfiles);
       showSuccess(t("toast.adminRevokedSuccess"));
+
+      if (adminProfileToDelete.email) {
+        void sendAdminRemovalEmail(
+          adminProfileToDelete.email,
+          adminProfileToDelete.fullName || adminProfileToDelete.email,
+          group.name || groupName || activeAdminProfile.groupId,
+        );
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : t("toast.genericError");
       setError(msg);

@@ -21,7 +21,6 @@ import {
   listDepositRequestsForChart,
   listCostsForChart,
   listCostRequestsForChart,
-  listNoticesForChart,
   getMealsForMonth,
   getMealsForDate,
   getMealsForChart,
@@ -126,15 +125,6 @@ export function useCostRequests(groupId: string | undefined, chartId: string | u
   );
 }
 
-// ── Notices ───────────────────────────────────────────────────────────────────
-
-export function useNotices(groupId: string | undefined, chartId: string | undefined) {
-  return useSWR(
-    groupId && chartId ? ["notices", groupId, chartId] : null,
-    ([, gid, cid]: [string, string, string]) => listNoticesForChart(gid, cid),
-    { keepPreviousData: true },
-  );
-}
 
 // ── Meals (month) ─────────────────────────────────────────────────────────────
 

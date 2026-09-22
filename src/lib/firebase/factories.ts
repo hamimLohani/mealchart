@@ -6,7 +6,6 @@ import type {
   Group,
   MealEntry,
   Member,
-  Notice,
   JoinRequest,
 } from "@/types/domain";
 import { daysInMonth, getChartMonthKeys } from "@/lib/utils/date";
@@ -137,19 +136,6 @@ export function buildDepositRecord(input: {
   };
 }
 
-export function buildNoticeRecord(input: {
-  title: string;
-  body: string;
-  systemGenerated: boolean;
-}): Notice {
-  return {
-    id: crypto.randomUUID(),
-    title: input.title,
-    body: input.body,
-    systemGenerated: input.systemGenerated,
-    createdAt: new Date().toISOString(),
-  };
-}
 
 export function buildJoinRequestRecord(input: {
   id: string;

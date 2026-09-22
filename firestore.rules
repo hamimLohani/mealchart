@@ -275,7 +275,7 @@ service cloud.firestore {
         && request.resource.data.totalChartsCreated == 0
         && request.resource.data.totalMembersCreated == 0;
       allow update: if isGroupAdmin(groupId) || isAdminAccountMigration(groupId);
-      allow delete: if isGroupAdmin(groupId);
+      allow delete: if isGroupOwner(groupId);
 
       match /settings/whatsapp {
         allow read, write: if isGroupAdmin(groupId);
@@ -292,9 +292,9 @@ service cloud.firestore {
             && request.resource.data.groupId is string
             && isGroupOwner(request.resource.data.groupId));
       allow update: if isValidAdminUpdate(adminId);
-      allow delete: if isGroupOwner(resource.data.groupId) 
-        && resource.data.id != request.auth.uid 
-        && (!("role" in resource.data) || resource.data.role != "owner");
+      allow delete: if 
+        (isSignedIn() && (request.auth.uid == adminId || resource.data.email == signedInEmail()))
+        || (isGroupOwner(resource.data.groupId) && (!("role" in resource.data) || resource.data.role != "owner" || request.auth.uid == adminId || resource.data.email == signedInEmail()));
     }
 
     match /groups/{groupId}/members/{memberId} {
@@ -327,12 +327,12 @@ service cloud.firestore {
         allow read: if true;
         allow create: if isValidChartDepositWrite(groupId, chartId);
         allow update: if isValidChartDepositWrite(groupId, chartId);
-        allow delete: if isGroupAdmin(groupId) && isChartUnlocked(groupId, chartId);
+        allow delete: if (isGroupAdmin(groupId) && isChartUnlocked(groupId, chartId)) || isGroupOwner(groupId);
       }
 
       match /depositRequests/{requestId} {
         allow read: if isGroupAdmin(groupId);
-        allow update, delete: if isGroupAdmin(groupId) && isChartUnlocked(groupId, chartId);
+        allow update, delete: if (isGroupAdmin(groupId) && isChartUnlocked(groupId, chartId)) || isGroupOwner(groupId);
         allow create: if isValidChartDepositRequestCreate(groupId, chartId, requestId);
       }
 
@@ -340,26 +340,20 @@ service cloud.firestore {
         allow read: if true;
         allow create: if isValidChartCostWrite(groupId, chartId);
         allow update: if isValidChartCostWrite(groupId, chartId);
-        allow delete: if isGroupAdmin(groupId) && isChartUnlocked(groupId, chartId);
+        allow delete: if (isGroupAdmin(groupId) && isChartUnlocked(groupId, chartId)) || isGroupOwner(groupId);
       }
 
       match /costRequests/{requestId} {
         allow read: if isGroupAdmin(groupId);
-        allow update, delete: if isGroupAdmin(groupId) && isChartUnlocked(groupId, chartId);
+        allow update, delete: if (isGroupAdmin(groupId) && isChartUnlocked(groupId, chartId)) || isGroupOwner(groupId);
         allow create: if isValidChartCostRequestCreate(groupId, chartId, requestId);
-      }
-
-      match /notices/{noticeId} {
-        allow read: if true;
-        allow create: if (isGroupAdmin(groupId) || isGroupOwner(groupId)) && isChartUnlocked(groupId, chartId);
-        allow update, delete: if isGroupAdmin(groupId) && isChartUnlocked(groupId, chartId);
       }
     }
     match /groups/{groupId}/meals/{mealId} {
       allow read: if true;
       allow create: if isValidMealWrite(groupId, mealId);
       allow update: if isValidMealWrite(groupId, mealId) || isAdminMealMonthKeyBackfill(groupId);
-      allow delete: if isGroupAdmin(groupId) && canDeleteMeal(groupId);
+      allow delete: if (isGroupAdmin(groupId) && canDeleteMeal(groupId)) || isGroupOwner(groupId);
     }
 
     // Legacy flat costs/deposits removed — all money data must live under charts/{chartId}/…

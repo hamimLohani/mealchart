@@ -98,14 +98,6 @@ export type DepositRequest = {
   createdAt: string;
 };
 
-export type Notice = {
-  id: string;
-  title: string;
-  body: string;
-  systemGenerated: boolean;
-  createdAt: string;
-};
-
 export type JoinRequest = {
   id: string;
   fullName: string;

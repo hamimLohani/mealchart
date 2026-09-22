@@ -12,10 +12,10 @@ import { auth } from "@/lib/firebase/client";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
 import { useGroupSession } from "@/lib/hooks/use-group-session";
-import { chartMonthDateBounds, getChartDates, toDateInputValue } from "@/lib/utils/date";
+import { chartMonthDateBounds, getChartDates, toDateInputValue, pickCurrentMonthChart, isChartActive } from "@/lib/utils/date";
 import { formatMeal, getMemberTotals, getMonthTotals, normalizeMealQuantity } from "@/lib/utils/meal-money";
 import { Skeleton } from "@/components/ui/skeleton";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useGroup, useMembers, useMealsForChart, useMealsForDate, useCosts, useDeposits, useCharts, useAdminProfiles } from "@/lib/hooks/use-data";
 import { mutate } from "swr";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
@@ -28,7 +28,7 @@ export default function MemberPage({
 }) {
   const { groupId, memberId } = use(params);
   const router = useRouter();
-  const { chart } = useGroupSession();
+  const { chart, selectChart } = useGroupSession();
   const { t, language } = useT();
   const { toast } = useToast();
   const locale = language === "bn" ? "bn-BD" : undefined;
@@ -40,6 +40,7 @@ export default function MemberPage({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [mealCount, setMealCount] = useState(0);
   const [selectedDate, setSelectedDate] = useState<string>(() => toDateInputValue(new Date()));
+  const [isMonthSelectorOpen, setIsMonthSelectorOpen] = useState(false);
 
   // SWR fetching — shared cache
   const { data: group, isLoading: groupLoading } = useGroup(isFirebaseConfigured ? groupId : undefined);
@@ -50,6 +51,16 @@ export default function MemberPage({
   const { data: dateMeals = [], isLoading: dateMealLoading } = useMealsForDate(group?.id, selectedDate);
   const { data: charts = [] } = useCharts(group?.id);
   const { data: adminProfiles = [] } = useAdminProfiles(group?.id);
+
+  useEffect(() => {
+    if (charts.length === 0 || chart) return;
+    const hasManuallyExited = sessionStorage.getItem("mc_manual_exit");
+    if (hasManuallyExited) return;
+    const preferredChart = pickCurrentMonthChart(charts);
+    if (preferredChart) {
+      selectChart(preferredChart);
+    }
+  }, [chart, charts, selectChart]);
 
   // Selectable dates for standard members: yesterday, today, and the next 5 days,
   // filtered to only keep dates that fall within the currently selected chart's months.
@@ -127,6 +138,19 @@ export default function MemberPage({
       }
     });
   }, [groupId]);
+
+  const currentAdminProfile = useMemo(() => {
+    if (!currentUser?.email) return null;
+    return adminProfiles.find((a) => a.email.trim().toLowerCase() === currentUser.email?.trim().toLowerCase()) ?? null;
+  }, [adminProfiles, currentUser?.email]);
+
+  const isOwnerAdmin = useMemo(() => {
+    if (!currentAdminProfile) return false;
+    return (
+      currentAdminProfile.groupId === groupId &&
+      (currentAdminProfile.role === "owner" || currentAdminProfile.id === group?.adminId || group?.adminId === currentUser?.uid)
+    );
+  }, [currentAdminProfile, groupId, group?.adminId, currentUser?.uid]);
 
   const tk = t("common.tk");
 
@@ -262,56 +286,134 @@ export default function MemberPage({
       (a.id === group?.adminId || a.role === "owner"),
   );
 
+  // Remove this button from temporary admin: only the owner admin can see this button on their own view
+  const showAdminPanelButton = isOwnerAdmin && isThisMemberOwner;
+
   return (
     <motion.main initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="mx-auto w-full max-w-7xl px-2.5 py-4 sm:px-8 sm:py-6 md:flex md:items-start md:gap-6 md:py-8">
       <GroupNavbar groupId={groupId} />
       <div className="min-w-0 flex-1 pb-20 md:pb-0">
-        <GroupMonthSelector groupId={group.id} groupName={group.name} autoSelect />
         <div className="py-6 grid gap-4">
-          <div className="group-hero flex items-start justify-between gap-3 sm:items-center">
-            <div className="min-w-0">
-              <p className="group-kicker">{group.name} · {chart.label}</p>
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="group-title">{member.fullName}</p>
-                {isThisMemberAdmin && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-[color:var(--accent)] text-white px-2.5 py-0.5 text-xs font-semibold shadow-sm">
-                    {isThisMemberOwner ? `👑 ${t("memberMgr.owner")}` : `🛡️ ${t("memberMgr.temporaryAdmin")}`}
-                  </span>
+          <div className="group-hero !flex-col !items-stretch gap-3">
+            <div className="flex items-start justify-between gap-6 sm:items-center w-full">
+              <div className="min-w-0 flex-1">
+                <p className="group-kicker">{group.name} · {chart.label}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="group-title">{member.fullName}</p>
+                  {isThisMemberAdmin && (
+                    <span className="inline-flex items-center whitespace-nowrap gap-1 rounded-full bg-[color:var(--accent)] text-white px-2.5 py-0.5 text-xs font-semibold shadow-sm">
+                      {isThisMemberOwner ? `👑 ${t("memberMgr.owner")}` : `🛡️ ${t("memberMgr.temporaryAdmin")}`}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">{t("memberPage.monthInfoSubtitle")}</p>
+                {chart.locked && (
+                  <p className="mt-1 inline-flex rounded-full border border-[color:var(--danger-border)] bg-[color:var(--danger-bg)] px-2 py-0.5 text-xs font-semibold text-[color:var(--danger)]">
+                    {t("memberPage.monthLocked")}
+                  </p>
                 )}
               </div>
-              <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">{t("memberPage.monthInfoSubtitle")}</p>
-              {chart.locked && (
-                <p className="mt-1 inline-flex rounded-full border border-[color:var(--danger-border)] bg-[color:var(--danger-bg)] px-2 py-0.5 text-xs font-semibold text-[color:var(--danger)]">
-                  {t("memberPage.monthLocked")}
-                </p>
-              )}
+              <div className="flex items-center gap-2.5 shrink-0">
+                {showAdminPanelButton && (
+                  <button
+                    type="button"
+                    onClick={() => router.push("/admin")}
+                    className="button-primary !py-2 !px-3 text-xs flex items-center gap-1.5 rounded-xl shadow-xs"
+                    title={t("groupNav.adminPanel")}
+                  >
+                    <span>🛡️</span>
+                    <span className="hidden sm:inline font-semibold">{t("groupNav.adminPanel")}</span>
+                  </button>
+                )}
+
+                <div className="flex flex-col items-stretch gap-1.5 min-w-[85px]">
+                  <button
+                    type="button"
+                    onClick={handleDownloadPDF}
+                    className="button-secondary !py-1 !px-2.5 text-xs font-semibold flex items-center justify-center gap-1.5 rounded-lg w-full transition hover:bg-[color:var(--accent-dim)]"
+                    aria-label="Export member report as PDF"
+                    title="Export member report as PDF"
+                  >
+                    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    <span>PDF</span>
+                  </button>
+
+                  {/* Months option right below download PDF inside the box */}
+                  <button
+                    type="button"
+                    onClick={() => setIsMonthSelectorOpen((prev) => !prev)}
+                    className="button-secondary !py-1 !px-2.5 text-xs font-semibold flex items-center justify-center gap-1 rounded-lg w-full transition hover:bg-[color:var(--accent-dim)]"
+                    title={t("groupDash.changeMonth")}
+                  >
+                    <span>{t("groupDash.changeMonth")}</span>
+                    <span className="text-[10px] opacity-70">{isMonthSelectorOpen ? "▲" : "▼"}</span>
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              {isAdmin && (
-                <button
-                  type="button"
-                  onClick={() => router.push("/admin")}
-                  className="button-primary !py-2 !px-3 text-xs flex items-center gap-1.5"
-                  title={t("groupNav.adminPanel")}
+
+            {/* Months Selector Grid Inside The Box */}
+            <AnimatePresence>
+              {isMonthSelectorOpen && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="w-full mt-3 border-t border-[color:var(--border)] pt-3 overflow-hidden"
                 >
-                  <span>🛡️</span>
-                  <span className="hidden sm:inline">{t("groupNav.adminPanel")}</span>
-                </button>
+                  <p className="text-xs font-bold uppercase tracking-wider text-[color:var(--muted)] mb-2">
+                    {t("groupDash.availableMonths")}
+                  </p>
+                  {charts.length === 0 ? (
+                    <p className="py-2 text-center text-xs text-[color:var(--soft-foreground)]">
+                      {t("groupDash.noCharts")}
+                    </p>
+                  ) : (
+                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                      {charts.map((monthChart) => {
+                        const isSelected = chart?.id === monthChart.id;
+                        const isActive = isChartActive(monthChart);
+                        return (
+                          <button
+                            key={monthChart.id}
+                            type="button"
+                            onClick={() => {
+                              sessionStorage.setItem("mc_auto_selected_chart", "false");
+                              selectChart(monthChart);
+                              setIsMonthSelectorOpen(false);
+                            }}
+                            className={`flex items-center justify-between rounded-lg border px-3 py-2 text-left transition ${
+                              isSelected
+                                ? "border-[color:var(--accent)] bg-[color:var(--accent-dim)] text-[color:var(--accent)] font-bold shadow-xs"
+                                : "border-[color:var(--border)] bg-[color:var(--background)] hover:border-[color:var(--accent)]"
+                            }`}
+                          >
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-sm font-semibold truncate">{monthChart.label}</span>
+                                {isActive && <span className="badge-accent !text-[10px] !py-0 !px-1.5">{t("common.active")}</span>}
+                              </div>
+                              <p className="text-[11px] text-[color:var(--muted)]">
+                                {(monthChart.monthKeys || [monthChart.monthKey]).join(", ")}
+                              </p>
+                            </div>
+                            {isSelected ? (
+                              <span className="text-xs font-bold text-[color:var(--accent)]">✓</span>
+                            ) : (
+                              <span className="text-xs text-[color:var(--muted)]">→</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </motion.div>
               )}
-              <button
-                type="button"
-                onClick={handleDownloadPDF}
-                className="button-secondary rounded-full p-2"
-                aria-label="Export member report as PDF"
-                title="Export member report as PDF"
-              >
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="7 10 12 15 17 10" />
-                  <line x1="12" y1="15" x2="12" y2="3" />
-                </svg>
-              </button>
-            </div>
+            </AnimatePresence>
           </div>
 
         {monthLoading ? (
