@@ -98,16 +98,53 @@ export function GroupNavbar({
 
   return (
     <>
+      {isGroupAdmin && (
+        <div className="md:hidden sticky top-14 z-20 mb-2 flex items-center justify-between gap-2 rounded-lg border border-[color:var(--accent)] bg-[color:var(--accent-dim)] px-3 py-1.5 shadow-xs">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-[color:var(--accent)]">
+            <span>🛡️</span>
+            <span>{adminProfile?.role === "owner" ? t("memberMgr.owner") : t("memberMgr.temporaryAdmin")}</span>
+          </div>
+          <Link
+            href="/admin"
+            className="button-primary !py-1 !px-2.5 text-xs flex items-center gap-1"
+          >
+            <span>{t("groupNav.adminPanel")}</span>
+            <span>→</span>
+          </Link>
+        </div>
+      )}
       <aside className="hidden shrink-0 md:block md:w-56 lg:w-64">
         <div className="sticky top-20">
           <nav className="admin-sidebar">
             <div className="admin-sidebar-identity">
               <div className="admin-sidebar-avatar">{identityName[0]?.toUpperCase() ?? "M"}</div>
               <div className="min-w-0">
-                <p className="admin-sidebar-role">{t("groupNav.panel")}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="admin-sidebar-role">{t("groupNav.panel")}</p>
+                  {isGroupAdmin && (
+                    <span className="rounded-full bg-[color:var(--accent)] text-white px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider">
+                      {adminProfile?.role === "owner" ? t("memberMgr.owner") : t("memberMgr.temporaryAdmin")}
+                    </span>
+                  )}
+                </div>
                 <p className="admin-sidebar-email">{identityName}</p>
               </div>
             </div>
+
+            {isGroupAdmin && (
+              <div className="mt-3">
+                <Link
+                  href="/admin"
+                  className="flex items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-[color:var(--accent)] bg-[color:var(--accent-dim)] px-3 py-2 text-xs font-bold text-[color:var(--accent)] transition hover:opacity-90"
+                >
+                  <div className="flex items-center gap-2">
+                    <span>🛡️</span>
+                    <span>{t("groupNav.adminPanel")}</span>
+                  </div>
+                  <span>→</span>
+                </Link>
+              </div>
+            )}
 
             <Link
               href={memberHomeHref}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -11,16 +11,27 @@ import { useAuthStore } from "@/store/auth-store";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { useAdminRequestCounts, type AdminRequestCountKey } from "@/lib/hooks/use-admin-request-counts";
 import { handleAdminLogout } from "@/lib/auth/admin-logout";
+import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
+import { useMembers } from "@/lib/hooks/use-data";
 
 export function AdminNav() {
   const pathname = usePathname();
   const router = useRouter();
-  const { t, tx } = useT();
+  const { t } = useT();
   const { toast } = useToast();
   const { admin, isLoaded } = useAuthStore();
+  const { adminProfile } = useCurrentAdminProfile();
+  const { data: members = [] } = useMembers(adminProfile?.groupId);
   const requestCounts = useAdminRequestCounts();
   const [isSignOutInProgress, setIsSignOutInProgress] = useState(false);
   const isLoggedIn = isLoaded && !!admin;
+
+  const currentMember = useMemo(() => {
+    const adminEmail = admin?.email;
+    if (!adminEmail || !members.length) return null;
+    const emailNorm = adminEmail.trim().toLowerCase();
+    return members.find((m) => m.email.trim().toLowerCase() === emailNorm) ?? null;
+  }, [admin, members]);
 
   useGlobalLoading("admin-nav-sign-out", isSignOutInProgress, t("common.signingOut"));
 
@@ -90,6 +101,19 @@ export function AdminNav() {
           <span>{t("adminNav.panel")}</span>
         </motion.div>
       </Link>
+
+      {currentMember && adminProfile && (
+        <Link
+          href={`/group/${adminProfile.groupId}/member/${encodeURIComponent(currentMember.id)}`}
+          className="mt-2 flex items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-[color:var(--accent)] bg-[color:var(--accent-dim)] px-3 py-2 text-xs font-bold text-[color:var(--accent)] transition hover:opacity-90"
+        >
+          <div className="flex items-center gap-2">
+            <span>👤</span>
+            <span>{t("adminNav.myMemberView")}</span>
+          </div>
+          <span>→</span>
+        </Link>
+      )}
 
       {isLoggedIn ? (
         <>

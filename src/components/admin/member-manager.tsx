@@ -58,13 +58,15 @@ export function MemberManager() {
   const [isRemoving, setIsRemoving] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<Member | null>(null);
   const [adminToDelete, setAdminToDelete] = useState<AdminProfile | null>(null);
+  const [memberToMakeAdmin, setMemberToMakeAdmin] = useState<Member | null>(null);
+  const [isPromotingAdmin, setIsPromotingAdmin] = useState(false);
   const [requestAction, setRequestAction] = useState<"approve" | "reject" | null>(null);
   const [copiedGroupId, setCopiedGroupId] = useState(false);
-  const { admin, isLoaded } = useAuthStore();
+  const { admin } = useAuthStore();
   const { adminProfile: currentAdminProfile, isLoading: profileLoading, error: profileError } = useCurrentAdminProfile();
   const activeAdminProfile =
     currentAdminProfile && adminProfile?.id === currentAdminProfile.id ? adminProfile : null;
-  const isGroupOwner = group && admin && group.adminId === admin.uid;
+  const isGroupOwner = (group && admin && group.adminId === admin.uid) || currentAdminProfile?.role === "owner";
   const visibleMembers = useMemo(
     () => (activeAdminProfile ? members : []),
     [activeAdminProfile, members],
@@ -89,15 +91,17 @@ export function MemberManager() {
       : t("memberMgr.submittingReject")
     : isRemoving
       ? t("memberMgr.submittingRemove")
-      : isInvitingAdmin
-        ? t("memberMgr.invitingAdmin")
-        : editingMemberId
-          ? t("memberMgr.submittingUpdate")
-          : t("memberMgr.submittingAdd");
+      : isPromotingAdmin
+        ? t("memberMgr.makingAdmin")
+        : isInvitingAdmin
+          ? t("memberMgr.invitingAdmin")
+          : editingMemberId
+            ? t("memberMgr.submittingUpdate")
+            : t("memberMgr.submittingAdd");
 
   useGlobalLoading(
     "member-manager",
-    isLoading || profileLoading || isSubmitting || isRemoving || !!requestAction || isInvitingAdmin,
+    isLoading || profileLoading || isSubmitting || isRemoving || !!requestAction || isInvitingAdmin || isPromotingAdmin,
     isLoading ? t("memberMgr.loadingList") : requestLoadingMessage,
   );
 
@@ -344,15 +348,51 @@ export function MemberManager() {
     }
   }
 
-  async function performDeleteAdmin(admin: AdminProfile) {
+  async function performMakeAdmin(member: Member) {
+    if (!activeAdminProfile) return;
+    setError(null);
+    setIsPromotingAdmin(true);
+    try {
+      await createAdminProfile({
+        groupId: activeAdminProfile.groupId,
+        fullName: member.fullName,
+        email: member.email,
+        role: "admin",
+      });
+      const updatedAdminProfiles = await listAdminProfiles(activeAdminProfile.groupId);
+      setAdminProfiles(updatedAdminProfiles);
+      showSuccess(t("toast.adminMadeSuccess"));
+
+      void sendAdminWelcomeEmail(
+        member.email,
+        member.fullName,
+        groupName || activeAdminProfile.groupId,
+      );
+    } catch (e) {
+      let msg;
+      if (e instanceof Error && e.message === "ADMIN_ALREADY_EXISTS") {
+        msg = t("errors.adminAlreadyExists");
+      } else if (e instanceof Error && e.message === "EMAIL_ALREADY_MEMBER") {
+        msg = t("errors.emailAlreadyMember");
+      } else {
+        msg = e instanceof Error ? e.message : t("toast.genericError");
+      }
+      setError(msg);
+      showError(msg);
+    } finally {
+      setIsPromotingAdmin(false);
+    }
+  }
+
+  async function performDeleteAdmin(adminProfileToDelete: AdminProfile) {
     if (!activeAdminProfile || !group) return;
     setError(null);
     setIsRemoving(true);
     try {
-      await deleteAdminProfile(admin.id);
+      await deleteAdminProfile(adminProfileToDelete.id);
       const updatedAdminProfiles = await listAdminProfiles(activeAdminProfile.groupId);
       setAdminProfiles(updatedAdminProfiles);
-      showSuccess(t("toast.memberRemoved"));
+      showSuccess(t("toast.adminRevokedSuccess"));
     } catch (e) {
       const msg = e instanceof Error ? e.message : t("toast.genericError");
       setError(msg);
@@ -636,29 +676,44 @@ export function MemberManager() {
             </div>
 
             <div className="mt-4 grid gap-2.5">
-              {adminProfiles.map((admin) => (
-                <article
-                  key={admin.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3"
-                >
-                  <div className="min-w-0">
-                    <p className="font-semibold">{admin.fullName || admin.email}</p>
-                    <p className="mt-0.5 text-xs text-[color:var(--muted)]">
-                      {admin.email}
-                      {admin.role && (
-                        <span className="ml-2 px-2 py-0.5 rounded-full bg-[color:var(--accent)] text-white text-xs">
-                          {admin.role}
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                  {admin.id !== group?.adminId && (
-                    <button className="button-danger" onClick={() => setAdminToDelete(admin)} type="button">
-                      {t("memberMgr.remove")}
-                    </button>
-                  )}
-                </article>
-              ))}
+              {adminProfiles.map((adminItem) => {
+                const isOwner = adminItem.id === group?.adminId || adminItem.role === "owner";
+                const linkedMember = members.find((m) => m.email.trim().toLowerCase() === adminItem.email.trim().toLowerCase());
+                return (
+                  <article
+                    key={adminItem.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold">{adminItem.fullName || adminItem.email}</p>
+                        {isOwner ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-[color:var(--accent)] text-white px-2 py-0.5 text-[11px] font-bold">
+                            👑 {t("memberMgr.owner")}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-[color:var(--panel-solid)] border border-[color:var(--border-strong)] text-[color:var(--accent)] px-2 py-0.5 text-[11px] font-bold">
+                            🛡️ {t("memberMgr.temporaryAdmin")}
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-0.5 text-xs text-[color:var(--muted)]">
+                        {adminItem.email}
+                        {linkedMember && (
+                          <span className="ml-2 font-medium text-[color:var(--soft-foreground)]">
+                            · {t("memberMgr.memberLabel")}: {linkedMember.fullName}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    {!isOwner && (
+                      <button className="button-danger !py-1 !px-3 text-xs" onClick={() => setAdminToDelete(adminItem)} type="button">
+                        {t("memberMgr.revokeAdmin")}
+                      </button>
+                    )}
+                  </article>
+                );
+              })}
             </div>
           </div>
         </>
@@ -726,27 +781,60 @@ export function MemberManager() {
               {t("admin.noMembersYet")}
             </p>
           ) : filteredMembers.length ? (
-            filteredMembers.map((member) => (
-              <article
-                key={member.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3"
-              >
-                <div className="min-w-0">
-                  <p className="font-semibold">{member.fullName}</p>
-                  <p className="mt-0.5 text-xs text-[color:var(--muted)]">
-                    {t("memberMgr.joinedLine")} {member.joinDate} · {member.email}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <button className="button-secondary" onClick={() => startEdit(member)} type="button">
-                    {t("memberMgr.edit")}
-                  </button>
-                  <button className="button-danger" onClick={() => setMemberToDelete(member)} type="button">
-                    {t("memberMgr.remove")}
-                  </button>
-                </div>
-              </article>
-            ))
+            filteredMembers.map((member) => {
+              const memberAdmin = adminProfiles.find(
+                (a) => a.email.trim().toLowerCase() === member.email.trim().toLowerCase()
+              );
+              const isMemberAdmin = !!memberAdmin;
+              const isOwnerAdmin = memberAdmin?.id === group?.adminId || memberAdmin?.role === "owner";
+
+              return (
+                <article
+                  key={member.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-4 py-3"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold">{member.fullName}</p>
+                      {isMemberAdmin && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[color:var(--panel-solid)] border border-[color:var(--border-strong)] text-[color:var(--accent)] px-2 py-0.5 text-[10px] font-bold">
+                          🛡️ {isOwnerAdmin ? t("memberMgr.owner") : t("memberMgr.temporaryAdmin")}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-0.5 text-xs text-[color:var(--muted)]">
+                      {t("memberMgr.joinedLine")} {member.joinDate} · {member.email}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {isGroupOwner && !isMemberAdmin && (
+                      <button
+                        className="button-secondary !py-1 !px-2.5 text-xs font-semibold text-[color:var(--accent)] border-[color:var(--accent)] hover:bg-[color:var(--accent-dim)]"
+                        onClick={() => setMemberToMakeAdmin(member)}
+                        type="button"
+                      >
+                        🛡️ {t("memberMgr.makeAdmin")}
+                      </button>
+                    )}
+                    {isGroupOwner && isMemberAdmin && !isOwnerAdmin && (
+                      <button
+                        className="button-secondary !py-1 !px-2.5 text-xs font-semibold text-[color:var(--danger)] border-[color:var(--danger-border)] hover:bg-[color:var(--danger-bg)]"
+                        onClick={() => setAdminToDelete(memberAdmin)}
+                        type="button"
+                      >
+                        {t("memberMgr.revokeAdmin")}
+                      </button>
+                    )}
+                    <button className="button-secondary !py-1 !px-2.5 text-xs" onClick={() => startEdit(member)} type="button">
+                      {t("memberMgr.edit")}
+                    </button>
+                    <button className="button-danger !py-1 !px-2.5 text-xs" onClick={() => setMemberToDelete(member)} type="button">
+                      {t("memberMgr.remove")}
+                    </button>
+                  </div>
+                </article>
+              );
+            })
           ) : (
             <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">
               {t("memberMgr.noSearchMatch")}
@@ -771,12 +859,28 @@ export function MemberManager() {
         }}
       />
     )}
+    {memberToMakeAdmin && (
+      <ConfirmModal
+        open={!!memberToMakeAdmin}
+        title={t("memberMgr.makeAdmin")}
+        description={t("memberMgr.makeAdminConfirm", { member: memberToMakeAdmin.fullName })}
+        confirmLabel={t("memberMgr.makeAdmin")}
+        cancelLabel={t("common.cancel")}
+        isProcessing={isPromotingAdmin}
+        onCancel={() => setMemberToMakeAdmin(null)}
+        onConfirm={async () => {
+          if (!memberToMakeAdmin) return;
+          await performMakeAdmin(memberToMakeAdmin);
+          setMemberToMakeAdmin(null);
+        }}
+      />
+    )}
     {adminToDelete && (
       <ConfirmModal
         open={!!adminToDelete}
-        title={t("memberMgr.remove")}
-        description={t("memberMgr.removeConfirm", { member: adminToDelete.fullName || adminToDelete.email })}
-        confirmLabel={t("memberMgr.remove")}
+        title={t("memberMgr.revokeAdmin")}
+        description={t("memberMgr.revokeAdminConfirm", { member: adminToDelete.fullName || adminToDelete.email })}
+        confirmLabel={t("memberMgr.revokeAdmin")}
         cancelLabel={t("common.cancel")}
         isProcessing={isRemoving}
         onCancel={() => setAdminToDelete(null)}

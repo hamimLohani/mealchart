@@ -10,12 +10,14 @@ import { GroupMonthSelector } from "@/components/group/group-month-selector";
 import { getGroupById, listMembers } from "@/lib/firebase/repositories";
 import { useGroupSession } from "@/lib/hooks/use-group-session";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
+import { useAdminProfiles } from "@/lib/hooks/use-data";
 import type { Group, Member } from "@/types/domain";
 
 export function GroupMembersList({ groupId }: { groupId: string }) {
   const router = useRouter();
   const { t, tx, language } = useT();
   const { chart } = useGroupSession();
+  const { data: adminProfiles = [] } = useAdminProfiles(groupId);
   const [group, setGroup] = useState<Group | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [memberSearch, setMemberSearch] = useState("");
@@ -105,23 +107,38 @@ export function GroupMembersList({ groupId }: { groupId: string }) {
           type="search"
         />
         <div className="mt-3 grid gap-2">
-          {filtered.map((member) => (
-            <button
-              key={member.id}
-              onClick={() => router.push(`/group/${groupId}/member/${member.id}`)}
-              className="member-row"
-              type="button"
-              aria-label={`View ${member.fullName}'s details`}
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold">{member.fullName}</p>
-                <p className="text-xs text-[color:var(--muted)]">
-                  {t("groupDash.joined")} {new Date(member.joinDate).toLocaleDateString(language === "bn" ? "bn-BD" : undefined)}
-                </p>
-              </div>
-              <span className="text-[color:var(--accent)]">→</span>
-            </button>
-          ))}
+          {filtered.map((member) => {
+            const memberAdmin = adminProfiles.find(
+              (a) => a.email.trim().toLowerCase() === member.email.trim().toLowerCase()
+            );
+            const isMemberAdmin = !!memberAdmin;
+            const isOwnerAdmin = memberAdmin?.id === group?.adminId || memberAdmin?.role === "owner";
+
+            return (
+              <button
+                key={member.id}
+                onClick={() => router.push(`/group/${groupId}/member/${member.id}`)}
+                className="member-row"
+                type="button"
+                aria-label={`View ${member.fullName}'s details`}
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="truncate text-sm font-semibold">{member.fullName}</p>
+                    {isMemberAdmin && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[color:var(--panel-solid)] border border-[color:var(--border-strong)] text-[color:var(--accent)] px-2 py-0.5 text-[10px] font-bold">
+                        {isOwnerAdmin ? `👑 ${t("memberMgr.owner")}` : `🛡️ ${t("memberMgr.temporaryAdmin")}`}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-[color:var(--muted)]">
+                    {t("groupDash.joined")} {new Date(member.joinDate).toLocaleDateString(language === "bn" ? "bn-BD" : undefined)}
+                  </p>
+                </div>
+                <span className="text-[color:var(--accent)]">→</span>
+              </button>
+            );
+          })}
           {filtered.length === 0 && (
             <p className="py-4 text-center text-sm text-[color:var(--soft-foreground)]">{t("groupMembers.searchNoMatch")}</p>
           )}

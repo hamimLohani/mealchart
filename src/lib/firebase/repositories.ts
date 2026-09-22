@@ -236,9 +236,9 @@ export async function createAdminProfile(input: {
     throw new Error("ADMIN_ALREADY_EXISTS");
   }
 
-  // Check if email is already a member in any group
+  // Check if email is already a member in another group
   const existingMember = await findMemberGroupByEmail(input.email);
-  if (existingMember) {
+  if (existingMember && existingMember.groupId !== input.groupId) {
     throw new Error("EMAIL_ALREADY_MEMBER");
   }
 
@@ -398,6 +398,17 @@ export async function deleteMember(groupId: string, memberId: string) {
   const snapshot = await getDoc(memberRef);
 
   if (!snapshot.exists()) throw new Error("Member was not found.");
+
+  const data = snapshot.data();
+  if (data?.email) {
+    const adminDocId = `${groupId}:${data.email.trim().toLowerCase()}`;
+    const adminDocRef = doc(database, adminsCollection, adminDocId);
+    try {
+      await deleteDoc(adminDocRef);
+    } catch {
+      // ignore if admin doc doesn't exist
+    }
+  }
 
   await deleteDoc(memberRef);
 }

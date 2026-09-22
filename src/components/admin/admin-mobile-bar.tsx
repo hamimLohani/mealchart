@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useRef, type TouchEvent } from "react";
+import { useRef, useMemo, type TouchEvent } from "react";
 import { useT } from "@/i18n/use-t";
 import { useAdminRequestCounts, type AdminRequestCountKey } from "@/lib/hooks/use-admin-request-counts";
+import { useAuthStore } from "@/store/auth-store";
+import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
+import { useMembers } from "@/lib/hooks/use-data";
 
 export function AdminMobileBar() {
   const pathname = usePathname();
@@ -13,6 +16,16 @@ export function AdminMobileBar() {
   const touchStartY = useRef<number | null>(null);
   const { t } = useT();
   const requestCounts = useAdminRequestCounts();
+  const { admin } = useAuthStore();
+  const { adminProfile } = useCurrentAdminProfile();
+  const { data: members = [] } = useMembers(adminProfile?.groupId);
+
+  const currentMember = useMemo(() => {
+    const adminEmail = admin?.email;
+    if (!adminEmail || !members.length) return null;
+    const emailNorm = adminEmail.trim().toLowerCase();
+    return members.find((m) => m.email.trim().toLowerCase() === emailNorm) ?? null;
+  }, [admin, members]);
 
   const navItems = [
     { href: "/admin", icon: <HomeIcon />, labelKey: "adminMobile.panel" as const },
@@ -52,11 +65,27 @@ export function AdminMobileBar() {
   };
 
   return (
-    <div
-      className="fixed bottom-0 left-0 right-0 z-[60] flex items-center justify-around border-t border-[color:var(--border)] bg-[color:var(--panel)] px-1 py-1.5 pb-safe shadow-[0_-4px_12px_rgba(0,0,0,0.05)] md:hidden"
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-    >
+    <>
+      {currentMember && adminProfile && (
+        <div className="md:hidden">
+          <Link
+            href={`/group/${adminProfile.groupId}/member/${encodeURIComponent(currentMember.id)}`}
+            className="flex items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-[color:var(--accent)] bg-[color:var(--accent-dim)] px-4 py-2.5 text-xs font-bold text-[color:var(--accent)] transition hover:opacity-90 shadow-xs"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-sm">👤</span>
+              <span>{t("adminNav.myMemberView")}</span>
+            </div>
+            <span>→</span>
+          </Link>
+        </div>
+      )}
+
+      <div
+        className="fixed bottom-0 left-0 right-0 z-[60] flex items-center justify-around border-t border-[color:var(--border)] bg-[color:var(--panel)] px-1 py-1.5 pb-safe shadow-[0_-4px_12px_rgba(0,0,0,0.05)] md:hidden"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
       {navItems.map((item) => {
         const isActive = pathname === item.href;
         const requestCountKey: AdminRequestCountKey | undefined =
@@ -84,6 +113,7 @@ export function AdminMobileBar() {
         );
       })}
     </div>
+    </>
   );
 }
 

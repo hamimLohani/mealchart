@@ -13,6 +13,7 @@ import {
   getGroupById,
   listGroups,
   getAdminProfile,
+  listAdminProfiles,
   listMembers,
   listCharts,
   listJoinRequests,
@@ -47,6 +48,14 @@ export function useAdminProfile(uid: string | undefined) {
   return useSWR(
     uid ? ["admin", uid] : null,
     ([, id]: [string, string]) => getAdminProfile(id),
+    { keepPreviousData: true },
+  );
+}
+
+export function useAdminProfiles(groupId: string | undefined) {
+  return useSWR(
+    groupId ? ["adminProfiles", groupId] : null,
+    ([, id]: [string, string]) => listAdminProfiles(id),
     { keepPreviousData: true },
   );
 }

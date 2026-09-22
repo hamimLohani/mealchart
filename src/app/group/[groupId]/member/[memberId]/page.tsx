@@ -16,7 +16,7 @@ import { chartMonthDateBounds, getChartDates, toDateInputValue } from "@/lib/uti
 import { formatMeal, getMemberTotals, getMonthTotals, normalizeMealQuantity } from "@/lib/utils/meal-money";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
-import { useGroup, useMembers, useMealsForChart, useMealsForDate, useCosts, useDeposits, useCharts } from "@/lib/hooks/use-data";
+import { useGroup, useMembers, useMealsForChart, useMealsForDate, useCosts, useDeposits, useCharts, useAdminProfiles } from "@/lib/hooks/use-data";
 import { mutate } from "swr";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { useToast } from "@/lib/hooks/use-toast";
@@ -49,6 +49,7 @@ export default function MemberPage({
   const { data: deposits = [] } = useDeposits(group?.id, chart?.id);
   const { data: dateMeals = [], isLoading: dateMealLoading } = useMealsForDate(group?.id, selectedDate);
   const { data: charts = [] } = useCharts(group?.id);
+  const { data: adminProfiles = [] } = useAdminProfiles(group?.id);
 
   // Selectable dates for standard members: yesterday, today, and the next 5 days,
   // filtered to only keep dates that fall within the currently selected chart's months.
@@ -254,6 +255,13 @@ export default function MemberPage({
             ? t("memberPage.saved")
             : t("memberPage.tapUpdate");
 
+  const isThisMemberAdmin = adminProfiles.some((a) => a.email.trim().toLowerCase() === member?.email?.trim().toLowerCase());
+  const isThisMemberOwner = adminProfiles.some(
+    (a) =>
+      a.email.trim().toLowerCase() === member?.email?.trim().toLowerCase() &&
+      (a.id === group?.adminId || a.role === "owner"),
+  );
+
   return (
     <motion.main initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="mx-auto w-full max-w-7xl px-2.5 py-4 sm:px-8 sm:py-6 md:flex md:items-start md:gap-6 md:py-8">
       <GroupNavbar groupId={groupId} />
@@ -263,7 +271,14 @@ export default function MemberPage({
           <div className="group-hero flex items-start justify-between gap-3 sm:items-center">
             <div className="min-w-0">
               <p className="group-kicker">{group.name} · {chart.label}</p>
-              <p className="group-title">{member.fullName}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="group-title">{member.fullName}</p>
+                {isThisMemberAdmin && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[color:var(--accent)] text-white px-2.5 py-0.5 text-xs font-semibold shadow-sm">
+                    {isThisMemberOwner ? `👑 ${t("memberMgr.owner")}` : `🛡️ ${t("memberMgr.temporaryAdmin")}`}
+                  </span>
+                )}
+              </div>
               <p className="mt-1 text-sm text-[color:var(--soft-foreground)]">{t("memberPage.monthInfoSubtitle")}</p>
               {chart.locked && (
                 <p className="mt-1 inline-flex rounded-full border border-[color:var(--danger-border)] bg-[color:var(--danger-bg)] px-2 py-0.5 text-xs font-semibold text-[color:var(--danger)]">
@@ -271,19 +286,32 @@ export default function MemberPage({
                 </p>
               )}
             </div>
-            <button
-              type="button"
-              onClick={handleDownloadPDF}
-              className="button-secondary rounded-full p-2"
-              aria-label="Export member report as PDF"
-              title="Export member report as PDF"
-            >
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-            </button>
+            <div className="flex items-center gap-2">
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => router.push("/admin")}
+                  className="button-primary !py-2 !px-3 text-xs flex items-center gap-1.5"
+                  title={t("groupNav.adminPanel")}
+                >
+                  <span>🛡️</span>
+                  <span className="hidden sm:inline">{t("groupNav.adminPanel")}</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleDownloadPDF}
+                className="button-secondary rounded-full p-2"
+                aria-label="Export member report as PDF"
+                title="Export member report as PDF"
+              >
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+              </button>
+            </div>
           </div>
 
         {monthLoading ? (
@@ -325,6 +353,11 @@ export default function MemberPage({
                 selectedDate === yesterdayDateStr ? "text-[#c2570c]" : "text-[color:var(--accent)]"
               }`}>
                 {t("memberPage.addMeal")} ({chart.label})
+                {isAdmin && (
+                  <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-[color:var(--panel-solid)] border border-[color:var(--border-strong)] text-[color:var(--accent)] px-2 py-0.5 text-[10px] font-bold">
+                    🛡️ {t("groupNav.adminPanel")}
+                  </span>
+                )}
                 {selectedDate === yesterdayDateStr && (
                   <span className="ml-2 inline-flex items-center rounded-full border border-[#c2570c]/30 bg-[#fff7ed] px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[#c2570c]">
                     {t("common.yesterday")}
