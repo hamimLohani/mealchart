@@ -2,6 +2,9 @@
  * Centralized SWR data hooks.
  * These wrap repository functions so all UI components share the same cache.
  * Cache keys are stable tuples, making deduplication and invalidation predictable.
+ *
+ * keepPreviousData: true — keeps stale data visible while a background revalidation
+ * is in progress, eliminating the blank/spinner flash that users perceive as slowness.
  */
 "use client";
 
@@ -30,11 +33,12 @@ export function useGroup(groupId: string | undefined) {
   return useSWR(
     groupId ? ["group", groupId] : null,
     ([, id]: [string, string]) => getGroupById(id),
+    { keepPreviousData: true },
   );
 }
 
 export function useGroups() {
-  return useSWR("groups", () => listGroups());
+  return useSWR("groups", () => listGroups(), { keepPreviousData: true });
 }
 
 // ── Admin ────────────────────────────────────────────────────────────────────
@@ -43,6 +47,7 @@ export function useAdminProfile(uid: string | undefined) {
   return useSWR(
     uid ? ["admin", uid] : null,
     ([, id]: [string, string]) => getAdminProfile(id),
+    { keepPreviousData: true },
   );
 }
 
@@ -52,6 +57,7 @@ export function useMembers(groupId: string | undefined) {
   return useSWR(
     groupId ? ["members", groupId] : null,
     ([, id]: [string, string]) => listMembers(id),
+    { keepPreviousData: true },
   );
 }
 
@@ -61,6 +67,7 @@ export function useJoinRequests(groupId: string | undefined) {
   return useSWR(
     groupId ? ["joinRequests", groupId] : null,
     ([, id]: [string, string]) => listJoinRequests(id),
+    { keepPreviousData: true },
   );
 }
 
@@ -70,6 +77,7 @@ export function useCharts(groupId: string | undefined) {
   return useSWR(
     groupId ? ["charts", groupId] : null,
     ([, id]: [string, string]) => listCharts(id),
+    { keepPreviousData: true },
   );
 }
 
@@ -79,6 +87,7 @@ export function useDeposits(groupId: string | undefined, chartId: string | undef
   return useSWR(
     groupId && chartId ? ["deposits", groupId, chartId] : null,
     ([, gid, cid]: [string, string, string]) => listDepositsForChart(gid, cid),
+    { keepPreviousData: true },
   );
 }
 
@@ -86,6 +95,7 @@ export function useDepositRequests(groupId: string | undefined, chartId: string 
   return useSWR(
     groupId && chartId ? ["depositRequests", groupId, chartId] : null,
     ([, gid, cid]: [string, string, string]) => listDepositRequestsForChart(gid, cid),
+    { keepPreviousData: true },
   );
 }
 
@@ -95,6 +105,7 @@ export function useCosts(groupId: string | undefined, chartId: string | undefine
   return useSWR(
     groupId && chartId ? ["costs", groupId, chartId] : null,
     ([, gid, cid]: [string, string, string]) => listCostsForChart(gid, cid),
+    { keepPreviousData: true },
   );
 }
 
@@ -102,6 +113,7 @@ export function useCostRequests(groupId: string | undefined, chartId: string | u
   return useSWR(
     groupId && chartId ? ["costRequests", groupId, chartId] : null,
     ([, gid, cid]: [string, string, string]) => listCostRequestsForChart(gid, cid),
+    { keepPreviousData: true },
   );
 }
 
@@ -111,6 +123,7 @@ export function useNotices(groupId: string | undefined, chartId: string | undefi
   return useSWR(
     groupId && chartId ? ["notices", groupId, chartId] : null,
     ([, gid, cid]: [string, string, string]) => listNoticesForChart(gid, cid),
+    { keepPreviousData: true },
   );
 }
 
@@ -120,6 +133,7 @@ export function useMealsForMonth(groupId: string | undefined, monthKey: string |
   return useSWR(
     groupId && monthKey ? ["mealsMonth", groupId, monthKey] : null,
     ([, gid, mk]: [string, string, string]) => getMealsForMonth(gid, mk),
+    { keepPreviousData: true },
   );
 }
 
@@ -129,6 +143,7 @@ export function useMealsForDate(groupId: string | undefined, date: string | unde
   return useSWR(
     groupId && date ? ["mealsDate", groupId, date] : null,
     ([, gid, d]: [string, string, string]) => getMealsForDate(gid, d),
+    { keepPreviousData: true },
   );
 }
 
@@ -139,5 +154,6 @@ export function useMealsForChart(groupId: string | undefined, chart: Chart | und
   return useSWR(
     cacheKey,
     () => getMealsForChart(groupId!, chart!),
+    { keepPreviousData: true },
   );
 }

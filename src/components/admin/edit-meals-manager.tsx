@@ -288,6 +288,12 @@ export function EditMealsManager() {
 
   const days = getChartDates(selectedChart.monthKeys || [selectedChart.monthKey]);
   const currentDate = toDateInputValue(new Date());
+  const yesterdayDate = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    const ys = toDateInputValue(d);
+    return (selectedChart.monthKeys || [selectedChart.monthKey]).includes(ys.slice(0, 7)) ? ys : null;
+  })();
   const todayDate = (selectedChart.monthKeys || [selectedChart.monthKey]).includes(currentDate.slice(0, 7)) ? currentDate : null;
   const grandTotal = rowMemberIds.reduce((s, id) => s + memberTotal(id), 0);
 
@@ -342,14 +348,24 @@ export function EditMealsManager() {
                 </th>
                 {days.map((date) => {
                   const isToday = date === todayDate;
+                  const isYesterday = date === yesterdayDate;
                   return (
                     <th
                       key={date}
                       className={`min-w-[40px] px-0.5 py-2 text-center text-xs font-semibold tracking-tight ${
-                        isToday ? "bg-[color:var(--accent-dim)] text-[color:var(--accent)]" : "text-[color:var(--muted)]"
+                        isToday
+                          ? "bg-[color:var(--accent-dim)] text-[color:var(--accent)]"
+                          : isYesterday
+                            ? "bg-[color:var(--warn-bg,#fff7ed)] text-[color:var(--warn,#c2570c)]"
+                            : "text-[color:var(--muted)]"
                       }`}
                     >
                       {formatHeaderDate(date, language)}
+                      {isYesterday && (
+                        <span className="block text-[9px] font-bold uppercase tracking-widest opacity-70">
+                          {t("common.yesterday")}
+                        </span>
+                      )}
                     </th>
                   );
                 })}
@@ -400,11 +416,25 @@ export function EditMealsManager() {
                     {days.map((date) => {
                       const val = meals[memberId]?.[date] ?? 0;
                       const isToday = date === todayDate;
+                      const isYesterday = date === yesterdayDate;
                       return (
-                        <td key={date} className={`px-0.5 py-1 text-center ${isToday ? "bg-[color:var(--accent-dim)]" : ""}`}>
+                        <td
+                          key={date}
+                          className={`px-0.5 py-1 text-center ${
+                            isToday
+                              ? "bg-[color:var(--accent-dim)]"
+                              : isYesterday
+                                ? "bg-[color:var(--warn-bg,#fff7ed)]"
+                                : ""
+                          }`}
+                        >
                           <input
-                            className={`w-18 rounded-md border border-transparent bg-transparent px-1 text-center text-sm font-medium tabular-nums outline-none transition focus:border-[color:var(--accent)] focus:bg-[color:var(--panel)] ${
-                              isToday ? "border-[color:var(--accent)] bg-[color:var(--panel)]" : ""
+                            className={`w-18 rounded-md border bg-transparent px-1 text-center text-sm font-medium tabular-nums outline-none transition focus:border-[color:var(--accent)] focus:bg-[color:var(--panel)] ${
+                              isToday
+                                ? "border-[color:var(--accent)] bg-[color:var(--panel)]"
+                                : isYesterday
+                                  ? "border-[color:var(--warn,#c2570c)] border-opacity-40 bg-[color:var(--panel)]"
+                                  : "border-transparent"
                             }`}
                             min="0"
                             step="0.25"

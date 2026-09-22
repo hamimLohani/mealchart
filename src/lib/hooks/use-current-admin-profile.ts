@@ -16,7 +16,9 @@ export function useCurrentAdminProfile() {
     },
     {
       revalidateOnFocus: false,
-      dedupingInterval: 10000,
+      // Admin profile is static during a session — only re-fetch once per 5 min.
+      dedupingInterval: 5 * 60 * 1000,
+      revalidateIfStale: false,
     },
   );
 

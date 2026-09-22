@@ -6,7 +6,7 @@ import { GroupMonthSelector } from "@/components/group/group-month-selector";
 import { useGroupSession } from "@/lib/hooks/use-group-session";
 
 import { memberDisplayName, memberIdsForChartRows } from "@/lib/utils/chart-members";
-import { getChartDates, formatHeaderDate } from "@/lib/utils/date";
+import { getChartDates, formatHeaderDate, toDateInputValue } from "@/lib/utils/date";
 import { formatMeal, getMonthTotals, normalizeMealQuantity } from "@/lib/utils/meal-money";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGroup, useMembers, useMealsForChart, useCosts, useDeposits } from "@/lib/hooks/use-data";
@@ -78,6 +78,9 @@ export function GroupChartView({ groupId }: { groupId: string }) {
   const { totalMeals: grandTotal, totalCost, totalPaid, mealRate, remainingTaka } = getMonthTotals(meals, costs, deposits);
   const totalMembers = rowMemberIds.length;
   const tk = t("common.tk");
+  const chartMonthKeys = chart.monthKeys || [chart.monthKey];
+  const todayStr = toDateInputValue(new Date());
+  const todayDate = chartMonthKeys.includes(todayStr.slice(0, 7)) ? todayStr : null;
 
   return (
     <div className="group-page-grid">
@@ -123,9 +126,21 @@ export function GroupChartView({ groupId }: { groupId: string }) {
               <th className="sticky left-0 z-10 min-w-[120px] bg-[color:var(--panel)] px-3 py-2.5 text-left text-xs font-bold uppercase tracking-[0.15em] text-[color:var(--muted)]">
                 {t("groupChart.colMember")}
               </th>
-              {days.map((d) => (
-                <th key={d} className="min-w-[36px] px-1 py-2.5 text-center text-xs font-semibold text-[color:var(--muted)]">{formatHeaderDate(d, language)}</th>
-              ))}
+              {days.map((d) => {
+                const isToday = d === todayDate;
+                return (
+                  <th
+                    key={d}
+                    className={`min-w-[36px] px-1 py-2.5 text-center text-xs font-semibold ${
+                      isToday
+                        ? "bg-[color:var(--accent-dim)] text-[color:var(--accent)]"
+                        : "text-[color:var(--muted)]"
+                    }`}
+                  >
+                    {formatHeaderDate(d, language)}
+                  </th>
+                );
+              })}
               <th className="px-3 py-2.5 text-center text-xs font-bold uppercase tracking-[0.15em] text-[color:var(--accent)]">
                 {t("groupChart.colTotal")}
               </th>
@@ -137,11 +152,19 @@ export function GroupChartView({ groupId }: { groupId: string }) {
                 <td className={`sticky left-0 z-10 px-3 py-2 text-sm font-medium ${ri % 2 === 0 ? "bg-[color:var(--background)]" : "bg-[color:var(--panel)]"}`}>
                   {memberDisplayName(memberId, members, former)}
                 </td>
-                {days.map((d) => (
-                  <td key={d} className="px-1 py-2 text-center text-xs">
-                    {mealMap[memberId]?.[d] ? formatMeal(mealMap[memberId][d]) : ""}
-                  </td>
-                ))}
+                {days.map((d) => {
+                  const isToday = d === todayDate;
+                  return (
+                    <td
+                      key={d}
+                      className={`px-1 py-2 text-center text-xs font-semibold ${
+                        isToday ? "bg-[color:var(--accent-dim)] text-[color:var(--accent)]" : ""
+                      }`}
+                    >
+                      {mealMap[memberId]?.[d] ? formatMeal(mealMap[memberId][d]) : ""}
+                    </td>
+                  );
+                })}
                 <td className="px-3 py-2 text-center text-sm font-bold text-[color:var(--accent)]">{formatMeal(memberTotal(memberId))}</td>
               </tr>
             ))}
@@ -151,7 +174,19 @@ export function GroupChartView({ groupId }: { groupId: string }) {
               </td>
               {days.map((d) => {
                 const s = rowMemberIds.reduce((sum, id) => sum + (mealMap[id]?.[d] ?? 0), 0);
-                return <td key={d} className="px-1 py-2 text-center text-xs text-[color:var(--soft-foreground)]">{s ? formatMeal(s) : ""}</td>;
+                const isToday = d === todayDate;
+                return (
+                  <td
+                    key={d}
+                    className={`px-1 py-2 text-center text-xs font-semibold ${
+                      isToday
+                        ? "bg-[color:var(--accent-dim)] text-[color:var(--accent)]"
+                        : "text-[color:var(--soft-foreground)]"
+                    }`}
+                  >
+                    {s ? formatMeal(s) : ""}
+                  </td>
+                );
               })}
               <td className="px-3 py-2 text-center text-sm font-bold">{formatMeal(grandTotal)}</td>
             </tr>

@@ -50,20 +50,26 @@ export default function MemberPage({
   const { data: dateMeals = [], isLoading: dateMealLoading } = useMealsForDate(group?.id, selectedDate);
   const { data: charts = [] } = useCharts(group?.id);
 
-  // Generate selectable dates for standard members: today and the next 5 days, filtered to only keep dates in the current selected month.
+  // Selectable dates for standard members: yesterday, today, and the next 5 days,
+  // filtered to only keep dates that fall within the currently selected chart's months.
   const editableDates = useMemo(() => {
     if (!chart) return [];
+    const chartMonthKeys = chart.monthKeys || [chart.monthKey];
     const dates = [];
     const baseDate = new Date();
-    for (let i = 0; i <= 5; i++) {
+
+    // Start from yesterday (i = -1) up to 5 days ahead
+    for (let i = -1; i <= 5; i++) {
       const d = new Date(baseDate);
       d.setDate(baseDate.getDate() + i);
       const dateStr = toDateInputValue(d);
-      // Only include dates in the currently selected chart's month
-      if ((chart.monthKeys || [chart.monthKey]).includes(dateStr.slice(0, 7))) {
+      // Only include dates that belong to the currently selected chart's month(s)
+      if (chartMonthKeys.includes(dateStr.slice(0, 7))) {
         dates.push({
           dateStr,
           dateObj: d,
+          isYesterday: i === -1,
+          isToday: i === 0,
         });
       }
     }
@@ -167,6 +173,12 @@ export default function MemberPage({
     const meal = myMeals.find((entry) => entry.date === date);
     return { day, date, qty: meal?.quantity ?? 0 };
   });
+  const yesterdayDateStr = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return toDateInputValue(d);
+  })();
+  const todayDateStr = toDateInputValue(new Date());
 
   const isOwner = currentUser?.email?.toLowerCase() === member?.email?.toLowerCase();
   const canEdit = isOwner || isAdmin;
@@ -303,8 +315,22 @@ export default function MemberPage({
               ))}
             </motion.div>
 
-            <div className="rounded-[var(--radius)] border-2 border-[color:var(--accent)] bg-[color:var(--panel)] p-5 shadow-[0_0_0_4px_var(--accent-dim)]">
-              <p className="group-kicker text-[color:var(--accent)]">{t("memberPage.addMeal")} ({chart.label})</p>
+            {/* Edit card — amber border when editing yesterday, green for today/future */}
+            <div className={`rounded-[var(--radius)] border-2 bg-[color:var(--panel)] p-5 transition-all ${
+              selectedDate === yesterdayDateStr
+                ? "border-[#c2570c] shadow-[0_0_0_4px_rgba(194,87,12,0.12)]"
+                : "border-[color:var(--accent)] shadow-[0_0_0_4px_var(--accent-dim)]"
+            }`}>
+              <p className={`group-kicker ${
+                selectedDate === yesterdayDateStr ? "text-[#c2570c]" : "text-[color:var(--accent)]"
+              }`}>
+                {t("memberPage.addMeal")} ({chart.label})
+                {selectedDate === yesterdayDateStr && (
+                  <span className="ml-2 inline-flex items-center rounded-full border border-[#c2570c]/30 bg-[#fff7ed] px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[#c2570c]">
+                    {t("common.yesterday")}
+                  </span>
+                )}
+              </p>
               {chart.locked && (
                 <p className="mt-1 text-xs font-semibold text-[color:var(--danger)]">{t("memberPage.monthLocked")}</p>
               )}
@@ -338,12 +364,16 @@ export default function MemberPage({
                           {new Date(selectedDate).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })}
                         </option>
                       ) : (
-                        editableDates.map(({ dateStr, dateObj }) => {
-                          const isToday = dateStr === toDateInputValue(new Date());
+                        editableDates.map(({ dateStr, dateObj, isYesterday, isToday }) => {
                           const label = dateObj.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' });
+                          const suffix = isToday
+                            ? ` (${t("common.today")})`
+                            : isYesterday
+                              ? ` (${t("common.yesterday")})`
+                              : "";
                           return (
                             <option key={dateStr} value={dateStr}>
-                              {label}{isToday ? ` (${t("common.today")})` : ""}
+                              {label}{suffix}
                             </option>
                           );
                         })
@@ -396,28 +426,72 @@ export default function MemberPage({
               <p className="group-kicker">{t("memberPage.dailyMeals")} — {chart.label}</p>
               <div className="mt-4 grid gap-1.5">
                 {days.map(({ day, date, qty }) => {
-                  const isToday = date === selectedDate;
+                  const isSelected = date === selectedDate;
+                  const isActualToday = date === todayDateStr;
+                  const isActualYesterday = date === yesterdayDateStr;
+                  // Clickable only if the date is in the member's editable range
+                  const isClickable = canEdit && !isLocked && editableDates.some((ed) => ed.dateStr === date);
                   return (
-                    <div 
-                      key={date} 
+                    <div
+                      key={date}
+                      role={isClickable ? "button" : undefined}
+                      tabIndex={isClickable ? 0 : undefined}
+                      onClick={isClickable ? () => setSelectedDate(date) : undefined}
+                      onKeyDown={isClickable ? (e) => e.key === "Enter" && setSelectedDate(date) : undefined}
                       className={`flex items-center gap-3 rounded-lg px-2 py-1 transition-colors ${
-                        isToday 
-                          ? "bg-[color:var(--accent-dim)] ring-1 ring-[color:var(--accent)]" 
-                          : "hover:bg-[color:var(--background-alt)]"
+                        isSelected && isActualYesterday
+                          ? "bg-[#fff7ed] ring-1 ring-[#c2570c]"
+                          : isSelected
+                            ? "bg-[color:var(--accent-dim)] ring-1 ring-[color:var(--accent)]"
+                            : isActualYesterday
+                              ? "bg-[#fff7ed]/60"
+                              : isClickable
+                                ? "cursor-pointer hover:bg-[color:var(--background-alt)]"
+                                : ""
                       }`}
                     >
                       <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-xs font-bold ${
-                        isToday 
-                          ? "bg-[color:var(--accent)] text-white" 
-                          : "bg-[color:var(--panel)] text-[color:var(--muted)] border border-[color:var(--border)]"
+                        isSelected && isActualYesterday
+                          ? "bg-[#c2570c] text-white"
+                          : isSelected
+                            ? "bg-[color:var(--accent)] text-white"
+                            : isActualYesterday
+                              ? "border border-[#c2570c]/40 bg-[#fff7ed] text-[#c2570c]"
+                              : "bg-[color:var(--panel)] text-[color:var(--muted)] border border-[color:var(--border)]"
                       }`}>
                         {day}
                       </div>
                       <div className="flex flex-1 items-center justify-between">
-                        <p className={`text-sm ${isToday ? "font-bold text-[color:var(--accent)]" : "text-[color:var(--soft-foreground)]"}`}>
+                        <p className={`text-sm ${
+                          isSelected && isActualYesterday
+                            ? "font-bold text-[#c2570c]"
+                            : isSelected
+                              ? "font-bold text-[color:var(--accent)]"
+                              : isActualYesterday
+                                ? "font-medium text-[#c2570c]"
+                                : "text-[color:var(--soft-foreground)]"
+                        }`}>
                           {new Date(date).toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' })}
+                          {isActualYesterday && !isSelected && (
+                            <span className="ml-1.5 text-[10px] font-bold uppercase tracking-widest opacity-60">
+                              {t("common.yesterday")}
+                            </span>
+                          )}
+                          {isActualToday && !isSelected && (
+                            <span className="ml-1.5 text-[10px] font-bold uppercase tracking-widest opacity-60">
+                              {t("common.today")}
+                            </span>
+                          )}
                         </p>
-                        <span className={`text-sm font-bold tabular-nums ${isToday ? "text-[color:var(--accent)]" : "text-[color:var(--foreground)]"}`}>
+                        <span className={`text-sm font-bold tabular-nums ${
+                          isSelected && isActualYesterday
+                            ? "text-[#c2570c]"
+                            : isSelected
+                              ? "text-[color:var(--accent)]"
+                              : isActualYesterday
+                                ? "text-[#c2570c]"
+                                : "text-[color:var(--foreground)]"
+                        }`}>
                           {formatMeal(qty)}
                         </span>
                       </div>

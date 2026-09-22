@@ -2,19 +2,16 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { auth, db } from "@/lib/firebase/client";
-import { doc, getDoc } from "firebase/firestore";
+import { useMemo, useState } from "react";
+import { auth } from "@/lib/firebase/client";
 import { useT } from "@/i18n/use-t";
-import { groupsCollection } from "@/lib/firebase/paths";
 import { useAuthStore } from "@/store/auth-store";
-import type { Group } from "@/types/domain";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { useToast } from "@/lib/hooks/use-toast";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
 import { AdminMonthSummary } from "@/components/admin/admin-month-summary";
-import { useCharts, useCosts, useDeposits, useMealsForChart, useMembers } from "@/lib/hooks/use-data";
+import { useCharts, useCosts, useDeposits, useGroup, useMealsForChart, useMembers } from "@/lib/hooks/use-data";
 import { saveChartReportPdf } from "@/lib/utils/pdf-report";
 import { pickCurrentMonthChart } from "@/lib/utils/date";
 import { handleAdminLogout } from "@/lib/auth/admin-logout";
@@ -53,11 +50,14 @@ export default function AdminPage() {
   const router = useRouter();
   const { t, tx } = useT();
   const { toast } = useToast();
-  const [group, setGroup] = useState<Group | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [isSignOutInProgress, setIsSignOutInProgress] = useState(false);
   const { adminProfile, isLoading: profileLoading, error: profileError } = useCurrentAdminProfile();
+
+  // Use the shared SWR cache for the group — avoids a raw getDoc() on every mount.
+  const { data: group = null, error: groupError } = useGroup(adminProfile?.groupId);
   const visibleGroup = adminProfile && group?.id === adminProfile.groupId ? group : null;
+  const loadError = groupError ? tx(groupError instanceof Error ? groupError.message : t("errors.loadGroupDetails")) : null;
+
   const { data: charts = [] } = useCharts(visibleGroup?.id);
   const { data: members = [] } = useMembers(visibleGroup?.id);
   const activeChart = useMemo(() => {
@@ -81,31 +81,6 @@ export default function AdminPage() {
 
   useGlobalLoading("admin-page", isPageLoading, t("adminDash.loading"));
   useGlobalLoading("admin-page-sign-out", isSignOutInProgress, t("common.signingOut"));
-
-  useEffect(() => {
-    let active = true;
-
-    async function loadGroup() {
-      if (!adminProfile) return;
-      try {
-        setLoadError(null);
-        if (!db) throw new Error("Firebase not configured.");
-        const groupSnap = await getDoc(doc(db, groupsCollection, adminProfile.groupId));
-        const currentGroup = groupSnap.exists() ? ({ id: groupSnap.id, ...groupSnap.data() } as Group) : null;
-        if (!currentGroup) throw new Error("No group was found for this admin profile.");
-        if (!active) return;
-        setGroup(currentGroup);
-      } catch (error) {
-        if (!active) return;
-        setLoadError(tx(error instanceof Error ? error.message : t("errors.loadGroupDetails")));
-      }
-    }
-
-    void loadGroup();
-    return () => {
-      active = false;
-    };
-  }, [adminProfile, t, tx]);
   async function handleLogout() {
     await handleAdminLogout(auth, router, setIsSignOutInProgress, (error) => {
       toast(error.message || "Failed to sign out. Please try again.", "error");

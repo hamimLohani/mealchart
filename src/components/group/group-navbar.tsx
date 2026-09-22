@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, type TouchEvent } from "react";
+import { useMemo, useRef, type TouchEvent } from "react";
 import { motion } from "framer-motion";
 import { useT } from "@/i18n/use-t";
-import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
 import { useGroup, useMembers } from "@/lib/hooks/use-data";
+import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
 import { useAuthStore } from "@/store/auth-store";
 
 type NavKey = "home" | "chart" | "money" | "costs" | "members" | "notices";
@@ -19,7 +19,9 @@ export function GroupNavbar({
   const pathname = usePathname();
   const { t } = useT();
   const { admin: currentUser } = useAuthStore();
-  const [isGroupAdmin, setIsGroupAdmin] = useState(false);
+  // Read admin profile from the shared SWR cache — no extra Firestore reads.
+  const { adminProfile } = useCurrentAdminProfile();
+  const isGroupAdmin = adminProfile?.groupId === groupId;
   const { data: group } = useGroup(groupId);
   const { data: members = [] } = useMembers(groupId);
   const groupName = group?.name ?? groupId;
@@ -30,29 +32,6 @@ export function GroupNavbar({
     signedInMember && !isGroupAdmin
       ? `/group/${groupId}/member/${encodeURIComponent(signedInMember.id)}`
       : `/group/${groupId}`;
-
-  useEffect(() => {
-    let active = true;
-
-    async function checkAdmin() {
-      if (!currentUser) {
-        setIsGroupAdmin(false);
-        return;
-      }
-
-      try {
-        const adminProfile = await getAdminProfileForUser(currentUser);
-        if (active) setIsGroupAdmin(adminProfile?.groupId === groupId);
-      } catch {
-        if (active) setIsGroupAdmin(false);
-      }
-    }
-
-    void checkAdmin();
-    return () => {
-      active = false;
-    };
-  }, [currentUser, groupId]);
 
   const navItems = useMemo(
     () =>
