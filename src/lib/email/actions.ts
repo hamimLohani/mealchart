@@ -880,6 +880,258 @@ export async function sendReminderEmails(input: {
   }
 }
 
+export type MoneyRequestRecipient = {
+  memberEmail: string;
+  memberName: string;
+  requestedAmount: number;
+  currentBalance: number;
+  totalPaid: number;
+  totalMeals: number;
+  mealRate?: number;
+};
+
+export type SendMoneyRequestEmailInput = {
+  groupName: string;
+  chartLabel: string;
+  adminName: string;
+  paymentInstructions?: string;
+  note?: string;
+  recipient: MoneyRequestRecipient;
+};
+
+export type SendBatchMoneyRequestInput = {
+  groupName: string;
+  chartLabel: string;
+  adminName: string;
+  paymentInstructions?: string;
+  note?: string;
+  recipients: MoneyRequestRecipient[];
+};
+
+function buildMoneyRequestHtml(input: {
+  groupName: string;
+  chartLabel: string;
+  adminName: string;
+  paymentInstructions?: string;
+  note?: string;
+  recipient: MoneyRequestRecipient;
+}) {
+  const { groupName, chartLabel, adminName, paymentInstructions, note, recipient } = input;
+  const isNegative = recipient.currentBalance < 0;
+  const balanceColor = isNegative ? "#ef4444" : "#10b981";
+  const balanceBg = isNegative ? "#fef2f2" : "#f0fdf4";
+  const balanceBorder = isNegative ? "#fecaca" : "#bbf7d0";
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://mealchart.vercel.app";
+
+  return `
+    <div style="font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 25px; color: #1e293b; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px;">
+      <!-- Header -->
+      <div style="text-align: center; margin-bottom: 25px;">
+        <div style="display: inline-block; padding: 12px 16px; background-color: #fef3c7; border-radius: 50px; margin-bottom: 12px;">
+          <span style="font-size: 28px;">🔔</span>
+        </div>
+        <h1 style="color: #0f172a; margin: 0; font-size: 24px; font-weight: 700;">টাকা জমার তাগিদ ও রিকোয়েস্ট</h1>
+        <p style="color: #64748b; margin: 6px 0 0 0; font-size: 15px;">${escapeHtml(chartLabel)} &bull; ${escapeHtml(groupName)}</p>
+      </div>
+
+      <!-- Greeting -->
+      <div style="background-color: #f8fafc; border-radius: 12px; padding: 18px; margin-bottom: 20px; border-left: 4px solid #0a7a63;">
+        <p style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #0f172a;">
+          প্রিয় <strong>${escapeHtml(recipient.memberName)}</strong>,
+        </p>
+        <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #475569;">
+          আশা করি ভালো আছেন। <strong>${escapeHtml(groupName)}</strong> মেস/গ্রুপের বর্তমান মাসের (<strong>${escapeHtml(chartLabel)}</strong>) মিল ও খরচের হিসাব অনুযায়ী আপনার কাছে টাকা জমার একটি রিকোয়েস্ট পাঠানো হয়েছে।
+        </p>
+      </div>
+
+      <!-- Main Requested Amount Card -->
+      <div style="background: linear-gradient(135deg, #0a7a63 0%, #14532d 100%); border-radius: 14px; padding: 24px 20px; color: #ffffff; text-align: center; margin-bottom: 22px; box-shadow: 0 4px 14px rgba(10, 122, 99, 0.2);">
+        <p style="margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.9;">
+          রিকোয়েস্টকৃত জমার পরিমাণ
+        </p>
+        <p style="margin: 8px 0 0 0; font-size: 36px; font-weight: 800; letter-spacing: -0.02em;">
+          ${recipient.requestedAmount.toFixed(2)} টাকা
+        </p>
+      </div>
+
+      <!-- Current Balance Notice -->
+      <div style="background-color: ${balanceBg}; border: 1.5px solid ${balanceBorder}; border-radius: 12px; padding: 16px 20px; margin-bottom: 22px; text-align: center;">
+        <p style="margin: 0; font-size: 13px; font-weight: 600; color: #64748b;">আপনার বর্তমান ব্যালেন্স স্ট্যাটাস</p>
+        <p style="margin: 4px 0 0 0; font-size: 22px; font-weight: 700; color: ${balanceColor};">
+          ${recipient.currentBalance >= 0 ? "+" : ""}${recipient.currentBalance.toFixed(2)} টাকা
+        </p>
+        ${
+          isNegative
+            ? `<p style="margin: 6px 0 0 0; font-size: 13px; font-weight: 600; color: #b91c1c;">
+                ⚠️ আপনার ব্যালেন্স মাইনাস (-) রয়েছে। হিসাব সচল রাখতে অনুগ্রহ করে দ্রুত বকেয়া পরিশোধ করুন।
+              </p>`
+            : `<p style="margin: 6px 0 0 0; font-size: 13px; color: #166534;">
+                ✅ আপনার পূর্বের ব্যালেন্স পজিটিভ রয়েছে। পরবর্তী খরচের জন্য এই জমা রিকোয়েস্ট পাঠানো হলো।
+              </p>`
+        }
+      </div>
+
+      <!-- Personal Breakdown Table -->
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 22px; font-size: 14px;">
+        <tbody>
+          <tr style="border-bottom: 1px solid #f1f5f9;">
+            <td style="padding: 10px 0; color: #64748b;">মোট মিল</td>
+            <td style="padding: 10px 0; text-align: right; font-weight: 600; color: #0f172a;">${formatMeal(recipient.totalMeals)} টি</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #f1f5f9;">
+            <td style="padding: 10px 0; color: #64748b;">এই মাসে আপনার মোট জমা</td>
+            <td style="padding: 10px 0; text-align: right; font-weight: 600; color: #10b981;">${recipient.totalPaid.toFixed(2)} টাকা</td>
+          </tr>
+          ${
+            recipient.mealRate
+              ? `<tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 0; color: #64748b;">বর্তমান সম্ভাব্য মিল রেট</td>
+                  <td style="padding: 10px 0; text-align: right; font-weight: 600; color: #0f172a;">${recipient.mealRate.toFixed(2)} টাকা</td>
+                </tr>`
+              : ""
+          }
+        </tbody>
+      </table>
+
+      <!-- Payment Instructions / Details (if provided) -->
+      ${
+        paymentInstructions
+          ? `<div style="background-color: #fffbeb; border: 1.5px dashed #fcd34d; border-radius: 12px; padding: 16px 18px; margin-bottom: 22px;">
+              <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: 700; color: #92400e;">
+                💳 টাকা পাঠানোর মাধ্যম ও নির্দেশাবলী:
+              </p>
+              <p style="margin: 0; font-size: 14px; font-weight: 600; color: #78350f; white-space: pre-wrap; line-height: 1.5;">
+                ${escapeHtml(paymentInstructions)}
+              </p>
+              <p style="margin: 8px 0 0 0; font-size: 12px; color: #b45309;">
+                💡 টাকা পাঠানোর পর অনুগ্রহ করে মিল চার্ট অ্যাপে "টাকা জমা রিকোয়েস্ট" দিন অথবা অ্যাডমিনকে জানিয়ে দিন।
+              </p>
+            </div>`
+          : ""
+      }
+
+      <!-- Custom Admin Note (if provided) -->
+      ${
+        note
+          ? `<div style="background-color: #f1f5f9; border-radius: 10px; padding: 14px 16px; margin-bottom: 22px;">
+              <p style="margin: 0; font-size: 13px; color: #475569; font-style: italic; line-height: 1.5;">
+                <strong>অ্যাডমিনের নোট:</strong> &ldquo;${escapeHtml(note)}&rdquo;
+              </p>
+            </div>`
+          : ""
+      }
+
+      <!-- Action Button -->
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${baseUrl}" style="background-color: #0a7a63; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 4px 12px rgba(10, 122, 99, 0.25);">
+          মিল চার্ট ড্যাশবোর্ডে যান
+        </a>
+      </div>
+
+      <!-- Sign-off -->
+      <div style="border-top: 1px solid #e2e8f0; padding-top: 18px; margin-top: 25px; font-size: 13px; color: #64748b;">
+        <p style="margin: 0; line-height: 1.6;">
+          ধন্যবাদান্তে,<br/>
+          <strong style="color: #0f172a;">${escapeHtml(adminName)}</strong> (গ্রুপ অ্যাডমিন)<br/>
+          ${escapeHtml(groupName)}
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div style="margin-top: 25px; text-align: center; color: #94a3b8; font-size: 12px; border-top: 1px dashed #f1f5f9; padding-top: 16px;">
+        <p style="margin: 0 0 4px 0;">এটি মিল চার্ট অ্যাপ থেকে পাঠানো একটি সৌজন্যমূলক তাগিদ বার্তা।</p>
+        <p style="margin: 0;">আপনি ইতিমধ্যে টাকা জমা দিয়ে থাকলে অনুগ্রহ করে এই ইমেইলটি উপেক্ষা করুন।</p>
+        <p style="margin: 8px 0 0 0; font-size: 11px;">&copy; ${new Date().getFullYear()} মিল চার্ট। সর্বস্বত্ব সংরক্ষিত।</p>
+      </div>
+    </div>
+  `;
+}
+
+export async function sendMoneyRequestEmail(input: SendMoneyRequestEmailInput) {
+  try {
+    const { groupName, chartLabel, recipient, adminName, paymentInstructions, note } = input;
+
+    if (!recipient.memberEmail || !recipient.memberEmail.includes("@")) {
+      return { success: false, error: "সদস্যের কোনো বৈধ ইমেইল ঠিকানা নেই।" };
+    }
+
+    const html = buildMoneyRequestHtml({
+      groupName,
+      chartLabel,
+      adminName,
+      paymentInstructions,
+      note,
+      recipient,
+    });
+
+    const mailOptions: SendMailOptions = {
+      from: fromEmail,
+      to: recipient.memberEmail,
+      subject: `[মিল চার্ট] টাকা জমার তাগিদ: ${recipient.requestedAmount.toFixed(2)} টাকা - ${groupName}`,
+      html,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`[Email] Successfully sent money request email to ${recipient.memberEmail}`);
+    return { success: true };
+  } catch (error) {
+    console.error("[Email] sendMoneyRequestEmail failed:", error);
+    return { success: false, error: getErrorMessage(error) };
+  }
+}
+
+export async function sendBatchMoneyRequestEmails(input: SendBatchMoneyRequestInput) {
+  const { groupName, chartLabel, adminName, paymentInstructions, note, recipients } = input;
+  console.log(`[Email] Starting batch money request for group "${groupName}" (${chartLabel}) to ${recipients.length} members.`);
+
+  try {
+    const results: Array<{ email: string; success: boolean; error?: string }> = [];
+
+    for (const recipient of recipients) {
+      if (!recipient.memberEmail || !recipient.memberEmail.includes("@")) {
+        results.push({ email: recipient.memberEmail || "unknown", success: false, error: "Invalid email" });
+        continue;
+      }
+
+      try {
+        const html = buildMoneyRequestHtml({
+          groupName,
+          chartLabel,
+          adminName,
+          paymentInstructions,
+          note,
+          recipient,
+        });
+
+        await transporter.sendMail({
+          from: fromEmail,
+          to: recipient.memberEmail,
+          subject: `[মিল চার্ট] টাকা জমার তাগিদ: ${recipient.requestedAmount.toFixed(2)} টাকা - ${groupName}`,
+          html,
+        });
+
+        results.push({ email: recipient.memberEmail, success: true });
+      } catch (err) {
+        console.error(`[Email] Failed to send reminder to ${recipient.memberEmail}:`, err);
+        results.push({ email: recipient.memberEmail, success: false, error: getErrorMessage(err) });
+      }
+    }
+
+    const sentCount = results.filter((r) => r.success).length;
+    const failedCount = results.length - sentCount;
+
+    return {
+      success: true,
+      sentCount,
+      failedCount,
+      totalCount: recipients.length,
+    };
+  } catch (error) {
+    console.error("[Email] Critical batch money request failure:", error);
+    return { success: false, error: getErrorMessage(error) };
+  }
+}
+
 export async function sendAccountDeletionEmails(input: {
   groupName: string;
   adminName: string;

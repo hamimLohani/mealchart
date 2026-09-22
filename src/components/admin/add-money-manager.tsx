@@ -20,7 +20,7 @@ import {
 import { chartMonthDateBounds, currentMonthKey, pickCurrentMonthChart, toMonthKey, toDateInputValue, isChartActive } from "@/lib/utils/date";
 import { getMemberTotals, getMonthTotals, normalizeMealQuantity } from "@/lib/utils/meal-money";
 import type { AdminProfile, Chart, CostEntry, DepositEntry, DepositRequest, Member, MealEntry } from "@/types/domain";
-import { sendMoneyReceiptEmail } from "@/lib/email/actions";
+import { sendMoneyReceiptEmail, sendMoneyRequestEmail, sendBatchMoneyRequestEmails, type MoneyRequestRecipient } from "@/lib/email/actions";
 import { getFriendlyEmailError } from "@/lib/utils/email-error";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
@@ -56,6 +56,47 @@ export function AddMoneyManager() {
   const [form, setForm] = useState<DepositFormState>({ memberId: "", amount: "", date: toDateInputValue(new Date()) });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [requestAction, setRequestAction] = useState<{ id: string; type: "approve" | "reject" } | null>(null);
+
+  // Money reminder section state
+  const [reminderTarget, setReminderTarget] = useState<"negative" | "all" | "single">("negative");
+  const [selectedSingleMemberId, setSelectedSingleMemberId] = useState("");
+  const [reminderAmountMode, setReminderAmountMode] = useState<"due" | "fixed">("due");
+  const [fixedAmount, setFixedAmount] = useState("");
+  const [paymentInstructions, setPaymentInstructions] = useState("");
+  const [reminderNote, setReminderNote] = useState("");
+  const [isSendingReminders, setIsSendingReminders] = useState(false);
+
+  // Quick remind modal state for a single member row
+  const [quickRemindState, setQuickRemindState] = useState<{
+    member: Member;
+    balance: number;
+    paid: number;
+    meals: number;
+    dueAmount: number;
+  } | null>(null);
+  const [quickAmount, setQuickAmount] = useState("");
+  const [quickPaymentInfo, setQuickPaymentInfo] = useState("");
+  const [quickNote, setQuickNote] = useState("");
+  const [isSendingQuick, setIsSendingQuick] = useState(false);
+
+  // Restore saved payment instructions
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("mealchart_payment_info");
+      if (saved) {
+        setPaymentInstructions(saved);
+        setQuickPaymentInfo(saved);
+      }
+    } catch {}
+  }, []);
+
+  const handlePaymentInfoChange = (val: string) => {
+    setPaymentInstructions(val);
+    try {
+      localStorage.setItem("mealchart_payment_info", val);
+    } catch {}
+  };
+
   const { adminProfile: currentAdminProfile, isLoading: profileLoading, error: profileError } = useCurrentAdminProfile();
   const activeAdminProfile =
     currentAdminProfile && adminProfile?.id === currentAdminProfile.id ? adminProfile : null;
@@ -173,6 +214,156 @@ export function AddMoneyManager() {
   const { totalPaid, remainingTaka: balance, mealRate } = useMemo(() => {
     return getMonthTotals(meals, costs, deposits);
   }, [meals, costs, deposits]);
+
+  const memberStatsList = useMemo(() => {
+    return visibleMembers.map((member) => {
+      const mid = member.id.toLowerCase();
+      const memberPaid = deposits
+        .filter((d) => d.memberId.toLowerCase() === mid)
+        .reduce((s, d) => s + d.amount, 0);
+      const memberMealsCount = meals
+        .filter((m) => m.memberId.toLowerCase() === mid)
+        .reduce((s, m) => s + normalizeMealQuantity(m.quantity), 0);
+      const memberEaten = memberMealsCount * mealRate;
+      const memberRemaining = memberPaid - memberEaten;
+      return {
+        member,
+        paid: memberPaid,
+        meals: memberMealsCount,
+        eaten: memberEaten,
+        balance: memberRemaining,
+        isNegative: memberRemaining < 0,
+        dueAmount: memberRemaining < 0 ? Math.abs(memberRemaining) : 0,
+      };
+    });
+  }, [visibleMembers, deposits, meals, mealRate]);
+
+  const negativeStats = useMemo(() => memberStatsList.filter((s) => s.isNegative), [memberStatsList]);
+
+  const targetRecipients = useMemo(() => {
+    if (reminderTarget === "negative") {
+      return negativeStats;
+    }
+    if (reminderTarget === "single") {
+      const found = memberStatsList.find((s) => s.member.id === selectedSingleMemberId);
+      return found ? [found] : [];
+    }
+    return memberStatsList;
+  }, [reminderTarget, negativeStats, memberStatsList, selectedSingleMemberId]);
+
+  const getRecipientAmount = (stat: (typeof memberStatsList)[number]): number => {
+    if (reminderAmountMode === "due") {
+      return stat.dueAmount > 0 ? stat.dueAmount : (parseFloat(fixedAmount) || 500);
+    }
+    return parseFloat(fixedAmount) || 0;
+  };
+
+  async function handleSendBatchReminders() {
+    if (!selectedChart || !activeAdminProfile) return;
+    if (targetRecipients.length === 0) {
+      showError(t("moneyReminder.noNegativeMembers"));
+      return;
+    }
+
+    const validRecipients: MoneyRequestRecipient[] = targetRecipients
+      .filter((s) => s.member.email && s.member.email.includes("@"))
+      .map((s) => ({
+        memberEmail: s.member.email,
+        memberName: s.member.fullName,
+        requestedAmount: getRecipientAmount(s),
+        currentBalance: s.balance,
+        totalPaid: s.paid,
+        totalMeals: s.meals,
+        mealRate,
+      }))
+      .filter((r) => r.requestedAmount > 0);
+
+    if (validRecipients.length === 0) {
+      showError("No valid recipients with amount > 0 found.");
+      return;
+    }
+
+    setIsSendingReminders(true);
+    try {
+      const result = await sendBatchMoneyRequestEmails({
+        groupName: groupName || "মিল চার্ট",
+        chartLabel: selectedChart.label,
+        adminName: activeAdminProfile.fullName || "Admin",
+        paymentInstructions: paymentInstructions.trim() || undefined,
+        note: reminderNote.trim() || undefined,
+        recipients: validRecipients,
+      });
+
+      if (!result.success) {
+        showError(result.error || "Failed to send reminder emails.");
+      } else if (result.failedCount === 0) {
+        showSuccess(t("moneyReminder.batchSuccess", { sent: String(result.sentCount) }));
+      } else {
+        showSuccess(
+          t("moneyReminder.batchPartial", {
+            sent: String(result.sentCount),
+            total: String(result.totalCount),
+            failed: String(result.failedCount),
+          }),
+        );
+      }
+    } catch (err) {
+      showError(err instanceof Error ? err.message : "Error sending reminders");
+    } finally {
+      setIsSendingReminders(false);
+    }
+  }
+
+  function openQuickRemind(item: (typeof memberStatsList)[number]) {
+    setQuickRemindState(item);
+    setQuickAmount(item.dueAmount > 0 ? String(Math.round(item.dueAmount)) : "500");
+    setQuickPaymentInfo(paymentInstructions);
+    setQuickNote("");
+  }
+
+  async function handleSendQuickReminder() {
+    if (!quickRemindState || !selectedChart || !activeAdminProfile) return;
+    const amount = parseFloat(quickAmount);
+    if (Number.isNaN(amount) || amount <= 0) {
+      showError("Enter a valid amount.");
+      return;
+    }
+    if (!quickRemindState.member.email || !quickRemindState.member.email.includes("@")) {
+      showError(t("moneyReminder.noEmailWarning"));
+      return;
+    }
+
+    setIsSendingQuick(true);
+    try {
+      const result = await sendMoneyRequestEmail({
+        groupName: groupName || "মিল চার্ট",
+        chartLabel: selectedChart.label,
+        adminName: activeAdminProfile.fullName || "Admin",
+        paymentInstructions: quickPaymentInfo.trim() || undefined,
+        note: quickNote.trim() || undefined,
+        recipient: {
+          memberEmail: quickRemindState.member.email,
+          memberName: quickRemindState.member.fullName,
+          requestedAmount: amount,
+          currentBalance: quickRemindState.balance,
+          totalPaid: quickRemindState.paid,
+          totalMeals: quickRemindState.meals,
+          mealRate,
+        },
+      });
+
+      if (result.success) {
+        showSuccess(t("moneyReminder.batchSuccess", { sent: "1" }));
+        setQuickRemindState(null);
+      } else {
+        showError(result.error || "Failed to send email");
+      }
+    } catch (err) {
+      showError(err instanceof Error ? err.message : "Error sending reminder");
+    } finally {
+      setIsSendingQuick(false);
+    }
+  }
 
   const filteredMembers = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -511,6 +702,241 @@ export function AddMoneyManager() {
         </div>
       </div>
 
+      {/* ── Money Reminder & Request Section ── */}
+      <div className="rounded-[var(--radius)] border-2 border-[color:var(--accent)]/30 bg-[color:var(--panel)] p-4 sm:p-6 shadow-[var(--shadow)] relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-[color:var(--accent)]/5 rounded-full blur-2xl pointer-events-none" />
+        
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[color:var(--border)]">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[color:var(--accent-dim)] text-lg">
+              🔔
+            </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <p className="font-bold text-base text-[color:var(--foreground)]">{t("moneyReminder.sectionTitle")}</p>
+                <span className="badge-accent">{selectedChart.label}</span>
+              </div>
+              <p className="text-xs text-[color:var(--muted)]">{t("moneyReminder.sectionSubtitle")}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+              negativeStats.length > 0 
+                ? "bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20" 
+                : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+            }`}>
+              {negativeStats.length > 0 ? `⚠️ ${negativeStats.length} জন বকেয়া` : "✅ কোনো বকেয়া নেই"}
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          {/* Target Selection */}
+          <div className="rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] p-3.5 flex flex-col justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-[color:var(--muted)] mb-2">
+                1. {t("moneyReminder.targetLabel")}
+              </p>
+              <div className="grid gap-2">
+                <label className="flex items-center gap-2 text-xs font-semibold cursor-pointer">
+                  <input
+                    type="radio"
+                    name="reminderTarget"
+                    value="negative"
+                    checked={reminderTarget === "negative"}
+                    onChange={() => setReminderTarget("negative")}
+                    className="accent-[color:var(--accent)]"
+                  />
+                  <span>🔴 {t("moneyReminder.targetNegativeOnly", { count: String(negativeStats.length) })}</span>
+                </label>
+
+                <label className="flex items-center gap-2 text-xs font-semibold cursor-pointer">
+                  <input
+                    type="radio"
+                    name="reminderTarget"
+                    value="all"
+                    checked={reminderTarget === "all"}
+                    onChange={() => setReminderTarget("all")}
+                    className="accent-[color:var(--accent)]"
+                  />
+                  <span>👥 {t("moneyReminder.targetAll", { count: String(visibleMembers.length) })}</span>
+                </label>
+
+                <label className="flex items-center gap-2 text-xs font-semibold cursor-pointer">
+                  <input
+                    type="radio"
+                    name="reminderTarget"
+                    value="single"
+                    checked={reminderTarget === "single"}
+                    onChange={() => setReminderTarget("single")}
+                    className="accent-[color:var(--accent)]"
+                  />
+                  <span>👤 {t("moneyReminder.targetSingle")}</span>
+                </label>
+              </div>
+
+              {reminderTarget === "single" && (
+                <div className="mt-2.5">
+                  <select
+                    className="input !py-1.5 !text-xs w-full"
+                    value={selectedSingleMemberId}
+                    onChange={(e) => setSelectedSingleMemberId(e.target.value)}
+                  >
+                    <option value="">{t("moneyReminder.selectMember")}</option>
+                    {memberStatsList.map((s) => (
+                      <option key={s.member.id} value={s.member.id}>
+                        {s.member.fullName} ({s.balance >= 0 ? "+" : ""}{s.balance.toFixed(0)} ৳)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            <p className="text-[11px] text-[color:var(--muted)]">
+              নির্বাচিত প্রাপক: <strong className="text-[color:var(--foreground)]">{targetRecipients.length} জন</strong>
+            </p>
+          </div>
+
+          {/* Amount Mode */}
+          <div className="rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] p-3.5 flex flex-col justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-[color:var(--muted)] mb-2">
+                2. {t("moneyReminder.amountModeLabel")}
+              </p>
+              <div className="grid gap-2">
+                <label className="flex items-center gap-2 text-xs font-semibold cursor-pointer">
+                  <input
+                    type="radio"
+                    name="reminderAmountMode"
+                    value="due"
+                    checked={reminderAmountMode === "due"}
+                    onChange={() => setReminderAmountMode("due")}
+                    className="accent-[color:var(--accent)]"
+                  />
+                  <span>🎯 {t("moneyReminder.amountModeDue")}</span>
+                </label>
+
+                <label className="flex items-center gap-2 text-xs font-semibold cursor-pointer">
+                  <input
+                    type="radio"
+                    name="reminderAmountMode"
+                    value="fixed"
+                    checked={reminderAmountMode === "fixed"}
+                    onChange={() => setReminderAmountMode("fixed")}
+                    className="accent-[color:var(--accent)]"
+                  />
+                  <span>🏷️ {t("moneyReminder.amountModeFixed")}</span>
+                </label>
+              </div>
+
+              {reminderAmountMode === "fixed" && (
+                <div className="mt-2.5">
+                  <input
+                    type="number"
+                    step="50"
+                    placeholder={t("moneyReminder.amountPlaceholder")}
+                    value={fixedAmount}
+                    onChange={(e) => setFixedAmount(e.target.value)}
+                    className="input !py-1.5 !text-xs w-full"
+                  />
+                </div>
+              )}
+            </div>
+
+            <p className="text-[11px] text-[color:var(--muted)]">
+              {reminderAmountMode === "due" 
+                ? "সদস্যদের নিজ নিজ বকেয়া পরিমাণ অনুযায়ী রিকোয়েস্ট যাবে" 
+                : `প্রতি সদস্যের জন্য নির্ধারিত পরিমাণ: ${fixedAmount || "0"} ৳`}
+            </p>
+          </div>
+        </div>
+
+        {/* Payment Details & Note */}
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-1.5 text-xs font-medium">
+            <span className="flex items-center gap-1.5">
+              <span>💳 {t("moneyReminder.paymentInfoLabel")}</span>
+              <span className="text-[10px] text-[color:var(--muted)]">(অটো-সেভ হয়)</span>
+            </span>
+            <input
+              type="text"
+              className="input !py-2 !text-xs"
+              placeholder={t("moneyReminder.paymentInfoPlaceholder")}
+              value={paymentInstructions}
+              onChange={(e) => handlePaymentInfoChange(e.target.value)}
+            />
+          </label>
+
+          <label className="grid gap-1.5 text-xs font-medium">
+            <span>📝 অ্যাডমিন বার্তা / নোট (ঐচ্ছিক)</span>
+            <input
+              type="text"
+              className="input !py-2 !text-xs"
+              placeholder="যেমন: আগামী ৩ দিনের মধ্যে টাকা পরিশোধ করুন"
+              value={reminderNote}
+              onChange={(e) => setReminderNote(e.target.value)}
+            />
+          </label>
+        </div>
+
+        {/* Recipients Mini Checklist Preview */}
+        {targetRecipients.length > 0 && (
+          <div className="mt-4 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] p-3">
+            <p className="text-xs font-bold text-[color:var(--soft-foreground)] mb-2">
+              {t("moneyReminder.recipientsPreview", { count: String(targetRecipients.length) })}:
+            </p>
+            <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1">
+              {targetRecipients.map((s) => {
+                const reqAmt = getRecipientAmount(s);
+                return (
+                  <span
+                    key={s.member.id}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-[color:var(--panel)] px-2.5 py-1 text-[11px] font-semibold shadow-2xs"
+                  >
+                    <span>{s.member.fullName}</span>
+                    <span className={s.isNegative ? "text-red-500 font-bold" : "text-[color:var(--muted)]"}>
+                      ({s.balance >= 0 ? "+" : ""}{s.balance.toFixed(0)} ৳)
+                    </span>
+                    <span className="text-[color:var(--accent)] font-bold">
+                      → {reqAmt.toFixed(0)} ৳
+                    </span>
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Send Action */}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[color:var(--border)]">
+          <p className="text-xs text-[color:var(--muted)]">
+            সদস্যদের নিবন্ধিত ইমেইলে বাংলায় সম্পূর্ণ বিবরণসহ রিকোয়েস্ট পৌঁছাবে।
+          </p>
+          <button
+            type="button"
+            disabled={isSendingReminders || targetRecipients.length === 0}
+            onClick={handleSendBatchReminders}
+            className="button-primary !py-2.5 !px-5 text-xs font-bold flex items-center gap-2 rounded-full shadow-sm"
+          >
+            {isSendingReminders ? (
+              <>
+                <span className="animate-spin text-sm">⏳</span>
+                <span>{t("moneyReminder.sendingButton")}</span>
+              </>
+            ) : (
+              <>
+                <span>✉️</span>
+                <span>
+                  {t("moneyReminder.sendButton")} ({targetRecipients.length} জন)
+                </span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
       <div className="rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] p-3.5 sm:p-5 shadow-[var(--shadow-sm)]">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="admin-section-label">{t("addMoney.memberTotals")} — {selectedChart.label}</p>
@@ -523,50 +949,62 @@ export function AddMoneyManager() {
         </div>
         <div className="mt-3 grid gap-2.5 md:grid-cols-2">
           {filteredMembers.map((member) => {
-            const mid = member.id.toLowerCase();
-            const memberPaid = deposits
-              .filter(d => d.memberId.toLowerCase() === mid)
-              .reduce((s, d) => s + d.amount, 0);
-            const memberMealsCount = meals
-              .filter(m => m.memberId.toLowerCase() === mid)
-              .reduce((s, m) => s + normalizeMealQuantity(m.quantity), 0);
-            const memberEaten = memberMealsCount * mealRate;
-            const memberRemaining = memberPaid - memberEaten;
+            const stat = memberStatsList.find((s) => s.member.id === member.id) ?? {
+              member,
+              paid: 0,
+              meals: 0,
+              eaten: 0,
+              balance: 0,
+              isNegative: false,
+              dueAmount: 0,
+            };
 
             return (
               <div
                 key={member.id}
-                className="flex flex-wrap items-center justify-between gap-4 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-3 py-2.5 sm:px-4 sm:py-3.5"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[color:var(--border)] bg-[color:var(--background)] px-3 py-2.5 sm:px-4 sm:py-3.5"
               >
                 <div className="min-w-[120px] flex-1">
                   <p className="font-bold text-[color:var(--foreground)]">{member.fullName}</p>
                   <p className="text-xs text-[color:var(--muted)]">{member.email}</p>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4 sm:gap-8">
-                  <div className="text-right">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-[color:var(--muted)]">
-                      {t("groupMoney.statTotalPaid")}
-                    </p>
-                    <p className="font-semibold text-[color:var(--success-text)]">
-                      {memberPaid.toFixed(2)} {tk}
-                    </p>
+                <div className="flex items-center gap-3">
+                  <div className="grid grid-cols-2 gap-4 sm:gap-6">
+                    <div className="text-right">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-[color:var(--muted)]">
+                        {t("groupMoney.statTotalPaid")}
+                      </p>
+                      <p className="font-semibold text-[color:var(--success-text)]">
+                        {stat.paid.toFixed(2)} {tk}
+                      </p>
+                    </div>
+                    
+                    <div className="text-right">
+                      <p 
+                        className="text-[10px] font-bold uppercase tracking-wider"
+                        style={{ color: stat.balance >= 0 ? "var(--success-text)" : "var(--danger)" }}
+                      >
+                        {t("groupChart.statRemaining")}
+                      </p>
+                      <p 
+                        className="font-bold"
+                        style={{ color: stat.balance >= 0 ? "var(--success-text)" : "var(--danger)" }}
+                      >
+                        {stat.balance >= 0 ? "+" : ""}{stat.balance.toFixed(2)} {tk}
+                      </p>
+                    </div>
                   </div>
-                  
-                  <div className="text-right">
-                    <p 
-                      className="text-[10px] font-bold uppercase tracking-wider"
-                      style={{ color: memberRemaining >= 0 ? "var(--success-text)" : "var(--danger)" }}
-                    >
-                      {t("groupChart.statRemaining")}
-                    </p>
-                    <p 
-                      className="font-bold"
-                      style={{ color: memberRemaining >= 0 ? "var(--success-text)" : "var(--danger)" }}
-                    >
-                      {memberRemaining >= 0 ? "+" : ""}{memberRemaining.toFixed(2)} {tk}
-                    </p>
-                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => openQuickRemind(stat)}
+                    title={t("moneyReminder.quickRemind")}
+                    className="button-secondary !py-1 !px-2.5 text-xs flex items-center gap-1 rounded-full text-[color:var(--accent)] hover:border-[color:var(--accent)] shadow-2xs"
+                  >
+                    <span>✉️</span>
+                    <span className="hidden sm:inline font-semibold">{t("moneyReminder.quickRemind")}</span>
+                  </button>
                 </div>
               </div>
             );
@@ -607,6 +1045,106 @@ export function AddMoneyManager() {
           })}
         </div>
       </div>
+
+      {/* ── Quick Remind Modal ── */}
+      {quickRemindState && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel-solid)] p-5 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-[color:var(--border)]">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[color:var(--accent-dim)] text-lg">
+                  🔔
+                </span>
+                <div>
+                  <h3 className="font-bold text-sm text-[color:var(--foreground)]">
+                    {t("moneyReminder.quickModalTitle", { name: quickRemindState.member.fullName })}
+                  </h3>
+                  <p className="text-xs text-[color:var(--muted)]">{quickRemindState.member.email}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setQuickRemindState(null)}
+                className="text-[color:var(--muted)] hover:text-[color:var(--foreground)] text-lg px-1.5"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-3 py-2 px-3 rounded-lg border border-[color:var(--border)] bg-[color:var(--background)] flex items-center justify-between text-xs">
+              <span className="text-[color:var(--muted)]">বর্তমান ব্যালেন্স:</span>
+              <span className={`font-bold ${quickRemindState.balance < 0 ? "text-red-500" : "text-emerald-500"}`}>
+                {quickRemindState.balance >= 0 ? "+" : ""}{quickRemindState.balance.toFixed(2)} ৳
+              </span>
+            </div>
+
+            <div className="mt-3 grid gap-3">
+              <label className="grid gap-1 text-xs font-semibold">
+                <span>{t("moneyReminder.amountModeLabel")} (টাকা)</span>
+                <input
+                  type="number"
+                  step="50"
+                  value={quickAmount}
+                  onChange={(e) => setQuickAmount(e.target.value)}
+                  className="input !py-1.5 !text-xs font-bold"
+                  placeholder="500"
+                />
+              </label>
+
+              <label className="grid gap-1 text-xs font-semibold">
+                <span>💳 টাকা পাঠানোর মাধ্যম ও তথ্য</span>
+                <input
+                  type="text"
+                  value={quickPaymentInfo}
+                  onChange={(e) => setQuickPaymentInfo(e.target.value)}
+                  className="input !py-1.5 !text-xs"
+                  placeholder="যেমন: বিকাশ পার্সোনাল: ০১৭১১-XXXXXX"
+                />
+              </label>
+
+              <label className="grid gap-1 text-xs font-semibold">
+                <span>📝 বিশেষ বার্তা (ঐচ্ছিক)</span>
+                <input
+                  type="text"
+                  value={quickNote}
+                  onChange={(e) => setQuickNote(e.target.value)}
+                  className="input !py-1.5 !text-xs"
+                  placeholder="যেমন: মেসের রান্নার জন্য দ্রুত পরিশোধ করুন"
+                />
+              </label>
+            </div>
+
+            <div className="mt-5 flex items-center justify-end gap-2 pt-3 border-t border-[color:var(--border)]">
+              <button
+                type="button"
+                disabled={isSendingQuick}
+                onClick={() => setQuickRemindState(null)}
+                className="button-secondary !py-1.5 !px-3.5 text-xs font-semibold rounded-full"
+              >
+                {t("moneyReminder.cancel")}
+              </button>
+              <button
+                type="button"
+                disabled={isSendingQuick}
+                onClick={handleSendQuickReminder}
+                className="button-primary !py-1.5 !px-4 text-xs font-bold flex items-center gap-1.5 rounded-full"
+              >
+                {isSendingQuick ? (
+                  <>
+                    <span className="animate-spin text-xs">⏳</span>
+                    <span>{t("moneyReminder.sendingButton")}</span>
+                  </>
+                ) : (
+                  <>
+                    <span>✉️</span>
+                    <span>{t("moneyReminder.confirmSend")}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
