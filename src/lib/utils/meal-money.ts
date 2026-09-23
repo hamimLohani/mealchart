@@ -2,11 +2,12 @@ import type { CostEntry, DepositEntry, MealEntry } from "@/types/domain";
 
 export function normalizeMealQuantity(value: number): number {
   if (!Number.isFinite(value) || value < 0) return 0;
-  return Math.round(value * 4) / 4;
+  return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
 export function formatMeal(n: number): string {
-  const rounded = Math.round(n * 4) / 4;
+  if (!Number.isFinite(n) || n <= 0) return "0";
+  const rounded = Math.round((n + Number.EPSILON) * 100) / 100;
   return Number.isInteger(rounded) ? String(rounded) : rounded.toString();
 }
 

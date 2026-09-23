@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { auth } from "@/lib/firebase/client";
 import { useT } from "@/i18n/use-t";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
@@ -12,13 +12,111 @@ import {
   saveMealsBatch,
 } from "@/lib/firebase/repositories";
 import { normalizeMealQuantity, formatMeal } from "@/lib/utils/meal-money";
-import { currentMonthKey, pickCurrentMonthChart, toDateInputValue, getChartDates, formatHeaderDate, isChartActive } from "@/lib/utils/date";
+import { pickCurrentMonthChart, toDateInputValue, getChartDates, formatHeaderDate, isChartActive } from "@/lib/utils/date";
 import type { AdminProfile, Chart, MealEntry, Member } from "@/types/domain";
 import { memberDisplayName, memberIdsForChartRows } from "@/lib/utils/chart-members";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
 import { useToast } from "@/lib/hooks/use-toast";
+
+interface MealFloatInputProps {
+  value?: number;
+  disabled?: boolean;
+  className?: string;
+  placeholder?: string;
+  syncExternal?: boolean;
+  onChange: (val: number) => void;
+  onCommit?: (val: number) => void;
+}
+
+const MealFloatInput = memo(function MealFloatInput({
+  value = 0,
+  disabled,
+  className,
+  placeholder = "0",
+  syncExternal = true,
+  onChange,
+  onCommit,
+}: MealFloatInputProps) {
+  const [text, setText] = useState<string>(() => (value === 0 ? "" : formatMeal(value)));
+  const isFocusedRef = useRef(false);
+
+  useEffect(() => {
+    if (syncExternal && !isFocusedRef.current) {
+      setText(value === 0 ? "" : formatMeal(value));
+    }
+  }, [value, syncExternal]);
+
+  const handleFocus = () => {
+    isFocusedRef.current = true;
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let raw = e.target.value;
+
+    // Convert regional Bengali digits (০-৯) to standard digits (0-9)
+    raw = raw.replace(/[০-৯]/g, (d) => String("০১২৩৪৫৬৭৮৯".indexOf(d)));
+
+    // Convert comma to dot
+    raw = raw.replace(/,/g, ".");
+
+    // Allow float only: optional digits followed by an optional single decimal point and digits
+    if (raw !== "" && !/^\d*\.?\d*$/.test(raw)) {
+      return;
+    }
+
+    setText(raw);
+
+    if (raw === "" || raw === ".") {
+      onChange(0);
+    } else {
+      const parsed = parseFloat(raw);
+      if (Number.isFinite(parsed)) {
+        onChange(normalizeMealQuantity(parsed));
+      }
+    }
+  };
+
+  const handleBlur = () => {
+    isFocusedRef.current = false;
+    let finalVal = 0;
+
+    if (text === "" || text === ".") {
+      setText("");
+      finalVal = 0;
+    } else {
+      const parsed = parseFloat(text);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        finalVal = normalizeMealQuantity(parsed);
+        setText(formatMeal(finalVal));
+      } else {
+        setText("");
+        finalVal = 0;
+      }
+    }
+
+    onChange(finalVal);
+    onCommit?.(finalVal);
+  };
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      autoComplete="off"
+      autoCorrect="off"
+      spellCheck={false}
+      disabled={disabled}
+      className={className}
+      placeholder={placeholder}
+      value={text}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      onChange={handleInputChange}
+    />
+  );
+});
 
 
 
@@ -161,26 +259,16 @@ export function EditMealsManager() {
     });
   }, [search, rowMemberIds, members, t]);
 
-  function isActiveMember(memberId: string) {
-    return members.some((m) => m.id === memberId);
-  }
+  const isActiveMember = useCallback(
+    (memberId: string) => members.some((m) => m.id === memberId),
+    [members],
+  );
 
-  function parseMealQuantity(raw: string): number {
-    if (raw === "") return 0;
-    const n = Number(raw);
-    return normalizeMealQuantity(n);
-  }
-
-  function handleChange(memberId: string, date: string, raw: string) {
-    if (!adminProfile || !selectedChart || selectedChart.locked || !isActiveMember(memberId)) return;
-    const val = parseMealQuantity(raw);
-    setMeals((prev) => ({
-      ...prev,
-      [memberId]: { ...(prev[memberId] ?? {}), [date]: val },
-    }));
-    const key = `${memberId}_${date}`;
-    clearTimeout(savingRef.current[key]);
-    savingRef.current[key] = setTimeout(() => {
+  const commitMealSave = useCallback(
+    (memberId: string, date: string, val: number) => {
+      if (!adminProfile || !selectedChart || selectedChart.locked || !isActiveMember(memberId)) return;
+      const key = `${memberId}_${date}`;
+      clearTimeout(savingRef.current[key]);
       void (async () => {
         try {
           await saveMealEntry({
@@ -194,42 +282,61 @@ export function EditMealsManager() {
           setError(tx(e instanceof Error ? e.message : t("errors.saveMealFailed")));
         }
       })();
-    }, 600);
-  }
+    },
+    [adminProfile, selectedChart, isActiveMember, t, tx, showSuccess],
+  );
 
-  function handleDefaultChange(date: string, raw: string) {
-    if (!adminProfile || !selectedChart || selectedChart.locked) return;
-    const val = parseMealQuantity(raw);
-    
-    setMeals((prev) => {
-      const next = { ...prev };
-      for (const memberId of rowMemberIds) {
-        if (isActiveMember(memberId)) {
-          next[memberId] = { ...(next[memberId] ?? {}), [date]: val };
-        }
-      }
-      return next;
-    });
+  const handleChange = useCallback(
+    (memberId: string, date: string, val: number) => {
+      if (!adminProfile || !selectedChart || selectedChart.locked || !isActiveMember(memberId)) return;
+      setMeals((prev) => ({
+        ...prev,
+        [memberId]: { ...(prev[memberId] ?? {}), [date]: val },
+      }));
+      const key = `${memberId}_${date}`;
+      clearTimeout(savingRef.current[key]);
+      savingRef.current[key] = setTimeout(() => {
+        commitMealSave(memberId, date, val);
+      }, 600);
+    },
+    [adminProfile, selectedChart, isActiveMember, commitMealSave],
+  );
 
-    const key = `default_${date}`;
-    clearTimeout(savingRef.current[key]);
-    savingRef.current[key] = setTimeout(() => {
-      void (async () => {
-        try {
-          const activeMemberIds = rowMemberIds.filter(isActiveMember);
-          await saveMealsBatch({
-            groupId: adminProfile.groupId,
-            memberIds: activeMemberIds,
-            date,
-            quantity: val,
-          });
-          showSuccess(t("toast.mealSaved"));
-        } catch (e) {
-          setError(tx(e instanceof Error ? e.message : t("errors.saveMealFailed")));
+  const handleDefaultChange = useCallback(
+    (date: string, val: number) => {
+      if (!adminProfile || !selectedChart || selectedChart.locked) return;
+
+      setMeals((prev) => {
+        const next = { ...prev };
+        for (const memberId of rowMemberIds) {
+          if (isActiveMember(memberId)) {
+            next[memberId] = { ...(next[memberId] ?? {}), [date]: val };
+          }
         }
-      })();
-    }, 600);
-  }
+        return next;
+      });
+
+      const key = `default_${date}`;
+      clearTimeout(savingRef.current[key]);
+      savingRef.current[key] = setTimeout(() => {
+        void (async () => {
+          try {
+            const activeMemberIds = rowMemberIds.filter(isActiveMember);
+            await saveMealsBatch({
+              groupId: adminProfile.groupId,
+              memberIds: activeMemberIds,
+              date,
+              quantity: val,
+            });
+            showSuccess(t("toast.mealSaved"));
+          } catch (e) {
+            setError(tx(e instanceof Error ? e.message : t("errors.saveMealFailed")));
+          }
+        })();
+      }, 600);
+    },
+    [adminProfile, selectedChart, rowMemberIds, isActiveMember, t, tx, showSuccess],
+  );
 
   function memberTotal(memberId: string) {
     return days.reduce((s, d) => s + (meals[memberId]?.[d] ?? 0), 0);
@@ -382,14 +489,12 @@ export function EditMealsManager() {
                   </td>
                   {days.map((date) => (
                     <td key={date} className="px-1 py-1 text-center">
-                      <input
+                      <MealFloatInput
                         className="w-18 rounded-md border border-[color:var(--border)] bg-[color:var(--background)] px-1 text-center text-sm font-medium tabular-nums outline-none transition focus:border-[color:var(--accent)]"
-                        min="0"
-                        step="0.25"
-                        type="number"
                         placeholder="-"
                         disabled={selectedChart.locked}
-                        onChange={(e) => handleDefaultChange(date, e.target.value)}
+                        syncExternal={false}
+                        onChange={(val) => handleDefaultChange(date, val)}
                       />
                     </td>
                   ))}
@@ -428,7 +533,7 @@ export function EditMealsManager() {
                                 : ""
                           }`}
                         >
-                          <input
+                          <MealFloatInput
                             className={`w-18 rounded-md border bg-transparent px-1 text-center text-sm font-medium tabular-nums outline-none transition focus:border-[color:var(--accent)] focus:bg-[color:var(--panel)] ${
                               isToday
                                 ? "border-[color:var(--accent)] bg-[color:var(--panel)]"
@@ -436,13 +541,11 @@ export function EditMealsManager() {
                                   ? "border-[color:var(--warn,#c2570c)] border-opacity-40 bg-[color:var(--panel)]"
                                   : "border-transparent"
                             }`}
-                            min="0"
-                            step="0.25"
-                            type="number"
-                            value={val === 0 ? "" : val}
+                            value={val}
                             placeholder="0"
                             disabled={selectedChart.locked || !isActiveMember(memberId)}
-                            onChange={(e) => handleChange(memberId, date, e.target.value)}
+                            onChange={(newVal) => handleChange(memberId, date, newVal)}
+                            onCommit={(newVal) => commitMealSave(memberId, date, newVal)}
                           />
                         </td>
                       );
