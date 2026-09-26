@@ -18,7 +18,7 @@ export function GroupNavbar({
 }) {
   const pathname = usePathname();
   const { t } = useT();
-  const { admin: currentUser } = useAuthStore();
+  const { admin: currentUser, isLoaded } = useAuthStore();
   // Read admin profile from the shared SWR cache — no extra Firestore reads.
   const { adminProfile } = useCurrentAdminProfile();
   const isGroupAdmin = adminProfile?.groupId === groupId;
@@ -33,17 +33,18 @@ export function GroupNavbar({
       ? `/group/${groupId}/member/${encodeURIComponent(signedInMember.id)}`
       : `/group/${groupId}`;
 
-  const navItems = useMemo(
-    () =>
-      [
-        { key: "chart" as const, icon: <ChartIcon />, label: t("groupNav.chart"), hint: t("groupNav.chartHint") },
-        { key: "money" as const, icon: <MoneyIcon />, label: t("groupNav.money"), hint: t("groupNav.moneyHint") },
-        { key: "costs" as const, icon: <CostsIcon />, label: t("groupNav.costs"), hint: t("groupNav.costsHint") },
-        { key: "members" as const, icon: <MembersIcon />, label: t("groupNav.members"), hint: t("groupNav.membersHint") },
-        { key: "settings" as const, icon: <SettingsIcon />, label: t("groupNav.settings"), hint: t("groupNav.settingsHint") },
-      ] as const,
-    [t],
-  );
+  const navItems = useMemo(() => {
+    const items: Array<{ key: NavKey; icon: React.ReactNode; label: string; hint: string }> = [
+      { key: "chart", icon: <ChartIcon />, label: t("groupNav.chart"), hint: t("groupNav.chartHint") },
+      { key: "money", icon: <MoneyIcon />, label: t("groupNav.money"), hint: t("groupNav.moneyHint") },
+      { key: "costs", icon: <CostsIcon />, label: t("groupNav.costs"), hint: t("groupNav.costsHint") },
+      { key: "members", icon: <MembersIcon />, label: t("groupNav.members"), hint: t("groupNav.membersHint") },
+    ];
+    if (currentUser) {
+      items.push({ key: "settings", icon: <SettingsIcon />, label: t("groupNav.settings"), hint: t("groupNav.settingsHint") });
+    }
+    return items;
+  }, [currentUser, t]);
 
   const activeKey = useMemo<NavKey>(() => {
     const parts = pathname.split("/").filter(Boolean);
@@ -183,6 +184,20 @@ export function GroupNavbar({
                 ))}
               </div>
             </div>
+
+            {isLoaded && !currentUser && (
+              <div className="mt-4 pt-3 border-t border-[color:var(--border)]">
+                <Link
+                  href="/admin/login"
+                  className="admin-sidebar-link admin-sidebar-standalone-link"
+                >
+                  <motion.div whileHover={{ x: 4 }} whileTap={{ scale: 0.99 }} transition={{ type: "spring", stiffness: 300 }} className="admin-sidebar-link-text">
+                    <span className="admin-sidebar-link-label">{t("adminNav.login")}</span>
+                    <span className="admin-sidebar-link-hint">{t("adminNav.loginHint")}</span>
+                  </motion.div>
+                </Link>
+              </div>
+            )}
           </nav>
         </div>
       </aside>

@@ -16,11 +16,12 @@ export function AdminMobileBar() {
   const touchStartY = useRef<number | null>(null);
   const { t } = useT();
   const requestCounts = useAdminRequestCounts();
-  const { admin } = useAuthStore();
+  const { admin, isLoaded } = useAuthStore();
   const { adminProfile } = useCurrentAdminProfile();
   const { data: members = [] } = useMembers(adminProfile?.groupId);
 
   const currentMember = useMemo(() => {
+    if (!isLoaded || !admin) return null;
     const adminEmail = admin?.email;
     if (!adminEmail || !members.length) return null;
     const emailNorm = adminEmail.trim().toLowerCase();
@@ -63,6 +64,10 @@ export function AdminMobileBar() {
     if (nextIndex < 0 || nextIndex >= navItems.length) return;
     router.push(navItems[nextIndex].href);
   };
+
+  if (!isLoaded || !admin) {
+    return null;
+  }
 
   return (
     <>

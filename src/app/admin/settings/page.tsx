@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -167,9 +168,13 @@ export default function AdminSettingsPage() {
 
   if (!admin || !group) {
     return (
-      <div className="rounded-[var(--radius-lg)] border border-[color:var(--border)] bg-[color:var(--panel)] p-6 shadow-sm">
+      <div className="rounded-[var(--radius-lg)] border border-[color:var(--border)] bg-[color:var(--panel)] p-6 shadow-sm sm:p-8">
         <p className="admin-section-label">{t("adminDash.notSignedIn")}</p>
-        <h1 className="mt-2 text-xl font-semibold">{t("adminDash.accessRequired")}</h1>
+        <h1 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">{t("adminDash.accessRequired")}</h1>
+        <p className="mt-2 text-sm text-[color:var(--soft-foreground)]">{t("adminDash.signInToManage")}</p>
+        <Link href="/admin/login" className="button-primary mt-4 inline-block text-xs">
+          {t("adminNav.login")}
+        </Link>
       </div>
     );
   }

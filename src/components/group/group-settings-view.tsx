@@ -12,12 +12,14 @@ import { useGroup, useMembers, useAdminProfiles } from "@/lib/hooks/use-data";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
 import Link from "next/link";
 
+import { AdminLoadingState } from "@/components/admin/admin-loading-state";
+
 export function GroupSettingsView({ groupId }: { groupId: string }) {
   const router = useRouter();
   const { t } = useT();
   const { toast } = useToast();
   const { language, setLanguage, theme, setTheme } = useUiStore();
-  const { admin: currentUser } = useAuthStore();
+  const { admin: currentUser, isLoaded } = useAuthStore();
   const { data: group, isLoading: groupLoading } = useGroup(groupId);
   const { data: members = [] } = useMembers(groupId);
   const { data: adminProfiles = [] } = useAdminProfiles(groupId);
@@ -46,6 +48,28 @@ export function GroupSettingsView({ groupId }: { groupId: string }) {
       toast(err instanceof Error ? err.message : "Failed to sign out.", "error");
       setIsSigningOut(false);
     }
+  }
+
+  if (!isLoaded || groupLoading) {
+    return <AdminLoadingState message={t("adminDash.loading")} />;
+  }
+
+  if (!currentUser) {
+    return (
+      <div className="rounded-[var(--radius-lg)] border border-[color:var(--border)] bg-[color:var(--panel)] p-6 shadow-sm sm:p-8">
+        <p className="admin-section-label">{t("adminDash.notSignedIn")}</p>
+        <h1 className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">{t("adminDash.accessRequired")}</h1>
+        <p className="mt-2 text-sm text-[color:var(--soft-foreground)]">{t("adminDash.signInToManage")}</p>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Link href="/admin/login" className="button-primary text-xs">
+            {t("adminNav.login")}
+          </Link>
+          <Link href={`/group/${groupId}`} className="button-secondary text-xs">
+            {t("groupNav.home")}
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (
