@@ -889,6 +889,33 @@ export async function rejectDepositRequest(groupId: string, chartId: string, req
   await deleteDoc(doc(database, chartDepositRequestsCollection(groupId, chartId), requestId));
 }
 
+export async function deleteDeposit(groupId: string, chartId: string, depositId: string) {
+  const database = ensureDb();
+  await deleteDoc(doc(database, chartDepositsCollection(groupId, chartId), depositId));
+}
+
+export async function deleteMemberDepositsForChart(groupId: string, chartId: string, memberId: string) {
+  const database = ensureDb();
+  const deposits = await listDepositsForChart(groupId, chartId);
+  const mid = memberId.toLowerCase();
+  const memberDeposits = deposits.filter((d) => d.memberId.toLowerCase() === mid);
+  if (memberDeposits.length === 0) return;
+
+  let batch = writeBatch(database);
+  let count = 0;
+  for (const d of memberDeposits) {
+    batch.delete(doc(database, chartDepositsCollection(groupId, chartId), d.id));
+    count++;
+    if (count % 400 === 0) {
+      await batch.commit();
+      batch = writeBatch(database);
+    }
+  }
+  if (count % 400 !== 0) {
+    await batch.commit();
+  }
+}
+
 // ── Meals ─────────────────────────────────────────────────────────────
 
 export async function getMealsForDate(groupId: string, date: string) {

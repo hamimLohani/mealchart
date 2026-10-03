@@ -5,7 +5,21 @@ import { useSWRConfig } from "swr";
 import { auth } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { useT } from "@/i18n/use-t";
-import { createAdminProfile, createMember, deleteMember, listMembers, updateMember, listJoinRequests, approveJoinRequest, rejectJoinRequest, getGroupById, listAdminProfiles, deleteAdminProfile } from "@/lib/firebase/repositories";
+import {
+  createAdminProfile,
+  createMember,
+  deleteMember,
+  listMembers,
+  updateMember,
+  listJoinRequests,
+  approveJoinRequest,
+  rejectJoinRequest,
+  getGroupById,
+  listAdminProfiles,
+  deleteAdminProfile,
+  createDeposit,
+  deleteMemberDepositsForChart,
+} from "@/lib/firebase/repositories";
 import { toDateInputValue } from "@/lib/utils/date";
 import type { AdminProfile, Member, JoinRequest, Group } from "@/types/domain";
 import { sendWelcomeEmail, sendRemovalEmail, verifyEmailExistence, sendAdminWelcomeEmail, sendAdminRemovalEmail } from "@/lib/email/actions";
@@ -13,6 +27,7 @@ import { getFriendlyEmailError } from "@/lib/utils/email-error";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { MemberDeleteModal, type MemberDeleteSettlement } from "@/components/admin/member-delete-modal";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
 import { useAuthStore } from "@/store/auth-store";
 import { useToast } from "@/lib/hooks/use-toast";
@@ -322,16 +337,47 @@ export function MemberManager() {
     }
   }
 
-  async function performDeleteMember(member: Member) {
+  async function performDeleteMember(member: Member, settlement?: MemberDeleteSettlement) {
     if (!activeAdminProfile) return;
     setError(null);
     setIsRemoving(true);
     try {
+      // 1. Process money settlement before deleting member profile so permissions and links remain valid
+      if (settlement) {
+        if (settlement.mode === "refund" && settlement.amount > 0) {
+          await createDeposit({
+            groupId: activeAdminProfile.groupId,
+            chartId: settlement.chartId,
+            memberId: member.id,
+            amount: -Math.abs(settlement.amount),
+            date: settlement.date,
+            collectedByAdminId: activeAdminProfile.id,
+          });
+          mutate(["deposits", activeAdminProfile.groupId, settlement.chartId]);
+        } else if (settlement.mode === "settle_due" && settlement.amount > 0) {
+          await createDeposit({
+            groupId: activeAdminProfile.groupId,
+            chartId: settlement.chartId,
+            memberId: member.id,
+            amount: Math.abs(settlement.amount),
+            date: settlement.date,
+            collectedByAdminId: activeAdminProfile.id,
+          });
+          mutate(["deposits", activeAdminProfile.groupId, settlement.chartId]);
+        } else if (settlement.mode === "delete_deposits") {
+          await deleteMemberDepositsForChart(activeAdminProfile.groupId, settlement.chartId, member.id);
+          mutate(["deposits", activeAdminProfile.groupId, settlement.chartId]);
+        }
+      }
+
+      // 2. Remove member profile document
       await deleteMember(activeAdminProfile.groupId, member.id);
       setMembers((c) => c.filter((m) => m.id !== member.id));
+      mutate(["members", activeAdminProfile.groupId]);
       if (editingMemberId === member.id) resetForm();
       showSuccess(t("toast.memberRemoved"));
 
+      // 3. Send removal email if member has email
       if (member && member.email) {
         const emailResult = await sendRemovalEmail(member.email, member.fullName, groupName || activeAdminProfile.groupId);
         if (!emailResult.success) {
@@ -851,18 +897,16 @@ export function MemberManager() {
         </div>
       </div>
     </div>
-    {memberToDelete && (
-      <ConfirmModal
+    {memberToDelete && activeAdminProfile && (
+      <MemberDeleteModal
         open={!!memberToDelete}
-        title={t("memberMgr.remove")}
-        description={t("memberMgr.removeConfirm", { member: memberToDelete.fullName })}
-        confirmLabel={t("memberMgr.remove")}
-        cancelLabel={t("common.cancel")}
+        member={memberToDelete}
+        groupId={activeAdminProfile.groupId}
         isProcessing={isRemoving}
         onCancel={() => setMemberToDelete(null)}
-        onConfirm={async () => {
+        onConfirm={async (settlement) => {
           if (!memberToDelete) return;
-          await performDeleteMember(memberToDelete);
+          await performDeleteMember(memberToDelete, settlement);
           setMemberToDelete(null);
         }}
       />
