@@ -73,13 +73,18 @@ export async function saveChartReportPdf(options: ChartReportOptions): Promise<s
         return btoa(binary);
       };
 
+      type JsPdfWithVfs = typeof doc & {
+        addFileToVFS(fileName: string, data: string): void;
+        addFont(postScriptName: string, fontName: string, fontStyle: string): void;
+      };
+      const vfsDoc = doc as JsPdfWithVfs;
       const regularBase64 = toBase64(regularBuf);
-      (doc as any).addFileToVFS("NotoSansBengali-Regular.ttf", regularBase64);
-      (doc as any).addFont("NotoSansBengali-Regular.ttf", "NotoSansBengali", "normal");
+      vfsDoc.addFileToVFS("NotoSansBengali-Regular.ttf", regularBase64);
+      vfsDoc.addFont("NotoSansBengali-Regular.ttf", "NotoSansBengali", "normal");
       if (boldBuf) {
         const boldBase64 = toBase64(boldBuf);
-        (doc as any).addFileToVFS("NotoSansBengali-Bold.ttf", boldBase64);
-        (doc as any).addFont("NotoSansBengali-Bold.ttf", "NotoSansBengali", "bold");
+        vfsDoc.addFileToVFS("NotoSansBengali-Bold.ttf", boldBase64);
+        vfsDoc.addFont("NotoSansBengali-Bold.ttf", "NotoSansBengali", "bold");
       }
       fontsRegistered = true;
     } catch (e) {
@@ -280,7 +285,7 @@ export async function saveChartReportPdf(options: ChartReportOptions): Promise<s
   const summaryTableHeight = 22 + headerHeight + (rowMemberIds.length * bodyRowHeight) + bodyRowHeight + 20;
   if (currentY + summaryTableHeight > bottomLimit) {
     doc.addPage();
-    drawPageHeader();
+    await drawPageHeader();
     currentY = 108;
   }
 

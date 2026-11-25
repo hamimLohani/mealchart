@@ -13,64 +13,19 @@ import { useToast } from "@/lib/hooks/use-toast";
 import { useCharts, useCosts, useGroup, useMembers } from "@/lib/hooks/use-data";
 import { chartMonthDateBounds, toDateInputValue } from "@/lib/utils/date";
 import { useAuthStore } from "@/store/auth-store";
-
-function parseAmountInput(value: string, messages: { invalidCharacters: string; invalidFormula: string }) {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return { value: null as number | null, isValid: false, isFormula: false, message: "" };
-  }
-
-  const expression = trimmed.startsWith("=") ? trimmed.slice(1).trim() : trimmed;
-  const isFormula = trimmed.startsWith("=") || /[+\-*/()]/.test(expression);
-
-  if (!expression) {
-    return { value: null as number | null, isValid: false, isFormula: false, message: "" };
-  }
-
-  const numericPattern = /^[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?$/;
-  if (numericPattern.test(expression)) {
-    const numericValue = Number(expression);
-    return {
-      value: Number.isFinite(numericValue) ? numericValue : null,
-      isValid: Number.isFinite(numericValue),
-      isFormula: false,
-      message: "",
-    };
-  }
-
-  if (!/^[0-9+\-*/().\s]+$/.test(expression)) {
-    return {
-      value: null as number | null,
-      isValid: false,
-      isFormula: true,
-      message: messages.invalidCharacters,
-    };
-  }
-
-  try {
-    const result = Function(`"use strict"; return (${expression});`)();
-    if (!Number.isFinite(result)) {
-      throw new Error("Invalid expression");
-    }
-    return { value: Number(result), isValid: true, isFormula, message: "" };
-  } catch {
-    return {
-      value: null as number | null,
-      isValid: false,
-      isFormula: true,
-      message: messages.invalidFormula,
-    };
-  }
-}
+import { parseAmountInput } from "@/lib/utils/amount-parser";
+import { GroupAuthRequired } from "@/components/group/group-auth-required";
 
 export function GroupCostsView({ groupId }: { groupId: string }) {
   const { t } = useT();
   const { chart, selectChart } = useGroupSession();
-  const { admin: currentUser } = useAuthStore();
+  const { admin: currentUser, isLoaded } = useAuthStore();
   const { mutate } = useSWRConfig();
   const { success: showSuccess, error: showError } = useToast();
 
-  const { data: group, error: groupError, isLoading: groupLoading } = useGroup(isFirebaseConfigured ? groupId : undefined);
+  const { data: group, error: groupError, isLoading: groupLoading } = useGroup(
+    isFirebaseConfigured && isLoaded && currentUser ? groupId : undefined,
+  );
   const { data: charts = [] } = useCharts(group?.id);
   const activeChart = useMemo(() => {
     if (!chart) return null;
@@ -96,7 +51,7 @@ export function GroupCostsView({ groupId }: { groupId: string }) {
   const dataLoading = !!(activeChart && costsLoading);
   useGlobalLoading(
     `group-costs-view-${groupId}`,
-    groupLoading || dataLoading || isSubmitting,
+    !isLoaded || groupLoading || dataLoading || isSubmitting,
     isSubmitting ? t("groupCosts.submitting") : t("common.loading"),
   );
 
@@ -111,13 +66,17 @@ export function GroupCostsView({ groupId }: { groupId: string }) {
     }, 0);
   }, [activeChart, chart, selectChart]);
 
-  if (groupLoading) {
+  if (!isLoaded || groupLoading) {
     return (
       <div className="group-page-grid py-16">
         <Skeleton className="h-24 w-full" />
         <Skeleton className="h-48 w-full" />
       </div>
     );
+  }
+
+  if (!currentUser) {
+    return <GroupAuthRequired />;
   }
 
   if (groupError) {

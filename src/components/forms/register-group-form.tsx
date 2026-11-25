@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   getRedirectResult,
@@ -11,6 +11,7 @@ import {
   sendEmailVerification,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
+  onAuthStateChanged,
   type User,
 } from "firebase/auth";
 import { doc, serverTimestamp, writeBatch } from "firebase/firestore";
@@ -36,13 +37,40 @@ const pendingFormKey = "mealchart.pendingForm";
 export function RegisterGroupForm() {
   const { t, tx } = useT();
   const isOnline = useOnlineStatus();
-  const [form, setForm] = useState<FormState>(initialState);
+  const [form, setForm] = useState<FormState>(() => {
+    if (typeof window !== "undefined") {
+      const savedPendingUser = sessionStorage.getItem(pendingUserKey);
+      const savedPendingForm = sessionStorage.getItem(pendingFormKey);
+      if (savedPendingUser && savedPendingForm) {
+        try {
+          return JSON.parse(savedPendingForm) as FormState;
+        } catch {
+          return initialState;
+        }
+      }
+    }
+    return initialState;
+  });
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [authMethod, setAuthMethod] = useState<"google" | "email">("google");
-  const [step, setStep] = useState<Step>("info");
-  const [pendingUser, setPendingUser] = useState<User | null>(null);
+  const [step, setStep] = useState<Step>(() => {
+    if (typeof window !== "undefined" && auth?.currentUser) {
+      const savedPendingUser = sessionStorage.getItem(pendingUserKey);
+      const savedPendingForm = sessionStorage.getItem(pendingFormKey);
+      if (savedPendingUser && savedPendingForm) return "verify";
+    }
+    return "info";
+  });
+  const [pendingUser, setPendingUser] = useState<User | null>(() => {
+    if (typeof window !== "undefined" && auth?.currentUser) {
+      const savedPendingUser = sessionStorage.getItem(pendingUserKey);
+      const savedPendingForm = sessionStorage.getItem(pendingFormKey);
+      if (savedPendingUser && savedPendingForm) return auth.currentUser;
+    }
+    return null;
+  });
   const [showPasswordReset, setShowPasswordReset] = useState(false);
 
   useGlobalLoading("register-group-form", isSubmitting, t("registerForm.submitting"));
@@ -80,11 +108,17 @@ export function RegisterGroupForm() {
 
       await batch.commit();
 
-      void sendAdminWelcomeEmail(
-        normalizeEmail(user.email),
-        fullName || user.displayName || "Admin",
-        nameTrim
-      ).then(result => {
+      void user
+        .getIdToken()
+        .then((idToken) =>
+          sendAdminWelcomeEmail(
+            normalizeEmail(user.email!),
+            fullName || user.displayName || "Admin",
+            nameTrim,
+            idToken,
+          ),
+        )
+        .then(result => {
         if (!result.success) {
           const friendlyError = getFriendlyEmailError(result.error || "");
           setError(`ERR_TRANS:${JSON.stringify({ 
@@ -100,18 +134,20 @@ export function RegisterGroupForm() {
   useEffect(() => {
     if (!isFirebaseConfigured || !auth || !db) return;
 
-    // Check if we have a pending user and form data in session storage
-    const savedPendingUser = sessionStorage.getItem(pendingUserKey);
-    const savedPendingForm = sessionStorage.getItem(pendingFormKey);
-    if (savedPendingUser && auth.currentUser && savedPendingForm) {
-      const parsedForm = JSON.parse(savedPendingForm);
-      setForm(parsedForm);
-      setPendingUser(auth.currentUser);
-      setStep("verify");
-    }
-
     const firebaseAuth = auth;
     let active = true;
+
+    const savedPendingUser = sessionStorage.getItem(pendingUserKey);
+    const savedPendingForm = sessionStorage.getItem(pendingFormKey);
+    const unsubscribePending =
+      savedPendingUser && savedPendingForm && !firebaseAuth.currentUser
+        ? onAuthStateChanged(firebaseAuth, (user) => {
+            if (!active || !user) return;
+            setPendingUser(user);
+            setStep("verify");
+          })
+        : null;
+
     async function completeRedirectRegistration() {
       const pendingGroupName = window.sessionStorage.getItem(pendingGroupNameKey);
       if (!pendingGroupName) return;
@@ -142,6 +178,7 @@ export function RegisterGroupForm() {
     void completeRedirectRegistration();
     return () => {
       active = false;
+      unsubscribePending?.();
     };
   }, [createGroupForUser, t, tx]);
 
@@ -407,7 +444,7 @@ export function RegisterGroupForm() {
 
           {!isOnline && <p className="alert-warn">{t("common.offlineAuth")}</p>}
 
-          {error && <p className="alert-error">{error}</p>}
+          {error && <p className="alert-error">{tx(error)}</p>}
 
           {successMessage && <p className="alert-success">{successMessage}</p>}
 
@@ -495,7 +532,7 @@ export function RegisterGroupForm() {
             </p>
           </div>
 
-          {error && <p className="alert-error">{error}</p>}
+          {error && <p className="alert-error">{tx(error)}</p>}
 
           <div className="grid gap-3">
             <button

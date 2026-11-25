@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useSWRConfig } from "swr";
-import { auth } from "@/lib/firebase/client";
+import { auth, getCurrentIdToken } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { useT } from "@/i18n/use-t";
 import {
@@ -190,8 +190,9 @@ export function MemberManager() {
 
     setIsSubmitting(true);
     try {
+      const idToken = await getCurrentIdToken();
       // --- Email Existence Check (Option 3) ---
-      const verification = await verifyEmailExistence(form.email.trim());
+      const verification = await verifyEmailExistence(form.email.trim(), idToken);
       if (!verification.exists) {
         const errorKey = verification.error === "The email domain does not exist." 
           ? "errors.emailDomainNotExist" 
@@ -238,6 +239,7 @@ export function MemberManager() {
           created.email,
           created.fullName,
           groupName || activeAdminProfile.groupId,
+          idToken,
         );
         if (!emailResult.success) {
           const friendlyError = getFriendlyEmailError(emailResult.error || "");
@@ -307,10 +309,12 @@ export function MemberManager() {
       setAdminProfiles(updatedAdminProfiles);
       
       // Send admin welcome email
+      const idToken = await getCurrentIdToken();
       const emailResult = await sendAdminWelcomeEmail(
         emailTrim,
         fullNameTrim,
         groupName || activeAdminProfile.groupId,
+        idToken,
       );
       if (!emailResult.success) {
         const friendlyError = getFriendlyEmailError(emailResult.error || "");
@@ -379,7 +383,13 @@ export function MemberManager() {
 
       // 3. Send removal email if member has email
       if (member && member.email) {
-        const emailResult = await sendRemovalEmail(member.email, member.fullName, groupName || activeAdminProfile.groupId);
+        const idToken = await getCurrentIdToken();
+        const emailResult = await sendRemovalEmail(
+          member.email,
+          member.fullName,
+          groupName || activeAdminProfile.groupId,
+          idToken,
+        );
         if (!emailResult.success) {
           const friendlyError = getFriendlyEmailError(emailResult.error || "");
           setError(`ERR_TRANS:${JSON.stringify({ key: "errors.emailRemovalFailed", vars: { error: friendlyError } })}`);
@@ -409,10 +419,12 @@ export function MemberManager() {
       setAdminProfiles(updatedAdminProfiles);
       showSuccess(t("toast.adminMadeSuccess"));
 
+      const idToken = await getCurrentIdToken();
       void sendAdminWelcomeEmail(
         member.email,
         member.fullName,
         groupName || activeAdminProfile.groupId,
+        idToken,
       );
     } catch (e) {
       let msg;
@@ -441,10 +453,12 @@ export function MemberManager() {
       showSuccess(t("toast.adminRevokedSuccess"));
 
       if (adminProfileToDelete.email) {
+        const idToken = await getCurrentIdToken();
         void sendAdminRemovalEmail(
           adminProfileToDelete.email,
           adminProfileToDelete.fullName || adminProfileToDelete.email,
           group.name || groupName || activeAdminProfile.groupId,
+          idToken,
         );
       }
     } catch (e) {
@@ -479,8 +493,9 @@ export function MemberManager() {
     setRequestAction("approve");
     setIsSubmitting(true);
     try {
+      const idToken = await getCurrentIdToken();
       // --- Email Existence Check (Option 3) ---
-      const verification = await verifyEmailExistence(req.email.trim());
+      const verification = await verifyEmailExistence(req.email.trim(), idToken);
       if (!verification.exists) {
         const errorKey = verification.error === "The email domain does not exist." 
           ? "errors.emailDomainNotExist" 
@@ -511,6 +526,7 @@ export function MemberManager() {
         req.email,
         req.fullName,
         groupName || activeAdminProfile.groupId,
+        idToken,
       );
       if (!emailResult.success) {
         const friendlyError = getFriendlyEmailError(emailResult.error || "");

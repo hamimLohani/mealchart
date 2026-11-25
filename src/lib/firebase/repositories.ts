@@ -1,5 +1,4 @@
 import {
-  addDoc,
   collection,
   deleteDoc,
   doc,
@@ -8,6 +7,7 @@ import {
   limit,
   orderBy,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   Timestamp,
@@ -132,37 +132,6 @@ export async function listGroups() {
   }));
 }
 
-export async function updateGroupWhatsappConfig(
-  groupId: string,
-  config: {
-    whatsappPhoneNumberId: string;
-    whatsappAccessToken: string;
-    whatsappRecipientPhone: string;
-    whatsappEnabled: boolean;
-  }
-): Promise<void> {
-  const database = ensureDb();
-  await setDoc(doc(database, groupsCollection, groupId, "settings", "whatsapp"), {
-    whatsappPhoneNumberId: config.whatsappPhoneNumberId.trim(),
-    whatsappAccessToken: config.whatsappAccessToken.trim(),
-    whatsappRecipientPhone: config.whatsappRecipientPhone.trim(),
-    whatsappEnabled: config.whatsappEnabled,
-  });
-}
-
-export async function getGroupWhatsappConfig(groupId: string) {
-  const database = ensureDb();
-  const snapshot = await getDoc(doc(database, groupsCollection, groupId, "settings", "whatsapp"));
-  if (!snapshot.exists()) return null;
-  const data = snapshot.data();
-  return {
-    whatsappPhoneNumberId: (data.whatsappPhoneNumberId as string | undefined) ?? "",
-    whatsappAccessToken: (data.whatsappAccessToken as string | undefined) ?? "",
-    whatsappRecipientPhone: (data.whatsappRecipientPhone as string | undefined) ?? "",
-    whatsappEnabled: (data.whatsappEnabled as boolean | undefined) ?? false,
-  };
-}
-
 
 // ── Admins ────────────────────────────────────────────────────────────
 
@@ -261,36 +230,6 @@ export async function listAdminProfiles(groupId: string) {
   }));
 }
 
-export async function migrateAdminProfile(oldUid: string, newUid: string) {
-  const database = ensureDb();
-  const oldRef = doc(database, adminsCollection, oldUid);
-  const newRef = doc(database, adminsCollection, newUid);
-  
-  const snap = await getDoc(oldRef);
-  if (!snap.exists()) return;
-  
-  const data = snap.data();
-  const groupId = typeof data.groupId === "string" ? data.groupId : "";
-  if (!groupId) throw new Error("Admin profile is missing a group.");
-
-  const groupRef = doc(database, groupsCollection, groupId);
-  const groupSnap = await getDoc(groupRef);
-  const groupData = groupSnap.exists() ? groupSnap.data() : null;
-  const currentAdminId = typeof groupData?.adminId === "string" ? groupData.adminId : "";
-  const shouldUpdateGroupAdmin = !currentAdminId || currentAdminId === oldUid;
-
-  const batch = writeBatch(database);
-  batch.set(newRef, {
-    ...data,
-    id: newUid,
-    email: typeof data.email === "string" ? data.email.trim().toLowerCase() : data.email,
-  });
-  if (shouldUpdateGroupAdmin) {
-    batch.update(groupRef, { adminId: newUid });
-  }
-  await batch.commit();
-}
-
 // ── Members ───────────────────────────────────────────────────────────
 
 export async function listMembers(groupId: string) {
@@ -327,32 +266,7 @@ export async function createMember(input: {
     throw new Error("EMAIL_ALREADY_MEMBER");
   }
 
-  // --- Payment/Limit Check ---
-  const groupSnap = await getDoc(doc(database, groupsCollection, input.groupId));
-  if (!groupSnap.exists()) throw new Error("Group not found.");
-  const groupData = groupSnap.data();
-  
-  const totalCreated = groupData.totalMembersCreated || 0;
-
-  // Allow up to 4 free members, then require paid slots-------------------------------------------------------------------------------------------------------------------------------------
-  if (totalCreated >= 4) {// <-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-    const paidSlots = groupData.paidMemberSlots || 0;
-    if (paidSlots <= 0) {
-      throw new Error("LIMIT_REACHED_MEMBER");
-    }
-    // Deduct one paid slot and increment total count
-    await updateDoc(doc(database, groupsCollection, input.groupId), {
-      paidMemberSlots: paidSlots - 1,
-      totalMembersCreated: totalCreated + 1
-    });
-  } else {
-    // Increment total count for free slot
-    await updateDoc(doc(database, groupsCollection, input.groupId), {
-      totalMembersCreated: totalCreated + 1
-    });
-  }
-  // ---------------------------
-
+  const groupRef = doc(database, groupsCollection, input.groupId);
   const record = buildMemberRecord({
     id: memberId,
     fullName: input.fullName,
@@ -360,7 +274,38 @@ export async function createMember(input: {
     email: memberId,
   });
 
-  await setDoc(memberRef, record);
+  await runTransaction(database, async (tx) => {
+    const [txMemberSnap, groupSnap] = await Promise.all([
+      tx.get(memberRef),
+      tx.get(groupRef),
+    ]);
+    if (txMemberSnap.exists()) {
+      throw new Error("A member with this email already exists.");
+    }
+    if (!groupSnap.exists()) throw new Error("Group not found.");
+    const groupData = groupSnap.data();
+
+    const totalCreated = groupData.totalMembersCreated || 0;
+
+    // Allow up to 4 free members, then require paid slots
+    if (totalCreated >= 4) {
+      const paidSlots = groupData.paidMemberSlots || 0;
+      if (paidSlots <= 0) {
+        throw new Error("LIMIT_REACHED_MEMBER");
+      }
+      tx.update(groupRef, {
+        paidMemberSlots: paidSlots - 1,
+        totalMembersCreated: totalCreated + 1,
+      });
+    } else {
+      tx.update(groupRef, {
+        totalMembersCreated: totalCreated + 1,
+      });
+    }
+
+    tx.set(memberRef, record);
+  });
+
   return record;
 }
 
@@ -554,46 +499,6 @@ export async function createChart(input: {
     throw new Error("A chart for one or more of these months already exists.");
   }
 
-  // --- Payment/Limit Check ---
-  const groupSnap = await getDoc(doc(database, groupsCollection, input.groupId));
-  if (!groupSnap.exists()) throw new Error("Group not found.");
-  const groupData = groupSnap.data();
-
-  const totalCreated = groupData.totalChartsCreated || 0;
-
-  // Allow up to 3 free charts, then require paid slots------------------------------------------------------------------------------------------------------------------------------
-  if (totalCreated >= 3) {// <--------------------------------------------------------------------------------------------------------------------------------------------------------
-    const paidSlots = groupData.paidChartSlots || 0;
-    if (paidSlots < duration) {
-      throw new Error("LIMIT_REACHED_CHART");
-    }
-    // Deduct slots based on duration and increment total count
-    await updateDoc(doc(database, groupsCollection, input.groupId), {
-      paidChartSlots: paidSlots - duration,
-      totalChartsCreated: totalCreated + duration
-    });
-  } else {
-    // Increment total count for free slot
-    const remainingFree = Math.max(0, 3 - totalCreated);
-    const slotsToPay = Math.max(0, duration - remainingFree);
-    
-    if (slotsToPay > 0) {
-      const paidSlots = groupData.paidChartSlots || 0;
-      if (paidSlots < slotsToPay) {
-        throw new Error("LIMIT_REACHED_CHART");
-      }
-      await updateDoc(doc(database, groupsCollection, input.groupId), {
-        paidChartSlots: paidSlots - slotsToPay,
-        totalChartsCreated: totalCreated + duration
-      });
-    } else {
-      await updateDoc(doc(database, groupsCollection, input.groupId), {
-        totalChartsCreated: totalCreated + duration
-      });
-    }
-  }
-  // ---------------------------
-
   const chartId = crypto.randomUUID();
   const record = buildChartRecord({
     id: chartId,
@@ -604,10 +509,54 @@ export async function createChart(input: {
     duration,
   });
 
-  await setDoc(
-    doc(database, chartsCollection(input.groupId), chartId),
-    { ...record, createdAt: serverTimestamp() },
-  );
+  const groupRef = doc(database, groupsCollection, input.groupId);
+  const chartRef = doc(database, chartsCollection(input.groupId), chartId);
+
+  await runTransaction(database, async (tx) => {
+    const groupSnap = await tx.get(groupRef);
+    if (!groupSnap.exists()) throw new Error("Group not found.");
+    const groupData = groupSnap.data();
+
+    const totalCreated = groupData.totalChartsCreated || 0;
+
+    // Allow up to 3 free charts, then require paid slots
+    if (totalCreated >= 3) {
+      const paidSlots = groupData.paidChartSlots || 0;
+      if (paidSlots < duration) {
+        throw new Error("LIMIT_REACHED_CHART");
+      }
+      tx.update(groupRef, {
+        paidChartSlots: paidSlots - duration,
+        totalChartsCreated: totalCreated + duration,
+        currentChartId: chartId,
+        currentChartMonth: monthKey,
+      });
+    } else {
+      const remainingFree = Math.max(0, 3 - totalCreated);
+      const slotsToPay = Math.max(0, duration - remainingFree);
+
+      if (slotsToPay > 0) {
+        const paidSlots = groupData.paidChartSlots || 0;
+        if (paidSlots < slotsToPay) {
+          throw new Error("LIMIT_REACHED_CHART");
+        }
+        tx.update(groupRef, {
+          paidChartSlots: paidSlots - slotsToPay,
+          totalChartsCreated: totalCreated + duration,
+          currentChartId: chartId,
+          currentChartMonth: monthKey,
+        });
+      } else {
+        tx.update(groupRef, {
+          totalChartsCreated: totalCreated + duration,
+          currentChartId: chartId,
+          currentChartMonth: monthKey,
+        });
+      }
+    }
+
+    tx.set(chartRef, { ...record, createdAt: serverTimestamp() });
+  });
 
   // --- Carry Over Logic ---
   if (input.carryOver) {
@@ -650,11 +599,6 @@ export async function createChart(input: {
     }
   }
   // -------------------------
-
-  await updateDoc(doc(database, groupsCollection, input.groupId), {
-    currentChartId: chartId,
-    currentChartMonth: monthKey,
-  });
 
   return record;
 }
@@ -1258,12 +1202,11 @@ export async function deleteChart(groupId: string, chartId: string) {
 
 /**
  * Permanently deletes an entire group and all associated records:
- * - All charts and their subcollections (deposits, depositRequests, costs, costRequests, notices)
+ * - All charts and their subcollections (deposits, depositRequests, costs, costRequests)
  * - All global meals
  * - All members
  * - All lockedMonths mirrors
  * - All joinRequests
- * - Group settings (e.g. WhatsApp)
  * - The group document itself
  * - All admin profiles for this group (including owner and temporary admins)
  */
@@ -1349,14 +1292,7 @@ export async function deleteEntireGroupAndAccount(groupId: string, ownerAdminId?
     if (ops > 0) await batch.commit();
   }
 
-  // 6. Delete group settings
-  try {
-    await deleteDoc(doc(database, groupsCollection, groupId, "settings", "whatsapp"));
-  } catch {
-    // Ignore if not present
-  }
-
-  // 7. Delete all admins for this group
+  // 6. Delete all admins for this group
   const adminsSnap = await getDocs(
     query(collection(database, adminsCollection), where("groupId", "==", groupId)),
   );

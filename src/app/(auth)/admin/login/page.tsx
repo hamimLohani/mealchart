@@ -8,7 +8,7 @@ export default function AdminLoginPage() {
   const { t } = useT();
 
   return (
-    <main className="mx-auto w-full max-w-lg px-4 py-10 sm:px-6 sm:py-16">
+    <div className="mx-auto w-full max-w-lg px-4 py-10 sm:px-6 sm:py-16">
       {/* Header */}
       <div className="text-center mb-8">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[color:var(--accent-dim)] mb-5">
@@ -39,6 +39,6 @@ export default function AdminLoginPage() {
           </Link>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

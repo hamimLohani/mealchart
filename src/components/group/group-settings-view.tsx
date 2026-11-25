@@ -8,7 +8,7 @@ import { useT } from "@/i18n/use-t";
 import { useToast } from "@/lib/hooks/use-toast";
 import { useUiStore } from "@/store/ui-store";
 import { useAuthStore } from "@/store/auth-store";
-import { useGroup, useMembers, useAdminProfiles } from "@/lib/hooks/use-data";
+import { useGroup, useMembers } from "@/lib/hooks/use-data";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
 import Link from "next/link";
 
@@ -22,7 +22,6 @@ export function GroupSettingsView({ groupId }: { groupId: string }) {
   const { admin: currentUser, isLoaded } = useAuthStore();
   const { data: group, isLoading: groupLoading } = useGroup(groupId);
   const { data: members = [] } = useMembers(groupId);
-  const { data: adminProfiles = [] } = useAdminProfiles(groupId);
   const { adminProfile } = useCurrentAdminProfile();
 
   const [isSigningOut, setIsSigningOut] = useState(false);

@@ -11,13 +11,16 @@ import { getGroupById, listMembers } from "@/lib/firebase/repositories";
 import { useGroupSession } from "@/lib/hooks/use-group-session";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { useAdminProfiles } from "@/lib/hooks/use-data";
+import { useAuthStore } from "@/store/auth-store";
+import { GroupAuthRequired } from "@/components/group/group-auth-required";
 import type { Group, Member } from "@/types/domain";
 
 export function GroupMembersList({ groupId }: { groupId: string }) {
   const router = useRouter();
   const { t, tx, language } = useT();
   const { chart } = useGroupSession();
-  const { data: adminProfiles = [] } = useAdminProfiles(groupId);
+  const { admin: currentUser, isLoaded } = useAuthStore();
+  const { data: adminProfiles = [] } = useAdminProfiles(currentUser ? groupId : undefined);
   const [group, setGroup] = useState<Group | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [memberSearch, setMemberSearch] = useState("");
@@ -25,9 +28,10 @@ export function GroupMembersList({ groupId }: { groupId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useGlobalLoading(`group-members-list-${groupId}`, isLoading, t("groupMembers.loading"));
+  useGlobalLoading(`group-members-list-${groupId}`, !isLoaded || (Boolean(currentUser) && isLoading), t("groupMembers.loading"));
 
   useEffect(() => {
+    if (!isLoaded || !currentUser) return;
     let active = true;
     async function load() {
       if (!isFirebaseConfigured) {
@@ -53,8 +57,14 @@ export function GroupMembersList({ groupId }: { groupId: string }) {
     return () => {
       active = false;
     };
-  }, [t, tx, groupId]);
+  }, [currentUser, isLoaded, t, tx, groupId]);
 
+  if (!isLoaded) {
+    return <p className="py-16 text-center text-sm text-[color:var(--soft-foreground)]">{t("groupMembers.loading")}</p>;
+  }
+  if (!currentUser) {
+    return <GroupAuthRequired />;
+  }
   if (isLoading) {
     return <p className="py-16 text-center text-sm text-[color:var(--soft-foreground)]">{t("groupMembers.loading")}</p>;
   }
@@ -132,7 +142,7 @@ export function GroupMembersList({ groupId }: { groupId: string }) {
                     )}
                   </div>
                   <p className="text-xs text-[color:var(--muted)]">
-                    {t("groupDash.joined")} {new Date(member.joinDate).toLocaleDateString(language === "bn" ? "bn-BD" : undefined)}
+                    {t("groupDash.joined")} {new Date(`${member.joinDate}T12:00:00`).toLocaleDateString(language === "bn" ? "bn-BD" : undefined)}
                   </p>
                 </div>
                 <span className="text-[color:var(--accent)]">→</span>

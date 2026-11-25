@@ -272,7 +272,7 @@ export function GroupDashboard({ groupId }: { groupId: string }) {
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold">{member.fullName}</p>
                   <p className="text-xs text-[color:var(--muted)]">
-                    {t("groupDash.joined")} {new Date(member.joinDate).toLocaleDateString()}
+                    {t("groupDash.joined")} {new Date(`${member.joinDate}T12:00:00`).toLocaleDateString()}
                   </p>
                 </div>
                 <span className="text-[color:var(--accent)]">→</span>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   signInWithPopup,
@@ -10,7 +10,6 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendEmailVerification,
-  sendPasswordResetEmail,
   onAuthStateChanged,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
@@ -23,7 +22,7 @@ import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { useOnlineStatus } from "@/lib/hooks/use-online-status";
 import type { Group } from "@/types/domain";
 
-type Step = "login" | "register" | "verify" | "join";
+type Step = "login" | "register" | "join";
 
 export function EnterGroupForm() {
   const router = useRouter();
@@ -45,12 +44,17 @@ export function EnterGroupForm() {
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
   const [registerSelectedGroupId, setRegisterSelectedGroupId] = useState("");
-  const [isEmailVerified, setIsEmailVerified] = useState(false); // New state to track if email is verified
   const [hasCreatedAccount, setHasCreatedAccount] = useState(false); // New state to track if account is created
+  const stepRef = useRef<Step>(step);
+  const handlingAuthRef = useRef(false);
 
-  // Load groups when user selects register step
   useEffect(() => {
-    if (!isFirebaseConfigured || step !== "register") return;
+    stepRef.current = step;
+  }, [step]);
+
+  // Load groups when user selects register step and has authenticated
+  useEffect(() => {
+    if (!isFirebaseConfigured || step !== "register" || (!hasCreatedAccount && !auth?.currentUser)) return;
 
     let active = true;
     const loadGroups = async () => {
@@ -65,7 +69,7 @@ export function EnterGroupForm() {
     };
     loadGroups();
     return () => { active = false; };
-  }, [step, isFirebaseConfigured]);
+  }, [step, hasCreatedAccount]);
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -128,7 +132,7 @@ export function EnterGroupForm() {
     void completeRedirectSignIn();
 
     const unsubscribeAuth = onAuthStateChanged(firebaseAuth, (user) => {
-      if (user) {
+      if (user && stepRef.current !== "register" && !handlingAuthRef.current) {
         void finishSignIn(user);
       }
     });
@@ -137,7 +141,7 @@ export function EnterGroupForm() {
       active = false;
       unsubscribeAuth();
     };
-  }, [finishSignIn, isFirebaseConfigured, t, tx]);
+  }, [finishSignIn, t, tx]);
 
   async function handleGoogleSignIn() {
     setError(null);
@@ -220,6 +224,7 @@ export function EnterGroupForm() {
     }
 
     setIsSubmitting(true);
+    handlingAuthRef.current = true;
     try {
       let userCredential;
       try {
@@ -231,6 +236,7 @@ export function EnterGroupForm() {
           // Email already exists, try to sign in
           userCredential = await signInWithEmailAndPassword(auth, registerEmail, registerPassword);
         } else {
+          handlingAuthRef.current = false;
           // Re-throw other errors
           throw err;
         }
@@ -243,6 +249,7 @@ export function EnterGroupForm() {
       setSelectedGroupId(registerSelectedGroupId);
       setSuccessMsg(t("registerForm.verificationSent"));
     } catch (err) {
+      handlingAuthRef.current = false;
       setError(tx(getAuthErrorMessage(err, t("errors.registerFailed"))));
     } finally {
       setIsSubmitting(false);
@@ -277,72 +284,20 @@ export function EnterGroupForm() {
         return;
       }
 
-      if (!selectedGroupId) {
-        setError("Please select a group");
+      const targetGroupId = registerSelectedGroupId || selectedGroupId;
+      const targetFullName = (registerFullName || fullName).trim();
+      const targetEmail = (registerEmail || email || auth.currentUser.email || "").trim();
+
+      if (!targetGroupId) {
+        setError(t("enterForm.selectGroup"));
         return;
       }
 
-      await submitJoinRequest(selectedGroupId, fullName, email);
+      await submitJoinRequest(targetGroupId, targetFullName, targetEmail);
       setSuccessMsg(t("enterForm.joinRequestSuccess"));
       setHasCreatedAccount(false);
-      setIsEmailVerified(false);
+      handlingAuthRef.current = false;
       setStep("login");
-    } catch (err) {
-      setError(tx(getAuthErrorMessage(err, t("errors.registerFailed"))));
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  async function handleVerifyAndJoin() {
-    if (!auth?.currentUser) {
-      setError(t("registerForm.noPendingUser"));
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      await auth.currentUser.reload();
-      if (!auth.currentUser.emailVerified) {
-        setError(t("registerForm.emailNotVerified"));
-        return;
-      }
-
-      // First check if they are already a member or admin
-      const destination = await resolveSignInDestination(auth.currentUser);
-      if (destination.kind === "member") {
-        router.push(`/group/${destination.groupId}/member/${encodeURIComponent(destination.memberId)}`);
-        return;
-      }
-      if (destination.kind === "admin") {
-        router.push("/admin");
-        return;
-      }
-
-      // If not, submit join request to the selected group
-      if (!selectedGroupId) {
-        setError("Please select a group");
-        return;
-      }
-      await submitJoinRequest(selectedGroupId, fullName, email);
-      setSuccessMsg(t("enterForm.joinRequestSuccess"));
-      setShowJoinForm(false);
-      setStep("login");
-    } catch (err) {
-      setError(tx(getAuthErrorMessage(err, t("errors.registerFailed"))));
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  async function handleResendVerification() {
-    if (!auth?.currentUser) return;
-    setIsSubmitting(true);
-    try {
-      await sendEmailVerification(auth.currentUser);
-      setError(null);
-      setSuccessMsg(t("registerForm.verificationSent"));
-      setTimeout(() => setSuccessMsg(null), 5000);
     } catch (err) {
       setError(tx(getAuthErrorMessage(err, t("errors.registerFailed"))));
     } finally {
@@ -507,58 +462,6 @@ export function EnterGroupForm() {
     );
   }
 
-  // ── Verification Step ──────────────────────────────
-  if (step === "verify") {
-    return (
-      <div className="grid gap-5">
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[color:var(--accent-dim)] mb-5">
-            <svg className="w-8 h-8 text-[color:var(--accent)]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25H4.5a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.167a2.25 2.25 0 0 1-2.358 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
-            </svg>
-          </div>
-          <h2 className="text-2xl font-semibold tracking-tight text-[color:var(--foreground)]">
-            {t("registerForm.verifyEmail")}
-          </h2>
-          <p className="mt-2.5 text-sm leading-relaxed text-[color:var(--soft-foreground)]">
-            {t("registerForm.verifyEmailDescription", { email: email })}
-          </p>
-        </div>
-
-        {successMsg && <p className="alert-success">{successMsg}</p>}
-        {error && <p className="alert-error">{error}</p>}
-
-        <div className="grid gap-3">
-          <button
-            className="button-primary w-full py-3.5"
-            disabled={isSubmitting || !isFirebaseConfigured || !isOnline}
-            onClick={handleVerifyAndJoin}
-            type="button"
-          >
-            {isSubmitting ? t("registerForm.submitting") : t("enterForm.signInWithEmail")}
-          </button>
-          <button
-            className="button-secondary w-full py-3"
-            disabled={isSubmitting}
-            onClick={handleResendVerification}
-            type="button"
-          >
-            {t("registerForm.resendVerification")}
-          </button>
-          <button
-            className="w-full py-2.5 text-sm font-medium text-[color:var(--muted)] hover:text-[color:var(--foreground)] transition-colors"
-            onClick={() => {
-              setStep("login");
-            }}
-            type="button"
-          >
-            ← {t("common.back")}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   // ── Main Login/Register Screen ──────────────────────────────
   return (
     <div className="grid gap-5">
@@ -619,7 +522,10 @@ export function EnterGroupForm() {
             <button
               type="button"
               className={`button ${step === "login" ? "button-primary" : "button-secondary"} py-2`}
-              onClick={() => setStep("login")}
+              onClick={() => {
+                handlingAuthRef.current = false;
+                setStep("login");
+              }}
             >
               {t("enterForm.existingMember")}
             </button>
@@ -720,7 +626,9 @@ export function EnterGroupForm() {
               </label>
               <label className="grid gap-1.5 text-sm font-medium text-[color:var(--foreground)]">
                 {t("enterForm.selectGroup")}
-                {groups.length === 0 ? (
+                {!hasCreatedAccount && !auth?.currentUser ? (
+                  <p className="text-xs text-[color:var(--soft-foreground)]">{t("enterForm.joinHint")}</p>
+                ) : groups.length === 0 ? (
                   <p className="text-sm text-[color:var(--danger)]">{t("enterForm.noGroups")}</p>
                 ) : (
                   <select

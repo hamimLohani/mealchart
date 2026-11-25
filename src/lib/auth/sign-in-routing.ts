@@ -5,7 +5,6 @@ import {
   findMemberGroupByEmail,
   getAdminProfile,
   listGroups,
-  migrateAdminProfile,
   updateAdminProfile,
 } from "@/lib/firebase/repositories";
 

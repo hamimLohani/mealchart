@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, use, useMemo } from "react";
+import { useCallback, useEffect, useState, use, useMemo } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useT } from "@/i18n/use-t";
 import { GroupNavbar } from "@/components/group/group-navbar";
@@ -20,6 +21,7 @@ import { useGroup, useMembers, useMealsForChart, useMealsForDate, useCosts, useD
 import { mutate } from "swr";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
 import { useToast } from "@/lib/hooks/use-toast";
+import { GroupAuthRequired } from "@/components/group/group-auth-required";
 
 export default function MemberPage({
   params,
@@ -34,17 +36,37 @@ export default function MemberPage({
   const locale = language === "bn" ? "bn-BD" : undefined;
 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [authLoaded, setAuthLoaded] = useState(() => !auth);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [savedDate, setSavedDate] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [mealCount, setMealCount] = useState(0);
-  const [selectedDate, setSelectedDate] = useState<string>(() => toDateInputValue(new Date()));
+  const [mealOverride, setMealOverride] = useState<{ date: string; value: number } | null>(null);
+  const [dateSelection, setDateSelection] = useState<{ chartId: string; date: string } | null>(null);
   const [isMonthSelectorOpen, setIsMonthSelectorOpen] = useState(false);
 
+  const selectedDate = useMemo(() => {
+    if (!chart) return toDateInputValue(new Date());
+    const bounds = chartMonthDateBounds(chart);
+    const preferred =
+      dateSelection && dateSelection.chartId === chart.id
+        ? dateSelection.date
+        : toDateInputValue(new Date());
+    return preferred < bounds.min ? bounds.min : preferred > bounds.max ? bounds.max : preferred;
+  }, [chart, dateSelection]);
+
+  const setSelectedDate = useCallback(
+    (nextDate: string) => {
+      setDateSelection({ chartId: chart?.id ?? "__none__", date: nextDate });
+    },
+    [chart?.id],
+  );
+
   // SWR fetching — shared cache
-  const { data: group, isLoading: groupLoading } = useGroup(isFirebaseConfigured ? groupId : undefined);
-  const { data: allMembers = [] } = useMembers(group?.id);
+  const { data: group, isLoading: groupLoading } = useGroup(
+    isFirebaseConfigured && currentUser ? groupId : undefined,
+  );
+  const { data: allMembers = [], isLoading: membersLoading } = useMembers(group?.id);
   const { data: monthMeals = [], isLoading: monthLoading, mutate: mutateMonthMeals } = useMealsForChart(group?.id, chart || undefined);
   const { data: costs = [] } = useCosts(group?.id, chart?.id);
   const { data: deposits = [] } = useDeposits(group?.id, chart?.id);
@@ -105,27 +127,19 @@ export default function MemberPage({
 
   const member = allMembers.find((m) => m.id.toLowerCase() === normalizedMemberId) ?? null;
 
-  // Sync mealCount from SWR date data
-  useEffect(() => {
-    const current = dateMeals.find((e) => e.memberId.toLowerCase() === normalizedMemberId);
-    setMealCount(current?.quantity ?? 0);
-    setSaved(false);
-  }, [dateMeals, normalizedMemberId]);
-
-  // Clamp selected date to chart bounds when chart changes
-  useEffect(() => {
-    if (!chart) return;
-    const bounds = chartMonthDateBounds(chart);
-    const today = toDateInputValue(new Date());
-    const clamped = today < bounds.min ? bounds.min : today > bounds.max ? bounds.max : today;
-    setSelectedDate(clamped);
-  }, [chart]);
+  const syncedMealCount = useMemo(
+    () => dateMeals.find((e) => e.memberId.toLowerCase() === normalizedMemberId)?.quantity ?? 0,
+    [dateMeals, normalizedMemberId],
+  );
+  const mealCount = mealOverride?.date === selectedDate ? mealOverride.value : syncedMealCount;
+  const saved = savedDate === selectedDate;
 
   // Auth state — needed for permission checks
   useEffect(() => {
     if (!auth) return;
     return onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
+      setAuthLoaded(true);
       if (user) {
         try {
           const admin = await getAdminProfileForUser(user);
@@ -139,10 +153,11 @@ export default function MemberPage({
     });
   }, [groupId]);
 
+  const currentUserEmail = currentUser?.email?.trim().toLowerCase() ?? null;
   const currentAdminProfile = useMemo(() => {
-    if (!currentUser?.email) return null;
-    return adminProfiles.find((a) => a.email.trim().toLowerCase() === currentUser.email?.trim().toLowerCase()) ?? null;
-  }, [adminProfiles, currentUser?.email]);
+    if (!currentUserEmail) return null;
+    return adminProfiles.find((a) => a.email.trim().toLowerCase() === currentUserEmail) ?? null;
+  }, [adminProfiles, currentUserEmail]);
 
   const isOwnerAdmin = useMemo(() => {
     if (!currentAdminProfile) return false;
@@ -158,7 +173,7 @@ export default function MemberPage({
     return <p className="py-16 text-center text-sm text-[color:var(--soft-foreground)]">Firebase is not configured yet.</p>;
   }
 
-  if (groupLoading) {
+  if (!authLoaded || groupLoading || (Boolean(group) && membersLoading)) {
     return (
       <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-8">
         <Skeleton className="h-24 w-full" />
@@ -166,7 +181,35 @@ export default function MemberPage({
       </div>
     );
   }
-  if (!group || !member) return null;
+  if (!currentUser) {
+    return (
+      <div className="mx-auto w-full max-w-7xl px-2.5 py-4 sm:px-8 sm:py-6 md:flex md:items-start md:gap-6 md:py-8">
+        <GroupNavbar groupId={groupId} />
+        <div className="min-w-0 flex-1 pb-20 md:pb-0">
+          <GroupAuthRequired />
+        </div>
+      </div>
+    );
+  }
+  if (!group || !member) {
+    return (
+      <div className="mx-auto w-full max-w-7xl px-2.5 py-4 sm:px-8 sm:py-6 md:flex md:items-start md:gap-6 md:py-8">
+        <GroupNavbar groupId={groupId} />
+        <div className="min-w-0 flex-1 pb-20 md:pb-0">
+          <div className="panel space-y-4 p-6 text-center">
+            <h1 className="text-xl font-bold text-[color:var(--foreground)]">
+              {!group ? t("errors.groupNotFound") : t("errors.memberNotInGroup")}
+            </h1>
+            <div className="flex justify-center">
+              <Link className="button-secondary" href={!group ? "/" : `/group/${groupId}`}>
+                ← {t("common.back")}
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   if (!chart) {
     return (
       <div className="mx-auto w-full max-w-7xl px-2.5 py-4 sm:px-8 sm:py-6 md:flex md:items-start md:gap-6 md:py-8">
@@ -247,17 +290,19 @@ export default function MemberPage({
   async function handleMealChange(value: number) {
     if (!group || !selectedDate || !chart || isLocked) return;
     const clamped = normalizeMealQuantity(value);
-    setMealCount(clamped);
-    setSaved(false);
+    setMealOverride({ date: selectedDate, value: clamped });
+    setSavedDate(null);
     setSaveError(null);
     setIsSaving(true);
     try {
       await saveMealEntry({ groupId: group.id, memberId: normalizedMemberId, date: selectedDate, quantity: clamped });
-      setSaved(true);
+      setSavedDate(selectedDate);
       // Invalidate SWR caches so all views refresh automatically
       void mutateMonthMeals();
-      void mutate(["mealsDate", group.id, selectedDate]);
+      await mutate(["mealsDate", group.id, selectedDate]);
+      setMealOverride((prev) => (prev?.date === selectedDate ? null : prev));
     } catch (err) {
+      setMealOverride((prev) => (prev?.date === selectedDate ? null : prev));
       const isPermissionDenied =
         err instanceof Error &&
         (err.message.includes("PERMISSION_DENIED") || err.message.includes("Missing or insufficient permissions"));
@@ -290,7 +335,7 @@ export default function MemberPage({
   const showAdminPanelButton = isOwnerAdmin && isThisMemberOwner;
 
   return (
-    <motion.main initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="mx-auto w-full max-w-7xl px-2.5 py-4 sm:px-8 sm:py-6 md:flex md:items-start md:gap-6 md:py-8">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="mx-auto w-full max-w-7xl px-2.5 py-4 sm:px-8 sm:py-6 md:flex md:items-start md:gap-6 md:py-8">
       <GroupNavbar groupId={groupId} />
       <div className="min-w-0 flex-1 pb-20 md:pb-0">
         <div className="py-6 grid gap-4">
@@ -496,7 +541,7 @@ export default function MemberPage({
                     >
                       {editableDates.length === 0 ? (
                         <option value={selectedDate}>
-                          {new Date(selectedDate).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })}
+                          {new Date(`${selectedDate}T12:00:00`).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })}
                         </option>
                       ) : (
                         editableDates.map(({ dateStr, dateObj, isYesterday, isToday }) => {
@@ -606,7 +651,7 @@ export default function MemberPage({
                                 ? "font-medium text-[#c2570c]"
                                 : "text-[color:var(--soft-foreground)]"
                         }`}>
-                          {new Date(date).toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' })}
+                          {new Date(`${date}T12:00:00`).toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' })}
                           {isActualYesterday && !isSelected && (
                             <span className="ml-1.5 text-[10px] font-bold uppercase tracking-widest opacity-60">
                               {t("common.yesterday")}
@@ -654,7 +699,7 @@ export default function MemberPage({
                         className="font-bold"
                         style={{ color: (meal.quantity * mealRate) >= 0 ? "var(--success-text)" : "var(--danger)" }}
                       >
-                        {(meal.quantity * mealRate).toFixed(2)} ${tk}
+                        {(meal.quantity * mealRate).toFixed(2)} {tk}
                       </p>
                     </div>
                   ))
@@ -677,7 +722,7 @@ export default function MemberPage({
                         className="font-bold"
                         style={{ color: deposit.amount >= 0 ? "var(--success-text)" : "var(--danger)" }}
                       >
-                        {deposit.amount.toFixed(2)} ${tk}
+                        {deposit.amount.toFixed(2)} {tk}
                       </p>
                     </div>
                   ))
@@ -688,6 +733,6 @@ export default function MemberPage({
         )}
         </div>
       </div>
-    </motion.main>
+    </motion.div>
   );
 }

@@ -11,12 +11,17 @@ import { formatMeal, getMonthTotals, normalizeMealQuantity } from "@/lib/utils/m
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGroup, useMembers, useMealsForChart, useCosts, useDeposits } from "@/lib/hooks/use-data";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
+import { useAuthStore } from "@/store/auth-store";
+import { GroupAuthRequired } from "@/components/group/group-auth-required";
 
 export function GroupChartView({ groupId }: { groupId: string }) {
   const { t, language } = useT();
   const { chart } = useGroupSession();
+  const { admin: currentUser, isLoaded } = useAuthStore();
 
-  const { data: group, error: groupError, isLoading: groupLoading } = useGroup(isFirebaseConfigured ? groupId : undefined);
+  const { data: group, error: groupError, isLoading: groupLoading } = useGroup(
+    isFirebaseConfigured && isLoaded && currentUser ? groupId : undefined,
+  );
   const { data: members = [] } = useMembers(group?.id);
   const { data: meals = [], isLoading: mealsLoading } = useMealsForChart(group?.id, chart || undefined);
   const { data: costs = [] } = useCosts(group?.id, chart?.id);
@@ -25,17 +30,20 @@ export function GroupChartView({ groupId }: { groupId: string }) {
   const dataLoading = !!(chart && mealsLoading);
   useGlobalLoading(
     `group-chart-view-${groupId}`,
-    groupLoading || dataLoading,
-    groupLoading ? t("groupChart.loading") : t("groupChart.loading"),
+    !isLoaded || groupLoading || dataLoading,
+    t("groupChart.loading"),
   );
 
-  if (groupLoading) {
+  if (!isLoaded || groupLoading) {
     return (
       <div className="group-page-grid py-16">
         <Skeleton className="h-24 w-full" />
         <Skeleton className="h-48 w-full" />
       </div>
     );
+  }
+  if (!currentUser) {
+    return <GroupAuthRequired />;
   }
   if (groupError) {
     const msg = groupError instanceof Error ? groupError.message : t("errors.genericLoad");

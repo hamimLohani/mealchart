@@ -24,9 +24,9 @@ Meal Chart is a comprehensive, real-time management solution for hostels and mes
     - **Individual Costs**: Calculated per member based on their meal count and the current rate.
     - **Balance Tracking**: Real-time balance for each member (Paid - Cost).
 
-### 4. Communication & Notices
+### 4. Communication & Email Notifications
 - **Notice Board**: Admins can post announcements and important updates for all members.
-- **Real-time Updates**: Changes to meals or notices are reflected instantly for all users.
+- **Real-time Updates**: Changes to meals, deposits, and costs are reflected instantly for all users.
 
 ## 🛠 Admin Capabilities
 - **Edit Meals**: Full grid access to enter or correct meal counts for any member.
@@ -38,7 +38,7 @@ Meal Chart is a comprehensive, real-time management solution for hostels and mes
 ## 👤 Member Features
 - **Self-Service Meals**: Members can log in and add their own daily meal counts (if permitted by the admin).
 - **Personal Dashboard**: View individual meal history, deposits, and current balance.
-- **Group Transparency**: Access to the group's total costs, meal rate, and notices.
+- **Group Transparency**: Access to the group's total costs, deposits, and meal rate.
 
 ## 📱 Mobile & App Experience (PWA)
 - **Installable App**: Fully configured as a Progressive Web App (PWA).

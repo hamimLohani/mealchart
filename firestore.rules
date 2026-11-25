@@ -18,9 +18,71 @@ service cloud.firestore {
         && (
           (exists(/databases/$(database)/documents/admins/$(request.auth.uid))
             && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.groupId == groupId)
-          || (exists(/databases/$(database)/documents/admins/$(groupId + ":" + signedInEmail()))
+          || (signedInEmail() != ""
+            && exists(/databases/$(database)/documents/admins/$(groupId + ":" + signedInEmail()))
             && get(/databases/$(database)/documents/admins/$(groupId + ":" + signedInEmail())).data.groupId == groupId)
+          || (exists(/databases/$(database)/documents/groups/$(groupId))
+            && get(/databases/$(database)/documents/groups/$(groupId)).data.adminId == request.auth.uid)
         );
+    }
+
+    function isGroupMember(groupId) {
+      return isSignedIn()
+        && signedInEmail() != ""
+        && exists(/databases/$(database)/documents/groups/$(groupId)/members/$(signedInEmail()));
+    }
+
+    function isGroupAccess(groupId) {
+      return isGroupAdmin(groupId) || isGroupMember(groupId);
+    }
+
+    function groupNumberOrZero(data, field) {
+      return (field in data && data[field] is number) ? data[field] : 0;
+    }
+
+    function isValidGroupUpdate(groupId) {
+      let allowedKeys = [
+        "id",
+        "name",
+        "token",
+        "adminId",
+        "currentChartId",
+        "currentChartMonth",
+        "createdAt",
+        "active",
+        "paidChartSlots",
+        "paidMemberSlots",
+        "totalChartsCreated",
+        "totalMembersCreated"
+      ];
+      let oldPaidCharts = groupNumberOrZero(resource.data, "paidChartSlots");
+      let newPaidCharts = groupNumberOrZero(request.resource.data, "paidChartSlots");
+      let oldPaidMembers = groupNumberOrZero(resource.data, "paidMemberSlots");
+      let newPaidMembers = groupNumberOrZero(request.resource.data, "paidMemberSlots");
+      let oldTotalCharts = groupNumberOrZero(resource.data, "totalChartsCreated");
+      let newTotalCharts = groupNumberOrZero(request.resource.data, "totalChartsCreated");
+      let oldTotalMembers = groupNumberOrZero(resource.data, "totalMembersCreated");
+      let newTotalMembers = groupNumberOrZero(request.resource.data, "totalMembersCreated");
+
+      return isGroupAdmin(groupId)
+        && request.resource.data.keys().hasOnly(allowedKeys)
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.token == resource.data.token
+        && request.resource.data.adminId == resource.data.adminId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && (isGroupOwner(groupId)
+          || (request.resource.data.name == resource.data.name
+            && request.resource.data.active == resource.data.active))
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 1
+        && request.resource.data.name.size() <= 120
+        && request.resource.data.active is bool
+        && (!("currentChartId" in request.resource.data) || request.resource.data.currentChartId is string)
+        && (!("currentChartMonth" in request.resource.data) || request.resource.data.currentChartMonth is string)
+        && newPaidCharts >= 0 && newPaidCharts <= oldPaidCharts
+        && newPaidMembers >= 0 && newPaidMembers <= oldPaidMembers
+        && newTotalCharts >= oldTotalCharts
+        && newTotalMembers >= oldTotalMembers;
     }
 
     function hasOnlyFields(fields) {
@@ -116,12 +178,17 @@ service cloud.firestore {
       return isSignedIn()
         && resource.data.adminId != request.auth.uid
         && request.resource.data.adminId == request.auth.uid
+        && request.resource.data.id == resource.data.id
         && request.resource.data.name == resource.data.name
         && request.resource.data.token == resource.data.token
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.active == resource.data.active
         && request.resource.data.currentChartId == resource.data.currentChartId
         && request.resource.data.currentChartMonth == resource.data.currentChartMonth
+        && groupNumberOrZero(request.resource.data, "paidChartSlots") == groupNumberOrZero(resource.data, "paidChartSlots")
+        && groupNumberOrZero(request.resource.data, "paidMemberSlots") == groupNumberOrZero(resource.data, "paidMemberSlots")
+        && groupNumberOrZero(request.resource.data, "totalChartsCreated") == groupNumberOrZero(resource.data, "totalChartsCreated")
+        && groupNumberOrZero(request.resource.data, "totalMembersCreated") == groupNumberOrZero(resource.data, "totalMembersCreated")
         && exists(/databases/$(database)/documents/admins/$(resource.data.adminId))
         && get(/databases/$(database)/documents/admins/$(resource.data.adminId)).data.groupId == groupId
         && get(/databases/$(database)/documents/admins/$(resource.data.adminId)).data.email == signedInEmail()
@@ -171,6 +238,8 @@ service cloud.firestore {
         && hasOnlyFields(["id", "itemName", "amount", "date"])
         && request.resource.data.id is string
         && request.resource.data.itemName is string
+        && request.resource.data.itemName.size() >= 1
+        && request.resource.data.itemName.size() <= 200
         && request.resource.data.amount is number
         && request.resource.data.amount > 0;
     }
@@ -192,6 +261,8 @@ service cloud.firestore {
         ])
         && request.resource.data.id == requestId
         && request.resource.data.itemName is string
+        && request.resource.data.itemName.size() >= 1
+        && request.resource.data.itemName.size() <= 200
         && request.resource.data.amount is number
         && request.resource.data.amount > 0
         && request.resource.data.memberId is string
@@ -249,7 +320,7 @@ service cloud.firestore {
     }
 
     match /groups/{groupId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow create: if isSignedIn()
         && hasOnlyFields([
           "id",
@@ -274,16 +345,12 @@ service cloud.firestore {
         && request.resource.data.paidMemberSlots == 0
         && request.resource.data.totalChartsCreated == 0
         && request.resource.data.totalMembersCreated == 0;
-      allow update: if isGroupAdmin(groupId) || isAdminAccountMigration(groupId);
+      allow update: if isValidGroupUpdate(groupId) || isAdminAccountMigration(groupId);
       allow delete: if isGroupOwner(groupId);
-
-      match /settings/whatsapp {
-        allow read, write: if isGroupAdmin(groupId);
-      }
     }
 
     match /admins/{adminId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow create: if isValidAdminCreate(adminId) 
         || (isSignedIn() 
             && hasOnlyFields(["id", "email", "fullName", "groupId", "role", "createdAt"])
@@ -298,12 +365,12 @@ service cloud.firestore {
     }
 
     match /groups/{groupId}/members/{memberId} {
-      allow read: if true;
+      allow read: if isGroupAccess(groupId);
       allow create, update, delete: if isGroupAdmin(groupId);
     }
 
     match /{path=**}/members/{memberId} {
-      allow read: if true;
+      allow read: if isSignedIn();
     }
 
     match /groups/{groupId}/joinRequests/{requestId} {
@@ -315,16 +382,16 @@ service cloud.firestore {
     }
 
     match /groups/{groupId}/lockedMonths/{monthKey} {
-      allow read: if true;
+      allow read: if isGroupAccess(groupId);
       allow create, update, delete: if isGroupAdmin(groupId);
     }
 
     match /groups/{groupId}/charts/{chartId} {
-      allow read: if true;
+      allow read: if isGroupAccess(groupId);
       allow create, update, delete: if isGroupAdmin(groupId);
 
       match /deposits/{depositId} {
-        allow read: if true;
+        allow read: if isGroupAccess(groupId);
         allow create: if isValidChartDepositWrite(groupId, chartId);
         allow update: if isValidChartDepositWrite(groupId, chartId);
         allow delete: if (isGroupAdmin(groupId) && isChartUnlocked(groupId, chartId)) || isGroupOwner(groupId);
@@ -337,7 +404,7 @@ service cloud.firestore {
       }
 
       match /costs/{costId} {
-        allow read: if true;
+        allow read: if isGroupAccess(groupId);
         allow create: if isValidChartCostWrite(groupId, chartId);
         allow update: if isValidChartCostWrite(groupId, chartId);
         allow delete: if (isGroupAdmin(groupId) && isChartUnlocked(groupId, chartId)) || isGroupOwner(groupId);
@@ -350,7 +417,7 @@ service cloud.firestore {
       }
     }
     match /groups/{groupId}/meals/{mealId} {
-      allow read: if true;
+      allow read: if isGroupAccess(groupId);
       allow create: if isValidMealWrite(groupId, mealId);
       allow update: if isValidMealWrite(groupId, mealId) || isAdminMealMonthKeyBackfill(groupId);
       allow delete: if (isGroupAdmin(groupId) && canDeleteMeal(groupId)) || isGroupOwner(groupId);

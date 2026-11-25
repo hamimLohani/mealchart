@@ -22,8 +22,8 @@ export function GroupNavbar({
   // Read admin profile from the shared SWR cache — no extra Firestore reads.
   const { adminProfile } = useCurrentAdminProfile();
   const isGroupAdmin = adminProfile?.groupId === groupId;
-  const { data: group } = useGroup(groupId);
-  const { data: members = [] } = useMembers(groupId);
+  const { data: group } = useGroup(currentUser ? groupId : undefined);
+  const { data: members = [] } = useMembers(currentUser ? groupId : undefined);
   const groupName = group?.name ?? groupId;
   const currentEmail = currentUser?.email?.trim().toLowerCase();
   const signedInMember = currentEmail ? members.find((member) => member.email.trim().toLowerCase() === currentEmail) : null;

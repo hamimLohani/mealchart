@@ -17,6 +17,14 @@ const app = isFirebaseConfigured
 
 export const auth = app ? getAuth(app) : null;
 
+export async function getCurrentIdToken(): Promise<string> {
+  const user = auth?.currentUser;
+  if (!user) {
+    throw new Error("Authentication required.");
+  }
+  return user.getIdToken();
+}
+
 // Enable persistent IndexedDB cache so warm loads are served from disk,
 // and multi-tab manager so all tabs share one Firestore WebSocket connection.
 export const db = (() => {

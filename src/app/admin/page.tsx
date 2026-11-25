@@ -1,9 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { auth } from "@/lib/firebase/client";
 import { useT } from "@/i18n/use-t";
 import { useAuthStore } from "@/store/auth-store";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
@@ -14,7 +12,6 @@ import { AdminMonthSummary } from "@/components/admin/admin-month-summary";
 import { useCharts, useCosts, useDeposits, useGroup, useMealsForChart, useMembers } from "@/lib/hooks/use-data";
 import { saveChartReportPdf } from "@/lib/utils/pdf-report";
 import { pickCurrentMonthChart, isChartActive } from "@/lib/utils/date";
-import { handleAdminLogout } from "@/lib/auth/admin-logout";
 import { motion, AnimatePresence } from "framer-motion";
 
 const navItemKeys = [
@@ -48,10 +45,8 @@ const navItemKeys = [
 
 export default function AdminPage() {
   const { admin, isLoaded } = useAuthStore();
-  const router = useRouter();
   const { t, tx } = useT();
   const { toast } = useToast();
-  const [isSignOutInProgress, setIsSignOutInProgress] = useState(false);
   const [selectedChartId, setSelectedChartId] = useState<string | null>(null);
   const [isMonthSelectorOpen, setIsMonthSelectorOpen] = useState(false);
   const { adminProfile, isLoading: profileLoading, error: profileError } = useCurrentAdminProfile();
@@ -87,12 +82,6 @@ export default function AdminPage() {
     (profileError ? tx(profileError instanceof Error ? profileError.message : t("errors.loadGroupDetails")) : null);
 
   useGlobalLoading("admin-page", isPageLoading, t("adminDash.loading"));
-  useGlobalLoading("admin-page-sign-out", isSignOutInProgress, t("common.signingOut"));
-  async function handleLogout() {
-    await handleAdminLogout(auth, router, setIsSignOutInProgress, (error) => {
-      toast(error.message || "Failed to sign out. Please try again.", "error");
-    });
-  }
 
   async function handleDownloadPDF() {
     if (!visibleGroup || !activeChart || members.length === 0) return;

@@ -23,55 +23,7 @@ import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
 import { useToast } from "@/lib/hooks/use-toast";
-
-function parseAmountInput(value: string, messages: { invalidCharacters: string; invalidFormula: string }) {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return { value: null as number | null, isValid: false, isFormula: false, message: "" };
-  }
-
-  const expression = trimmed.startsWith("=") ? trimmed.slice(1).trim() : trimmed;
-  const isFormula = trimmed.startsWith("=") || /[+\-*/()]/.test(expression);
-
-  if (!expression) {
-    return { value: null as number | null, isValid: false, isFormula: false, message: "" };
-  }
-
-  const numericPattern = /^[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?$/;
-  if (numericPattern.test(expression)) {
-    const numericValue = Number(expression);
-    return {
-      value: Number.isFinite(numericValue) ? numericValue : null,
-      isValid: Number.isFinite(numericValue),
-      isFormula: false,
-      message: "",
-    };
-  }
-
-  if (!/^[0-9+\-*/().\s]+$/.test(expression)) {
-    return {
-      value: null as number | null,
-      isValid: false,
-      isFormula: true,
-      message: messages.invalidCharacters,
-    };
-  }
-
-  try {
-    const result = Function(`"use strict"; return (${expression});`)();
-    if (!Number.isFinite(result)) {
-      throw new Error("Invalid expression");
-    }
-    return { value: Number(result), isValid: true, isFormula, message: "" };
-  } catch {
-    return {
-      value: null as number | null,
-      isValid: false,
-      isFormula: true,
-      message: messages.invalidFormula,
-    };
-  }
-}
+import { parseAmountInput } from "@/lib/utils/amount-parser";
 
 export function CostsManager() {
   const { t, tx } = useT();

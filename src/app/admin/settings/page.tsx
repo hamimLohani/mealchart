@@ -18,7 +18,7 @@ import { useToast } from "@/lib/hooks/use-toast";
 import { useAuthStore } from "@/store/auth-store";
 import { useCurrentAdminProfile } from "@/lib/hooks/use-current-admin-profile";
 import { useGroup, useMembers, useAdminProfiles } from "@/lib/hooks/use-data";
-import { deleteEntireGroupAndAccount, deleteAdminProfile } from "@/lib/firebase/repositories";
+import { deleteEntireGroupAndAccount } from "@/lib/firebase/repositories";
 import { sendAccountDeletionEmails } from "@/lib/email/actions";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { useUiStore } from "@/store/ui-store";
@@ -133,11 +133,13 @@ export default function AdminSettingsPage() {
 
       // 3. Send notification emails
       setDeletionStep(t("adminSettings.statusSendingEmails"));
+      const idToken = await admin.getIdToken();
       await sendAccountDeletionEmails({
         groupName: group.name,
         adminName: adminProfile?.fullName || admin.displayName || "Admin",
         adminEmail: admin.email || "",
         recipients: Array.from(recipientMap.values()),
+        idToken,
       });
 
       // 4. Wipe data in Firestore

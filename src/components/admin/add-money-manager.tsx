@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useSWRConfig } from "swr";
-import { auth } from "@/lib/firebase/client";
+import { auth, getCurrentIdToken } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { useT } from "@/i18n/use-t";
 import {
@@ -17,7 +17,7 @@ import {
   getMealsForChart,
   rejectDepositRequest,
 } from "@/lib/firebase/repositories";
-import { chartMonthDateBounds, currentMonthKey, pickCurrentMonthChart, toMonthKey, toDateInputValue, isChartActive } from "@/lib/utils/date";
+import { chartMonthDateBounds, pickCurrentMonthChart, toDateInputValue, isChartActive } from "@/lib/utils/date";
 import { getMemberTotals, getMonthTotals, normalizeMealQuantity } from "@/lib/utils/meal-money";
 import type { AdminProfile, Chart, CostEntry, DepositEntry, DepositRequest, Member, MealEntry } from "@/types/domain";
 import { sendMoneyReceiptEmail, sendMoneyRequestEmail, sendBatchMoneyRequestEmails, type MoneyRequestRecipient } from "@/lib/email/actions";
@@ -62,7 +62,14 @@ export function AddMoneyManager() {
   const [selectedSingleMemberId, setSelectedSingleMemberId] = useState("");
   const [reminderAmountMode, setReminderAmountMode] = useState<"due" | "fixed">("due");
   const [fixedAmount, setFixedAmount] = useState("");
-  const [paymentInstructions, setPaymentInstructions] = useState("");
+  const [paymentInstructions, setPaymentInstructions] = useState(() => {
+    if (typeof window === "undefined") return "";
+    try {
+      return localStorage.getItem("mealchart_payment_info") || "";
+    } catch {
+      return "";
+    }
+  });
   const [reminderNote, setReminderNote] = useState("");
   const [isSendingReminders, setIsSendingReminders] = useState(false);
 
@@ -75,20 +82,16 @@ export function AddMoneyManager() {
     dueAmount: number;
   } | null>(null);
   const [quickAmount, setQuickAmount] = useState("");
-  const [quickPaymentInfo, setQuickPaymentInfo] = useState("");
+  const [quickPaymentInfo, setQuickPaymentInfo] = useState(() => {
+    if (typeof window === "undefined") return "";
+    try {
+      return localStorage.getItem("mealchart_payment_info") || "";
+    } catch {
+      return "";
+    }
+  });
   const [quickNote, setQuickNote] = useState("");
   const [isSendingQuick, setIsSendingQuick] = useState(false);
-
-  // Restore saved payment instructions
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("mealchart_payment_info");
-      if (saved) {
-        setPaymentInstructions(saved);
-        setQuickPaymentInfo(saved);
-      }
-    } catch {}
-  }, []);
 
   const handlePaymentInfoChange = (val: string) => {
     setPaymentInstructions(val);
@@ -285,6 +288,7 @@ export function AddMoneyManager() {
 
     setIsSendingReminders(true);
     try {
+      const idToken = await getCurrentIdToken();
       const result = await sendBatchMoneyRequestEmails({
         groupName: groupName || "মিল চার্ট",
         chartLabel: selectedChart.label,
@@ -292,6 +296,7 @@ export function AddMoneyManager() {
         paymentInstructions: paymentInstructions.trim() || undefined,
         note: reminderNote.trim() || undefined,
         recipients: validRecipients,
+        idToken,
       });
 
       if (!result.success) {
@@ -335,6 +340,7 @@ export function AddMoneyManager() {
 
     setIsSendingQuick(true);
     try {
+      const idToken = await getCurrentIdToken();
       const result = await sendMoneyRequestEmail({
         groupName: groupName || "মিল চার্ট",
         chartLabel: selectedChart.label,
@@ -350,6 +356,7 @@ export function AddMoneyManager() {
           totalMeals: quickRemindState.meals,
           mealRate,
         },
+        idToken,
       });
 
       if (result.success) {
@@ -427,6 +434,7 @@ export function AddMoneyManager() {
           mealRate,
         );
 
+        const idToken = await getCurrentIdToken();
         const emailResult = await sendMoneyReceiptEmail(
           member.email,
           member.fullName,
@@ -436,6 +444,7 @@ export function AddMoneyManager() {
           groupName,
           memberTotal,
           memberBalance,
+          idToken,
         );
         if (!emailResult.success) {
           const friendlyError = getFriendlyEmailError(emailResult.error || "");

@@ -17,12 +17,12 @@ export default function AdminLayout({
       </aside>
 
       {/* Content */}
-      <main className="min-w-0 flex-1 pb-20 md:pb-0">
+      <div className="min-w-0 flex-1 pb-20 md:pb-0">
         <AdminMobileBar />
         <ErrorBoundary>
           {children}
         </ErrorBoundary>
-      </main>
+      </div>
     </div>
   );
 }

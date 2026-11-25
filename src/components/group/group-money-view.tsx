@@ -16,15 +16,18 @@ import { submitDepositRequest } from "@/lib/firebase/repositories";
 import { chartMonthDateBounds, toDateInputValue } from "@/lib/utils/date";
 import { useToast } from "@/lib/hooks/use-toast";
 import { useAuthStore } from "@/store/auth-store";
+import { GroupAuthRequired } from "@/components/group/group-auth-required";
 
 export function GroupMoneyView({ groupId }: { groupId: string }) {
   const { t } = useT();
   const { chart, selectChart } = useGroupSession();
-  const { admin: currentUser } = useAuthStore();
+  const { admin: currentUser, isLoaded } = useAuthStore();
   const { mutate } = useSWRConfig();
   const { success: showSuccess, error: showError } = useToast();
 
-  const { data: group, error: groupError, isLoading: groupLoading } = useGroup(isFirebaseConfigured ? groupId : undefined);
+  const { data: group, error: groupError, isLoading: groupLoading } = useGroup(
+    isFirebaseConfigured && isLoaded && currentUser ? groupId : undefined,
+  );
   const { data: charts = [] } = useCharts(group?.id);
   const activeChart = useMemo(() => {
     if (!chart) return null;
@@ -50,7 +53,7 @@ export function GroupMoneyView({ groupId }: { groupId: string }) {
   const dataLoading = !!(activeChart && (mealsLoading || costsLoading || depositsLoading));
   useGlobalLoading(
     `group-money-view-${groupId}`,
-    groupLoading || dataLoading || isSubmitting,
+    !isLoaded || groupLoading || dataLoading || isSubmitting,
     isSubmitting ? t("groupMoney.requestSubmitting") : t("common.loading"),
   );
 
@@ -68,13 +71,16 @@ export function GroupMoneyView({ groupId }: { groupId: string }) {
   const tk = t("common.tk");
   const former = t("common.formerMember");
 
-  if (groupLoading) {
+  if (!isLoaded || groupLoading) {
     return (
       <div className="group-page-grid py-16">
         <Skeleton className="h-24 w-full" />
         <Skeleton className="h-48 w-full" />
       </div>
     );
+  }
+  if (!currentUser) {
+    return <GroupAuthRequired />;
   }
   if (groupError) {
     const msg = groupError instanceof Error ? groupError.message : t("errors.genericLoad");
@@ -205,7 +211,7 @@ export function GroupMoneyView({ groupId }: { groupId: string }) {
           className={`mt-1 text-xl font-bold ${balance >= 0 ? "text-[color:var(--success-text)]" : "text-[color:var(--danger)]"}`}
         >
           {balance >= 0 ? "+" : ""}
-          {balance.toFixed(2)} ${tk}
+          {balance.toFixed(2)} {tk}
         </p>
         <p className="mt-0.5 text-xs text-[color:var(--muted)]">
           {balance >= 0 ? t("groupMoney.surplus") : t("groupMoney.deficit")}
@@ -283,7 +289,7 @@ export function GroupMoneyView({ groupId }: { groupId: string }) {
                   style={{ color: remaining >= 0 ? "var(--success-text)" : "var(--danger)" }}
                 >
                   {remaining >= 0 ? "+" : ""}
-                  {remaining.toFixed(2)} ${tk}
+                  {remaining.toFixed(2)} {tk}
                 </p>
               </div>
             );
@@ -312,7 +318,7 @@ export function GroupMoneyView({ groupId }: { groupId: string }) {
                   className="font-bold"
                   style={{ color: d.amount >= 0 ? "var(--success-text)" : "var(--danger)" }}
                 >
-                  {d.amount >= 0 ? "+" : ""}{d.amount.toFixed(2)} ${tk}
+                  {d.amount >= 0 ? "+" : ""}{d.amount.toFixed(2)} {tk}
                 </p>
               </div>
             );

@@ -12,7 +12,6 @@ import {
   getMonthTotals,
   getMemberTotals,
   formatMeal,
-  normalizeMealQuantity,
 } from "@/lib/utils/meal-money";
 import {
   chartMonthDateBounds,
@@ -56,8 +55,14 @@ export function MemberDeleteModal({
   const [isLoadingChartData, setIsLoadingChartData] = useState(false);
 
   // Settlement choice
-  const [settlementMode, setSettlementMode] = useState<"settle_balance" | "keep_records" | "delete_deposits">("settle_balance");
-  const [customAmount, setCustomAmount] = useState<string>("");
+  const [settlementModeOverride, setSettlementModeOverride] = useState<{
+    key: string;
+    value: "settle_balance" | "keep_records" | "delete_deposits";
+  } | null>(null);
+  const [customAmountOverride, setCustomAmountOverride] = useState<{
+    key: string;
+    value: string;
+  } | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
   // Load charts when modal opens
@@ -148,19 +153,27 @@ export function MemberDeleteModal({
     };
   }, [member, meals, costs, deposits]);
 
-  // Set default amount when financial data finishes loading
-  useEffect(() => {
-    if (memberFinances.balance > 0.01) {
-      setCustomAmount(memberFinances.balance.toFixed(2));
-      setSettlementMode("settle_balance");
-    } else if (memberFinances.balance < -0.01) {
-      setCustomAmount(Math.abs(memberFinances.balance).toFixed(2));
-      setSettlementMode("settle_balance");
-    } else {
-      setCustomAmount("0.00");
-      setSettlementMode("keep_records");
-    }
-  }, [memberFinances.balance]);
+  const defaultSettlementMode: "settle_balance" | "keep_records" | "delete_deposits" =
+    Math.abs(memberFinances.balance) > 0.01 ? "settle_balance" : "keep_records";
+  const defaultCustomAmount =
+    memberFinances.balance > 0.01
+      ? memberFinances.balance.toFixed(2)
+      : memberFinances.balance < -0.01
+        ? Math.abs(memberFinances.balance).toFixed(2)
+        : "0.00";
+  const balanceKey = `${selectedChartId}:${memberFinances.balance.toFixed(2)}`;
+  const settlementMode =
+    settlementModeOverride?.key === balanceKey
+      ? settlementModeOverride.value
+      : defaultSettlementMode;
+  const customAmount =
+    customAmountOverride?.key === balanceKey
+      ? customAmountOverride.value
+      : defaultCustomAmount;
+  const setSettlementMode = (value: "settle_balance" | "keep_records" | "delete_deposits") =>
+    setSettlementModeOverride({ key: balanceKey, value });
+  const setCustomAmount = (value: string) =>
+    setCustomAmountOverride({ key: balanceKey, value });
 
   if (!open || !member) return null;
 

@@ -72,6 +72,9 @@ export function translateErrorMessage(
   t: (k: MessageKey, vars?: Record<string, string>) => string,
 ): string {
   // Handle complex reactive translations (e.g. email failures with dynamic reasons)
+  if (typeof raw !== "string") {
+    return t("errors.genericLoad");
+  }
   if (raw.startsWith("ERR_TRANS:")) {
     try {
       const data = JSON.parse(raw.slice(10)) as { key: MessageKey; vars?: Record<string, string> };

@@ -12,7 +12,7 @@ export function PageCard({
   children?: ReactNode;
 }) {
   return (
-    <main className="mx-auto w-full max-w-3xl px-3 py-6 sm:px-8 sm:py-12">
+    <div className="mx-auto w-full max-w-3xl px-3 py-6 sm:px-8 sm:py-12">
       <div className="flex flex-col">
         <p className="text-[0.65rem] font-bold uppercase tracking-[0.26em] text-[color:var(--muted)]">
           {eyebrow}
@@ -25,6 +25,6 @@ export function PageCard({
         </p>
         {children}
       </div>
-    </main>
+    </div>
   );
 }

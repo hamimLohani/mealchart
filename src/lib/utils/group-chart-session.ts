@@ -11,18 +11,40 @@ export function readStoredChartFromSession(): Chart | null {
   const monthKey = sessionStorage.getItem("mc_chart_month_key");
   const year = sessionStorage.getItem("mc_chart_year");
   const month = sessionStorage.getItem("mc_chart_month");
+  const duration = sessionStorage.getItem("mc_chart_duration");
+  const rawMonthKeys = sessionStorage.getItem("mc_chart_month_keys");
   const locked = sessionStorage.getItem("mc_chart_locked");
 
   if (id && label && monthKey && year && month) {
     const y = Number(year);
     const m = Number(month);
+    const parsedDuration = duration ? Number(duration) : undefined;
+    let parsedMonthKeys: string[] | undefined;
+    if (rawMonthKeys) {
+      try {
+        const candidate = JSON.parse(rawMonthKeys);
+        if (Array.isArray(candidate) && candidate.every((k) => typeof k === "string")) {
+          parsedMonthKeys = candidate;
+        }
+      } catch {
+        parsedMonthKeys = undefined;
+      }
+    }
+    const totalDays = parsedMonthKeys?.length
+      ? parsedMonthKeys.reduce((sum, key) => {
+          const [ky, km] = key.split("-").map(Number);
+          return sum + (ky && km ? daysInMonth(ky, km) : 0);
+        }, 0) || daysInMonth(y, m)
+      : daysInMonth(y, m);
     return {
       id,
       label,
       monthKey,
       year: y,
       month: m,
-      totalDays: daysInMonth(y, m),
+      ...(parsedDuration && Number.isFinite(parsedDuration) ? { duration: parsedDuration } : {}),
+      ...(parsedMonthKeys?.length ? { monthKeys: parsedMonthKeys } : {}),
+      totalDays,
       active: true,
       locked: locked === "true",
       createdAt: "",
@@ -38,6 +60,16 @@ export function saveStoredChartToSession(chart: Chart) {
   sessionStorage.setItem("mc_chart_month_key", chart.monthKey);
   sessionStorage.setItem("mc_chart_year", String(chart.year));
   sessionStorage.setItem("mc_chart_month", String(chart.month));
+  if (typeof chart.duration === "number" && Number.isFinite(chart.duration)) {
+    sessionStorage.setItem("mc_chart_duration", String(chart.duration));
+  } else {
+    sessionStorage.removeItem("mc_chart_duration");
+  }
+  if (Array.isArray(chart.monthKeys) && chart.monthKeys.length > 0) {
+    sessionStorage.setItem("mc_chart_month_keys", JSON.stringify(chart.monthKeys));
+  } else {
+    sessionStorage.removeItem("mc_chart_month_keys");
+  }
   sessionStorage.setItem("mc_chart_locked", String(chart.locked));
   sessionStorage.removeItem("mc_manual_exit");
   window.dispatchEvent(new Event(GROUP_CHART_SESSION_EVENT));
@@ -50,6 +82,8 @@ export function clearStoredChartFromSession() {
   sessionStorage.removeItem("mc_chart_month_key");
   sessionStorage.removeItem("mc_chart_year");
   sessionStorage.removeItem("mc_chart_month");
+  sessionStorage.removeItem("mc_chart_duration");
+  sessionStorage.removeItem("mc_chart_month_keys");
   sessionStorage.removeItem("mc_chart_locked");
   sessionStorage.setItem("mc_manual_exit", "true");
   window.dispatchEvent(new Event(GROUP_CHART_SESSION_EVENT));

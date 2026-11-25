@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { AdminLoadingState } from "@/components/admin/admin-loading-state";
 import { GroupDashboard } from "@/components/group/group-dashboard";
 import { GroupNavbar } from "@/components/group/group-navbar";
+import { GroupAuthRequired } from "@/components/group/group-auth-required";
 import { useT } from "@/i18n/use-t";
 import { getAdminProfileForUser } from "@/lib/auth/sign-in-routing";
 import { useGlobalLoading } from "@/lib/hooks/use-global-loading";
@@ -16,7 +17,7 @@ export function GroupHome({ groupId }: { groupId: string }) {
   const router = useRouter();
   const { t } = useT();
   const { admin: currentUser, isLoaded } = useAuthStore();
-  const { data: members = [], isLoading: membersLoading } = useMembers(groupId);
+  const { data: members = [], isLoading: membersLoading } = useMembers(currentUser ? groupId : undefined);
   const [isGroupAdmin, setIsGroupAdmin] = useState(false);
   const [isCheckingAdmin, setIsCheckingAdmin] = useState(true);
 
@@ -75,12 +76,23 @@ export function GroupHome({ groupId }: { groupId: string }) {
     );
   }
 
+  if (!currentUser) {
+    return (
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28 }} className="mx-auto w-full max-w-7xl px-2.5 py-4 sm:px-8 sm:py-6 md:flex md:items-start md:gap-6 md:py-8">
+        <GroupNavbar groupId={groupId} />
+        <div className="min-w-0 flex-1 pb-20 md:pb-0">
+          <GroupAuthRequired />
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
-    <motion.main initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28 }} className="mx-auto w-full max-w-7xl px-2.5 py-4 sm:px-8 sm:py-6 md:flex md:items-start md:gap-6 md:py-8">
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28 }} className="mx-auto w-full max-w-7xl px-2.5 py-4 sm:px-8 sm:py-6 md:flex md:items-start md:gap-6 md:py-8">
       <GroupNavbar groupId={groupId} />
       <div className="min-w-0 flex-1 pb-20 md:pb-0">
         <GroupDashboard groupId={groupId} />
       </div>
-    </motion.main>
+    </motion.div>
   );
 }

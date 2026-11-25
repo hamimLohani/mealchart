@@ -7,7 +7,7 @@ Meal Chart is a comprehensive multi-group hostel and mess meal-management web ap
 The app supports two roles:
 
 - `Admin`
-  Creates and manages a group, members, monthly charts, meals, deposits, costs, notices, PDF exports, and month locking.
+  Creates and manages a group, members, monthly charts, meals, deposits, costs, email notifications, PDF exports, and month locking.
 - `Member`
   Signs in with Google, joins a group, views monthly reports, and updates their own meals.
 
@@ -22,7 +22,7 @@ The app supports two roles:
 - Member self meal editing on personal page
 - Chart-scoped deposit and cost tracking
 - Group and member financial summaries
-- Manual and system-generated notices
+- Monthly charts with daily meals, deposits, costs, and PDF report exports
 - PDF export for monthly financial reports
 - Welcome, receipt, and month-summary emails
 - English / Bangla UI
@@ -40,12 +40,13 @@ The app supports two roles:
 - `/admin/edit-meals`
 - `/admin/costs`
 - `/admin/create-chart`
-- `/admin/notices`
+- `/admin/settings`
 - `/group/[groupId]`
 - `/group/[groupId]/chart`
 - `/group/[groupId]/money`
-- `/group/[groupId]/notices`
+- `/group/[groupId]/costs`
 - `/group/[groupId]/members`
+- `/group/[groupId]/settings`
 - `/group/[groupId]/member/[memberId]`
 
 ## Tech stack
@@ -134,9 +135,9 @@ Optional:
 - Member id is the normalized member email.
 - Deposits and costs are stored under each monthly chart.
 - Meals are stored at the group level with `monthKey` for locking and monthly reporting.
-- Month locking prevents further edits to meals, costs, deposits, and notices for that month.
+- Month locking prevents further edits to meals, costs, and deposits for that month.
 
 ## Documentation
 
 - Project audit and improvement plan:
-  [PROJECT_FEATURES_AND_IMPROVEMENTS.md](./PROJECT_FEATURES_AND_IMPROVEMENTS.md)
+  [FEATURES.md](./FEATURES.md)

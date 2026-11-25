@@ -1,5 +1,5 @@
 // Basic Service Worker for Meal Chart PWA
-const CACHE_NAME = "meal-chart-v1";
+const CACHE_NAME = "meal-chart-v2";
 const ASSETS_TO_CACHE = [
   "/",
   "/manifest.json",
@@ -37,14 +37,16 @@ self.addEventListener("fetch", (event) => {
 
   if (request.mode === "navigate" || (request.method === "GET" && request.headers.get("accept")?.includes("text/html"))) {
     event.respondWith(
-      fetch(request).catch(() => caches.match("/offline.html"))
+      fetch(request).catch(() =>
+        caches.match("/offline.html").then((cachedOffline) => cachedOffline || Response.error())
+      )
     );
     return;
   }
 
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
-      return cachedResponse || fetch(request).catch(() => null);
+      return cachedResponse || fetch(request).catch(() => Response.error());
     })
   );
 });

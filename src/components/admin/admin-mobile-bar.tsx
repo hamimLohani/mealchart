@@ -26,7 +26,7 @@ export function AdminMobileBar() {
     if (!adminEmail || !members.length) return null;
     const emailNorm = adminEmail.trim().toLowerCase();
     return members.find((m) => m.email.trim().toLowerCase() === emailNorm) ?? null;
-  }, [admin, members]);
+  }, [admin, isLoaded, members]);
 
   const navItems = [
     { href: "/admin", icon: <HomeIcon />, labelKey: "adminMobile.panel" as const },

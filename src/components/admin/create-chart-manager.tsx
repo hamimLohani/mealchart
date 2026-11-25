@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { auth } from "@/lib/firebase/client";
+import { auth, getCurrentIdToken } from "@/lib/firebase/client";
 import { isFirebaseConfigured } from "@/lib/firebase/config";
 import { useT } from "@/i18n/use-t";
 import {
@@ -17,7 +17,7 @@ import {
   listMembers,
   getGroupById,
 } from "@/lib/firebase/repositories";
-import { currentMonthKey, formatChartLabel, daysInMonth, isChartActive } from "@/lib/utils/date";
+import { formatChartLabel, daysInMonth, isChartActive } from "@/lib/utils/date";
 import { saveChartReportPdf } from "@/lib/utils/pdf-report";
 import type { AdminProfile, Chart } from "@/types/domain";
 import { sendMonthSummaryEmails } from "@/lib/email/actions";
@@ -67,7 +67,7 @@ export function CreateChartManager() {
     currentAdminProfile && adminProfile?.id === currentAdminProfile.id ? adminProfile : null;
   const visibleCharts = activeAdminProfile ? charts : [];
   const paymentPhone = process.env.NEXT_PUBLIC_PAYMENT_PHONE || "01xxxxxxxxx";
-  const rawResolvedError =
+  const resolvedError =
     error ??
     (profileError
       ? profileError instanceof Error
@@ -76,10 +76,6 @@ export function CreateChartManager() {
       : !profileLoading && !currentAdminProfile && !configurationError
         ? "Log in as an admin to create charts."
         : null);
-  const resolvedError =
-    typeof rawResolvedError === "string" && rawResolvedError.startsWith("ERR_TRANS:")
-      ? JSON.parse(rawResolvedError.split("ERR_TRANS:")[1])
-      : rawResolvedError;
 
   useGlobalLoading(
     "create-chart-manager",
@@ -229,7 +225,9 @@ export function CreateChartManager() {
           console.error("Failed to generate PDF attachment:", pdfErr);
         }
 
+        const idToken = await getCurrentIdToken();
         const emailResult = await sendMonthSummaryEmails({
+          idToken,
           groupName: group.name,
           chartLabel: chart.label,
           members,

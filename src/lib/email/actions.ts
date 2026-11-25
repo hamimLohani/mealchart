@@ -4,6 +4,7 @@ import { transporter, fromEmail } from "./transporter";
 import type { SendMailOptions } from "nodemailer";
 import { getMonthTotals, getMemberTotals, formatMeal } from "@/lib/utils/meal-money";
 import type { CostEntry, DepositEntry, MealEntry, Member } from "@/types/domain";
+import { verifyServerAuthToken } from "@/lib/firebase/admin";
 import dns from "dns";
 
 function escapeHtml(value: string) {
@@ -119,8 +120,14 @@ function buildDepositSummary(member: Member, deposits: DepositEntry[]) {
   `;
 }
 
-export async function sendWelcomeEmail(memberEmail: string, fullName: string, groupName: string) {
+export async function sendWelcomeEmail(
+  memberEmail: string,
+  fullName: string,
+  groupName: string,
+  idToken: string,
+) {
   try {
+    await verifyServerAuthToken(idToken);
     const html = `
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333; background-color: #f9f9f9; border-radius: 12px; border: 1px solid #eee;">
         <h1 style="color: #6366f1; font-size: 24px; text-align: center; margin-bottom: 20px;">${escapeHtml(groupName)}-এ স্বাগতম!</h1>
@@ -157,7 +164,13 @@ export async function sendWelcomeEmail(memberEmail: string, fullName: string, gr
  * Verifies if an email address "exists" by checking its domain's MX records.
  * This ensures the domain is real and configured to receive emails.
  */
-export async function verifyEmailExistence(email: string) {
+export async function verifyEmailExistence(email: string, idToken: string) {
+  try {
+    await verifyServerAuthToken(idToken);
+  } catch (error) {
+    return { exists: false, error: getErrorMessage(error) };
+  }
+
   if (!email || !email.includes("@")) return { exists: false, error: "Invalid email format" };
   
   const domain = email.split("@")[1];
@@ -197,8 +210,14 @@ export async function verifyEmailExistence(email: string) {
   }
 }
 
-export async function sendRemovalEmail(memberEmail: string, fullName: string, groupName: string) {
+export async function sendRemovalEmail(
+  memberEmail: string,
+  fullName: string,
+  groupName: string,
+  idToken: string,
+) {
   try {
+    await verifyServerAuthToken(idToken);
     const html = `
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333; background-color: #f9f9f9; border-radius: 12px; border: 1px solid #eee;">
         <h1 style="color: #ef4444; font-size: 24px; text-align: center; margin-bottom: 20px;">অ্যাকাউন্ট সরানো হয়েছে</h1>
@@ -228,8 +247,14 @@ export async function sendRemovalEmail(memberEmail: string, fullName: string, gr
   }
 }
 
-export async function sendAdminRemovalEmail(adminEmail: string, adminName: string, groupName: string) {
+export async function sendAdminRemovalEmail(
+  adminEmail: string,
+  adminName: string,
+  groupName: string,
+  idToken: string,
+) {
   try {
+    await verifyServerAuthToken(idToken);
     const html = `
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333; background-color: #f9f9f9; border-radius: 12px; border: 1px solid #eee;">
         <div style="text-align: center; margin-bottom: 20px;">
@@ -286,8 +311,14 @@ export async function sendAdminRemovalEmail(adminEmail: string, adminName: strin
   }
 }
 
-export async function sendAdminWelcomeEmail(adminEmail: string, adminName: string, groupName: string) {
+export async function sendAdminWelcomeEmail(
+  adminEmail: string,
+  adminName: string,
+  groupName: string,
+  idToken: string,
+) {
   try {
+    await verifyServerAuthToken(idToken);
     const html = `
       <div style="font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #0f172a; color: #f8fafc;">
         <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid #334155; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
@@ -381,8 +412,10 @@ export async function sendMoneyReceiptEmail(
   groupName: string,
   totalAmount: number,
   remainingBalance: number,
+  idToken: string,
 ) {
   try {
+    await verifyServerAuthToken(idToken);
     const html = `
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333; background-color: #f9f9f9; border-radius: 12px; border: 1px solid #eee;">
         <h1 style="color: #10b981; font-size: 24px; text-align: center; margin-bottom: 20px;">টাকা জমার রিসিট</h1>
@@ -460,11 +493,13 @@ export async function sendMonthSummaryEmails(input: {
   costs: CostEntry[];
   deposits: DepositEntry[];
   pdfAttachment?: string;
+  idToken: string;
 }) {
-  const { groupName, chartLabel, members, meals, costs, deposits, pdfAttachment } = input;
+  const { groupName, chartLabel, members, meals, costs, deposits, pdfAttachment, idToken } = input;
   console.log(`[Email] Starting monthly summary batch for group "${groupName}" (${chartLabel}) to ${members.length} members.`);
 
   try {
+    await verifyServerAuthToken(idToken);
     const { totalMeals, totalCost, totalPaid, mealRate, remainingTaka } = getMonthTotals(
       meals,
       costs,
@@ -623,263 +658,6 @@ export async function sendMonthSummaryEmails(input: {
   }
 }
 
-export async function sendVerificationEmail(
-  email: string,
-  fullName: string,
-  verificationUrl: string
-) {
-  try {
-    const html = `
-      <div style="font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333; background-color: #f9fafb; border-radius: 16px; border: 1px solid #e5e7eb;">
-        <!-- Header -->
-        <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 40px 30px; text-align: center; border-radius: 12px 12px 0 0;">
-          <div style="display: inline-block; margin-bottom: 16px;">
-            <span style="font-size: 36px;">🍚</span>
-          </div>
-          <h1 style="margin: 0; font-size: 28px; font-weight: 800;">মিল চার্ট-এ স্বাগতম!</h1>
-          <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.95;">শুরু করতে অনুগ্রহ করে আপনার ইমেইল ঠিকানাটি যাচাই করুন।</p>
-        </div>
-
-        <!-- Content -->
-        <div style="padding: 40px 30px; background: white; border-radius: 0 0 12px 12px;">
-          <p style="font-size: 16px; line-height: 1.6; color: #475569; margin: 0 0 24px 0;">
-            প্রিয় <strong style="color: #1f2937;">${escapeHtml(fullName)}</strong>,
-          </p>
-
-          <p style="font-size: 16px; line-height: 1.6; color: #475569; margin: 0 0 24px 0;">
-            সাইন আপ করার জন্য ধন্যবাদ! রেজিস্ট্রেশন সম্পন্ন করতে নিচের বাটনে ক্লিক করে আপনার ইমেইল ঠিকানাটি যাচাই করুন।
-          </p>
-
-          <!-- CTA Button -->
-          <div style="text-align: center; margin: 32px 0;">
-            <a href="${verificationUrl}" style="
-              display: inline-block;
-              background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-              color: white;
-              text-decoration: none;
-              font-size: 16px;
-              font-weight: 700;
-              padding: 16px 40px;
-              border-radius: 10px;
-              box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3);
-            ">
-              আমার ইমেইল ঠিকানা যাচাই করুন
-            </a>
-          </div>
-
-          <!-- Backup Link -->
-          <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin: 24px 0;">
-            <p style="margin: 0; font-size: 14px; color: #6b7280;">
-              বাটনটি কাজ না করলে নিচের লিংকটি কপি করে আপনার ব্রাউজারে পেস্ট করুন:
-            </p>
-            <p style="margin: 8px 0 0 0; word-break: break-all; font-size: 13px; color: #6366f1;">
-              ${verificationUrl}
-            </p>
-          </div>
-
-          <div style="border-top: 1px solid #e5e7eb; margin: 32px 0 0 0; padding-top: 24px;">
-            <p style="margin: 0; font-size: 14px; color: #9ca3af;">
-              আপনি যদি মিল চার্ট-এ সাইন আপ না করে থাকেন, তবে নির্দ্বিধায় এই ইমেইলটি উপেক্ষা করতে পারেন।
-            </p>
-          </div>
-        </div>
-
-        <!-- Footer -->
-        <div style="text-align: center; padding: 24px 0; color: #9ca3af; font-size: 13px;">
-          <p style="margin: 0;">© ${new Date().getFullYear()} মিল চার্ট। সর্বস্বত্ব সংরক্ষিত।</p>
-        </div>
-      </div>
-    `;
-
-    await transporter.sendMail({
-      from: fromEmail,
-      to: email,
-      subject: "ইমেইল ঠিকানা যাচাই করুন - মিল চার্ট",
-      html,
-    });
-
-    return { success: true };
-  } catch (error) {
-    console.error("Failed to send verification email:", error);
-    return { success: false, error: getErrorMessage(error) };
-  }
-}
-
-export async function sendReminderEmails(input: {
-  groupName: string;
-  chartLabel: string;
-  members: Member[];
-  meals: MealEntry[];
-  costs: CostEntry[];
-  deposits: DepositEntry[];
-}) {
-  const { groupName, chartLabel, members, meals, costs, deposits } = input;
-  console.log(`[Email] Starting reminder batch for group "${groupName}" (${chartLabel}) to ${members.length} members.`);
-
-  try {
-    const { totalMeals, totalCost, totalPaid, mealRate, remainingTaka } = getMonthTotals(
-      meals,
-      costs,
-      deposits,
-    );
-
-    type EmailResult = 
-      | { status: 'fulfilled'; value: { email: string; success: true } }
-      | { status: 'rejected'; reason: unknown };
-
-    const results: EmailResult[] = [];
-
-    for (const member of members) {
-      try {
-        if (!member.email || !member.email.includes("@")) {
-          throw new Error(`Invalid email for member ${member.fullName}`);
-        }
-
-        const totals = getMemberTotals(member.id, meals, deposits, mealRate);
-
-        const html = `
-          <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 650px; margin: 0 auto; padding: 25px; color: #333; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px;">
-            <div style="text-align: center; margin-bottom: 30px;">
-              <h1 style="color: #f59e0b; margin: 0; font-size: 28px;">🔔 টাকা পরিশোধের তাগিদ</h1>
-              <p style="color: #64748b; margin: 5px 0 0 0; font-size: 18px;">${escapeHtml(chartLabel)} • ${escapeHtml(groupName)}</p>
-            </div>
-
-            <div style="background-color: #fef3c7; border-radius: 12px; padding: 20px; margin-bottom: 30px; border: 1px solid #fcd34d;">
-              <p style="margin: 0 0 15px 0; font-size: 16px;">প্রিয় <strong>${escapeHtml(member.fullName)}</strong>,</p>
-              <p style="margin: 0; line-height: 1.6; color: #92400e;"><strong>${escapeHtml(chartLabel)}</strong> মাসের মিল অ্যাকাউন্টের বর্তমান ব্যালেন্স সম্পর্কে আপনাকে স্মরণ করিয়ে দেওয়া হচ্ছে।</p>
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
-              <div style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); padding: 20px; border-radius: 12px; color: white;">
-                <p style="margin: 0; font-size: 12px; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.05em;">মোট মিল</p>
-                <p style="margin: 5px 0 0 0; font-size: 24px; font-weight: bold;">${formatMeal(totals.totalMeals)}</p>
-              </div>
-              <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 20px; border-radius: 12px; color: white;">
-                <p style="margin: 0; font-size: 12px; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.05em;">মোট জমা</p>
-                <p style="margin: 5px 0 0 0; font-size: 24px; font-weight: bold;">${totals.totalPaid.toFixed(2)} টাকা</p>
-              </div>
-            </div>
-
-            <div style="background-color: ${totals.balance < 0 ? "#fef2f2" : "#f0fdf4"}; border: 2px solid ${totals.balance < 0 ? "#fecaca" : "#bbf7d0"}; border-radius: 12px; padding: 25px; margin-bottom: 30px; text-align: center;">
-              <p style="margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; color: ${totals.balance < 0 ? "#b91c1c" : "#166534"}; font-weight: bold;">আপনার বর্তমান ব্যালেন্স</p>
-              <p style="margin: 10px 0 0 0; font-size: 40px; font-weight: bold; color: ${totals.balance >= 0 ? "#10b981" : "#ef4444"};">
-                ${totals.balance >= 0 ? "+" : ""}${totals.balance.toFixed(2)} টাকা
-              </p>
-              ${totals.balance < 0 ? `
-                <p style="margin: 10px 0 0 0; font-size: 14px; color: #991b1b;">
-                  ⚠️ আপনার ব্যালেন্স মাইনাস (-) রয়েছে। বকেয়া পরিশোধ করতে অনুগ্রহ করে <strong>${Math.abs(totals.balance).toFixed(2)} টাকা</strong> জমা দিন!
-                </p>
-              ` : `
-                <p style="margin: 10px 0 0 0; font-size: 14px; color: #166534;">
-                  ✅ আপনার ব্যালেন্স পজিটিভ রয়েছে!
-                </p>
-              `}
-            </div>
-
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
-              <tr>
-                <td style="padding: 12px 0; border-bottom: 1px solid #f1f5f9; color: #64748b;">মিল রেট</td>
-                <td style="padding: 12px 0; border-bottom: 1px solid #f1f5f9; text-align: right; font-weight: 600;">${mealRate.toFixed(4)} টাকা</td>
-              </tr>
-              <tr>
-                <td style="padding: 12px 0; border-bottom: 1px solid #f1f5f9; color: #64748b;">ব্যক্তিগত খাবার খরচ (${formatMeal(totals.totalMeals)} × ${mealRate.toFixed(2)})</td>
-                <td style="padding: 12px 0; border-bottom: 1px solid #f1f5f9; text-align: right; font-weight: 600;">${totals.totalCost.toFixed(2)} টাকা</td>
-              </tr>
-            </table>
-
-            <div style="background-color: #f1f5f9; border-radius: 12px; padding: 20px;">
-              <p style="margin: 0 0 10px 0; font-weight: bold; font-size: 14px; color: #475569;">গ্রুপের সর্বমোট হিসাব</p>
-              <div style="display: flex; flex-wrap: wrap; gap: 20px;">
-                <div style="min-width: 120px;">
-                  <p style="margin: 0; font-size: 12px; color: #64748b;">মোট বাজার খরচ</p>
-                  <p style="margin: 2px 0 0 0; font-weight: 600;">${totalCost.toFixed(2)} টাকা</p>
-                </div>
-                <div style="min-width: 120px;">
-                  <p style="margin: 0; font-size: 12px; color: #64748b;">মোট মিল</p>
-                  <p style="margin: 2px 0 0 0; font-weight: 600;">${formatMeal(totalMeals)}</p>
-                </div>
-                <div style="min-width: 120px;">
-                  <p style="margin: 0; font-size: 12px; color: #64748b;">মোট জমা টাকা</p>
-                  <p style="margin: 2px 0 0 0; font-weight: 600;">${totalPaid.toFixed(2)} টাকা</p>
-                </div>
-                <div style="min-width: 120px;">
-                  <p style="margin: 0; font-size: 12px; color: #64748b;">অবশিষ্ট টাকা</p>
-                  <p style="margin: 2px 0 0 0; font-weight: 600; color: ${remainingTaka >= 0 ? "#10b981" : "#ef4444"};">
-                    ${remainingTaka >= 0 ? "+" : ""}${remainingTaka.toFixed(2)} টাকা
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div style="margin-top: 30px; border-top: 1px solid #f1f5f9; padding-top: 20px;">
-              <p style="margin: 0 0 10px 0; font-weight: bold; font-size: 14px; color: #475569;">আপনার টাকা জমার ইতিহাস</p>
-              ${buildDepositSummary(member, deposits)}
-            </div>
-
-            <div style="margin-top: 30px; border-top: 1px solid #f1f5f9; padding-top: 20px;">
-              <p style="margin: 0 0 10px 0; font-weight: bold; font-size: 14px; color: #475569;">আপনার মিলের তালিকা</p>
-              ${buildMealChartTable(member, meals)}
-            </div>
-
-            <div style="margin-top: 30px; border-top: 1px solid #f1f5f9; padding-top: 20px;">
-              <p style="margin: 0 0 10px 0; font-weight: bold; font-size: 14px; color: #475569;">বাজার খরচের তালিকা</p>
-              ${buildCostBreakdown(costs)}
-            </div>
-
-            <p style="text-align: center; margin-top: 30px;">
-              <a href="${process.env.NEXT_PUBLIC_BASE_URL || "https://mealchart.vercel.app"}" style="background-color: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
-                আপনার অ্যাকাউন্ট দেখুন
-              </a>
-            </p>
-
-            <div style="margin-top: 40px; text-align: center; color: #94a3b8; font-size: 12px;">
-              <p>এটি একটি সৌজন্যমূলক তাগিদ বার্তা। আপনি ইতিমধ্যে টাকা জমা দিয়ে থাকলে এই ইমেইলটি উপেক্ষা করতে পারেন।</p>
-              <p>© ${new Date().getFullYear()} মিল চার্ট অ্যাপ</p>
-            </div>
-          </div>
-        `;
-
-        const mailOptions: SendMailOptions = {
-          from: fromEmail,
-          to: member.email,
-          subject: `টাকা পরিশোধের তাগিদ: ${chartLabel} - ${groupName}`,
-          html,
-        };
-
-        await transporter.sendMail(mailOptions);
-
-        console.log(`[Email] Successfully sent reminder to ${member.email}`);
-        results.push({ status: 'fulfilled', value: { email: member.email, success: true } });
-      } catch (err) {
-        console.error(`[Email] Failed to send to ${member.email}:`, err);
-        results.push({ status: 'rejected', reason: err });
-      }
-    }
-
-    const successful = results.filter((r) => r.status === "fulfilled" && r.value.success).length;
-    const failed = results.filter((r) => r.status === "rejected" || !r.value.success);
-
-    if (failed.length > 0) {
-      console.error(`[Email] Batch completed with ${failed.length} failures out of ${members.length}.`);
-      failed.forEach((f) => {
-        if (f.status === "rejected") console.error(`[Email] Failure:`, f.reason);
-      });
-    } else {
-      console.log(`[Email] Batch completed successfully! Sent ${successful} reminders.`);
-    }
-
-    return {
-      success: true,
-      sentCount: successful,
-      failedCount: failed.length,
-      totalCount: members.length,
-    };
-  } catch (error) {
-    console.error("[Email] Critical reminder batch failure:", error);
-    return { success: false, error: getErrorMessage(error) };
-  }
-}
-
 export type MoneyRequestRecipient = {
   memberEmail: string;
   memberName: string;
@@ -897,6 +675,7 @@ export type SendMoneyRequestEmailInput = {
   paymentInstructions?: string;
   note?: string;
   recipient: MoneyRequestRecipient;
+  idToken: string;
 };
 
 export type SendBatchMoneyRequestInput = {
@@ -906,6 +685,7 @@ export type SendBatchMoneyRequestInput = {
   paymentInstructions?: string;
   note?: string;
   recipients: MoneyRequestRecipient[];
+  idToken: string;
 };
 
 function buildMoneyRequestHtml(input: {
@@ -1049,7 +829,8 @@ function buildMoneyRequestHtml(input: {
 
 export async function sendMoneyRequestEmail(input: SendMoneyRequestEmailInput) {
   try {
-    const { groupName, chartLabel, recipient, adminName, paymentInstructions, note } = input;
+    const { groupName, chartLabel, recipient, adminName, paymentInstructions, note, idToken } = input;
+    await verifyServerAuthToken(idToken);
 
     if (!recipient.memberEmail || !recipient.memberEmail.includes("@")) {
       return { success: false, error: "সদস্যের কোনো বৈধ ইমেইল ঠিকানা নেই।" };
@@ -1081,10 +862,11 @@ export async function sendMoneyRequestEmail(input: SendMoneyRequestEmailInput) {
 }
 
 export async function sendBatchMoneyRequestEmails(input: SendBatchMoneyRequestInput) {
-  const { groupName, chartLabel, adminName, paymentInstructions, note, recipients } = input;
+  const { groupName, chartLabel, adminName, paymentInstructions, note, recipients, idToken } = input;
   console.log(`[Email] Starting batch money request for group "${groupName}" (${chartLabel}) to ${recipients.length} members.`);
 
   try {
+    await verifyServerAuthToken(idToken);
     const results: Array<{ email: string; success: boolean; error?: string }> = [];
 
     for (const recipient of recipients) {
@@ -1137,9 +919,11 @@ export async function sendAccountDeletionEmails(input: {
   adminName: string;
   adminEmail: string;
   recipients: Array<{ email: string; name?: string; role?: string }>;
+  idToken: string;
 }) {
   try {
-    const { groupName, adminName, adminEmail, recipients } = input;
+    const { groupName, adminName, adminEmail, recipients, idToken } = input;
+    await verifyServerAuthToken(idToken);
     const seen = new Set<string>();
     const uniqueRecipients: Array<{ email: string; name?: string; role?: string }> = [];
     for (const r of recipients) {

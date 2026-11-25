@@ -91,7 +91,7 @@ export function AdminLoginForm() {
       active = false;
       unsubscribeAuth();
     };
-  }, [finishSignIn, isFirebaseConfigured, t, tx]);
+  }, [finishSignIn, t, tx]);
 
   async function handleGoogleSignIn() {
     setError(null);

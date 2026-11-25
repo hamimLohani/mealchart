@@ -32,18 +32,17 @@ const stepKeys = [
   { title: "about.step7Title", body: "about.step7Body", icon: "🔒" },
 ] as const;
 
-const tutorialVideoId = process.env.NEXT_PUBLIC_TUTORIAL_VIDEO_ID || "REPLACE_WITH_YOUTUBE_ID";
+const rawTutorialVideoId = process.env.NEXT_PUBLIC_TUTORIAL_VIDEO_ID?.trim() || "";
+const tutorialVideoId =
+  rawTutorialVideoId && !/^REPLACE_/i.test(rawTutorialVideoId) ? rawTutorialVideoId : "";
 
 export default function Home() {
   const router = useRouter();
-  const [checkedAuth, setCheckedAuth] = useState(false);
+  const [checkedAuth, setCheckedAuth] = useState(() => !auth);
   const { t } = useT();
 
   useEffect(() => {
-    if (!auth) {
-      setCheckedAuth(true);
-      return;
-    }
+    if (!auth) return;
 
     let active = true;
 
@@ -97,7 +96,7 @@ export default function Home() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 pb-16 pt-6 sm:px-8 sm:pt-10">
+    <div className="mx-auto w-full max-w-7xl px-4 pb-16 pt-6 sm:px-8 sm:pt-10">
       {/* ── Hero ──────────────────────────────────────────────── */}
       <section className="relative overflow-hidden rounded-[var(--radius-xl)] border border-white/10 bg-[linear-gradient(135deg,_rgba(8,80,62,0.97),_rgba(6,22,44,0.99))] p-6 text-white shadow-[0_28px_80px_rgba(6,22,44,0.45)] sm:p-10 lg:grid lg:grid-cols-[1fr_auto] lg:gap-12 lg:p-14">
         <div className="pointer-events-none absolute -top-32 -left-32 h-80 w-80 rounded-full bg-[rgba(44,179,145,0.15)] blur-3xl" />
@@ -129,13 +128,15 @@ export default function Home() {
             <Link className="button-ghost" href="/enter-group">
               {t("home.ctaEnter")}
             </Link>
-            <a
-              className="button-ghost"
-              href="#tutorial"
-              style={{ borderColor: "rgba(44,179,145,0.4)", color: "rgba(44,179,145,0.9)" }}
-            >
-              {t("home.ctaAbout")}
-            </a>
+            {tutorialVideoId ? (
+              <a
+                className="button-ghost"
+                href="#tutorial"
+                style={{ borderColor: "rgba(44,179,145,0.4)", color: "rgba(44,179,145,0.9)" }}
+              >
+                {t("home.ctaAbout")}
+              </a>
+            ) : null}
           </div>
         </div>
 
@@ -251,28 +252,30 @@ export default function Home() {
       </section>
 
       {/* ── Tutorial Video ──────────────────────────────── */}
-      <section id="tutorial" className="mt-20 scroll-mt-8 border-t border-[color:var(--border)] pt-16">
-        <div className="text-center">
-          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("home.tutorialTitle")}</h2>
-          <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-[color:var(--soft-foreground)] sm:text-base sm:leading-8">
-            {t("home.tutorialDescription")}
-          </p>
-        </div>
+      {tutorialVideoId ? (
+        <section id="tutorial" className="mt-20 scroll-mt-8 border-t border-[color:var(--border)] pt-16">
+          <div className="text-center">
+            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("home.tutorialTitle")}</h2>
+            <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-[color:var(--soft-foreground)] sm:text-base sm:leading-8">
+              {t("home.tutorialDescription")}
+            </p>
+          </div>
 
-        <div className="mx-auto mt-10 max-w-5xl">
-          <div className="overflow-hidden rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] shadow-[var(--shadow-sm)]">
-            <div className="aspect-video bg-black">
-              <iframe
-                className="h-full w-full"
-                src={`https://www.youtube.com/embed/${tutorialVideoId}`}
-                title="Meal Chart Tutorial"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
+          <div className="mx-auto mt-10 max-w-5xl">
+            <div className="overflow-hidden rounded-[var(--radius)] border border-[color:var(--border)] bg-[color:var(--panel)] shadow-[var(--shadow-sm)]">
+              <div className="aspect-video bg-black">
+                <iframe
+                  className="h-full w-full"
+                  src={`https://www.youtube.com/embed/${tutorialVideoId}`}
+                  title="Meal Chart Tutorial"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
             </div>
           </div>
-        </div>
-      </section>
-    </main>
+        </section>
+      ) : null}
+    </div>
   );
 }
