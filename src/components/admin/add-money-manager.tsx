@@ -421,8 +421,9 @@ export function AddMoneyManager() {
         return [deposit, ...prev];
       });
       showSuccess(amount >= 0 ? t("toast.depositAdded") : t("toast.depositDeducted"));
+      setForm((c) => ({ ...c, amount: "" }));
 
-      if (member) {
+      if (member && member.email && member.email.includes("@")) {
         const memberTotal = deposits
           .filter(d => d.memberId.toLowerCase() === mid)
           .reduce((s, d) => s + d.amount, 0) + amount;
@@ -434,28 +435,36 @@ export function AddMoneyManager() {
           mealRate,
         );
 
-        const idToken = await getCurrentIdToken();
-        const emailResult = await sendMoneyReceiptEmail(
-          member.email,
-          member.fullName,
-          amount,
-          form.date,
-          activeAdminProfile.fullName || activeAdminProfile.email,
-          groupName,
-          memberTotal,
-          memberBalance,
-          idToken,
-        );
-        if (!emailResult.success) {
-          const friendlyError = getFriendlyEmailError(emailResult.error || "");
+        try {
+          const idToken = await getCurrentIdToken();
+          const emailResult = await sendMoneyReceiptEmail(
+            member.email,
+            member.fullName,
+            amount,
+            form.date,
+            activeAdminProfile.fullName || activeAdminProfile.email,
+            groupName,
+            memberTotal,
+            memberBalance,
+            idToken,
+          );
+          if (!emailResult.success) {
+            const friendlyError = getFriendlyEmailError(emailResult.error || "");
+            setError(`ERR_TRANS:${JSON.stringify({ 
+              key: "errors.emailReceiptFailed", 
+              vars: { error: friendlyError } 
+            })}`);
+          }
+        } catch (emailErr) {
+          console.error("Failed to invoke sendMoneyReceiptEmail:", emailErr);
+          const rawMessage = emailErr instanceof Error ? emailErr.message : "";
+          const friendlyError = getFriendlyEmailError(rawMessage);
           setError(`ERR_TRANS:${JSON.stringify({ 
             key: "errors.emailReceiptFailed", 
             vars: { error: friendlyError } 
           })}`);
         }
       }
-
-      setForm((c) => ({ ...c, amount: "" }));
     } catch (e) {
       const msg = e instanceof Error ? e.message : t("toast.genericError");
       setError(msg);

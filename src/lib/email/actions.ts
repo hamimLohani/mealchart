@@ -1,6 +1,6 @@
 "use server";
 
-import { transporter, fromEmail } from "./transporter";
+import { getTransporter, fromEmail } from "./transporter";
 import type { SendMailOptions } from "nodemailer";
 import { getMonthTotals, getMemberTotals, formatMeal } from "@/lib/utils/meal-money";
 import type { CostEntry, DepositEntry, MealEntry, Member } from "@/types/domain";
@@ -146,7 +146,7 @@ export async function sendWelcomeEmail(
       </div>
     `;
 
-    await transporter.sendMail({
+    await getTransporter().sendMail({
       from: fromEmail,
       to: memberEmail,
       subject: `স্বাগতম ${groupName} গ্রুপে! - মিল চার্ট`,
@@ -233,7 +233,7 @@ export async function sendRemovalEmail(
       </div>
     `;
 
-    await transporter.sendMail({
+    await getTransporter().sendMail({
       from: fromEmail,
       to: memberEmail,
       subject: `অ্যাকাউন্ট বাতিল - ${groupName}`,
@@ -297,7 +297,7 @@ export async function sendAdminRemovalEmail(
       </div>
     `;
 
-    await transporter.sendMail({
+    await getTransporter().sendMail({
       from: fromEmail,
       to: adminEmail,
       subject: `[মিল চার্ট] অস্থায়ী অ্যাডমিন পদ প্রত্যাহার - ${groupName}`,
@@ -389,7 +389,7 @@ export async function sendAdminWelcomeEmail(
       </div>
     `;
 
-    await transporter.sendMail({
+    await getTransporter().sendMail({
       from: fromEmail,
       to: adminEmail,
       subject: `আপনার অ্যাডমিন ড্যাশবোর্ড প্রস্তুত - ${groupName}`,
@@ -471,7 +471,7 @@ export async function sendMoneyReceiptEmail(
       </div>
     `;
 
-    await transporter.sendMail({
+    await getTransporter().sendMail({
       from: fromEmail,
       to: memberEmail,
       subject: `টাকা জমার রিসিট: ${amount.toFixed(2)} টাকা - ${groupName}`,
@@ -624,7 +624,7 @@ export async function sendMonthSummaryEmails(input: {
           ];
         }
 
-        await transporter.sendMail(mailOptions);
+        await getTransporter().sendMail(mailOptions);
 
         console.log(`[Email] Successfully sent report to ${member.email}`);
         results.push({ status: 'fulfilled', value: { email: member.email, success: true } });
@@ -852,7 +852,7 @@ export async function sendMoneyRequestEmail(input: SendMoneyRequestEmailInput) {
       html,
     };
 
-    await transporter.sendMail(mailOptions);
+    await getTransporter().sendMail(mailOptions);
     console.log(`[Email] Successfully sent money request email to ${recipient.memberEmail}`);
     return { success: true };
   } catch (error) {
@@ -885,7 +885,7 @@ export async function sendBatchMoneyRequestEmails(input: SendBatchMoneyRequestIn
           recipient,
         });
 
-        await transporter.sendMail({
+        await getTransporter().sendMail({
           from: fromEmail,
           to: recipient.memberEmail,
           subject: `[মিল চার্ট] টাকা জমার তাগিদ: ${recipient.requestedAmount.toFixed(2)} টাকা - ${groupName}`,
@@ -984,7 +984,7 @@ export async function sendAccountDeletionEmails(input: {
           </div>
         `;
 
-        await transporter.sendMail({
+        await getTransporter().sendMail({
           from: fromEmail,
           to: recipient.email,
           subject: `[মিল চার্ট] অ্যাকাউন্ট ও গ্রুপ মুছে ফেলা হয়েছে: ${groupName}`,
